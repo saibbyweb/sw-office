@@ -4,7 +4,7 @@ import { AppProvider } from './context/AppContext';
 import { theme } from './styles/theme';
 import { GlobalStyles } from './styles/GlobalStyles';
 import { Button, Notification } from './components/common';
-import { StartWorkModal, EndWorkModal, BreakModal, WorkLogModal, SwitchProjectModal } from './components/modals';
+import { StartWorkModal, EndWorkModal, BreakModal } from './components/modals';
 import { Timer } from './components/timer/Timer';
 import { useApp } from './context/AppContext';
 
@@ -85,8 +85,6 @@ const AppContent: React.FC = () => {
   const [showStartModal, setShowStartModal] = useState(false);
   const [showEndModal, setShowEndModal] = useState(false);
   const [showBreakModal, setShowBreakModal] = useState(false);
-  const [showWorkLogModal, setShowWorkLogModal] = useState(false);
-  const [showSwitchProjectModal, setShowSwitchProjectModal] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
   const showNotification = (type: 'success' | 'error', message: string) => {
@@ -135,11 +133,7 @@ const AppContent: React.FC = () => {
         <Section>
           <SectionHeader>
             <SectionTitle>Current Project: {state.session.project}</SectionTitle>
-            <Button 
-              variant="secondary" 
-              size="small"
-              onClick={() => setShowSwitchProjectModal(true)}
-            >
+            <Button variant="secondary" size="small">
               Switch Project
             </Button>
           </SectionHeader>
@@ -151,24 +145,12 @@ const AppContent: React.FC = () => {
               <span role="img" aria-label="logs">📝</span>
               Work Logs
             </SectionTitle>
-            <Button 
-              variant="secondary" 
-              size="small"
-              onClick={() => setShowWorkLogModal(true)}
-            >
+            <Button variant="secondary" size="small">
               Add Work Log
             </Button>
           </SectionHeader>
           <WorkLogList>
-            {state.workLogs.logs.length === 0 ? (
-              'No work logs added yet'
-            ) : (
-              state.workLogs.logs.map(log => (
-                <div key={log.id}>
-                  {log.content}
-                </div>
-              ))
-            )}
+            No work logs added yet
           </WorkLogList>
         </Section>
 
@@ -225,14 +207,6 @@ const AppContent: React.FC = () => {
       <BreakModal
         isOpen={showBreakModal}
         onClose={() => setShowBreakModal(false)}
-      />
-      <WorkLogModal
-        isOpen={showWorkLogModal}
-        onClose={() => setShowWorkLogModal(false)}
-      />
-      <SwitchProjectModal
-        isOpen={showSwitchProjectModal}
-        onClose={() => setShowSwitchProjectModal(false)}
       />
 
       {notification && (
