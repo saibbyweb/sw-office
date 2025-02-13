@@ -79,8 +79,10 @@ export const StartWorkModal: React.FC<StartWorkModalProps> = ({ isOpen, onClose 
         throw new Error('Password is required');
       }
 
-      // TODO: Add password verification logic here
+      // Simulate a brief delay for login
+      await new Promise(resolve => setTimeout(resolve, 500));
 
+      // For now, accept any password
       const projectName = selectedProject === 'other' ? customProject : selectedProject;
       startSession(projectName);
       onClose();
