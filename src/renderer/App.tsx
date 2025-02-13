@@ -3,6 +3,8 @@ import styled, { ThemeProvider } from 'styled-components';
 import { AppProvider } from './context/AppContext';
 import { theme } from './styles/theme';
 import { GlobalStyles } from './styles/GlobalStyles';
+import { ApolloProvider } from '@apollo/client';
+import { client } from '../lib/apollo';
 import { Button, Notification } from './components/common';
 import { StartWorkModal, EndWorkModal, BreakModal } from './components/modals';
 import { Timer } from './components/timer/Timer';
@@ -221,12 +223,14 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <ThemeProvider theme={theme}>
-      <GlobalStyles />
-      <AppProvider>
-        <AppContent />
-      </AppProvider>
-    </ThemeProvider>
+    <ApolloProvider client={client}>
+      <ThemeProvider theme={theme}>
+        <GlobalStyles />
+        <AppProvider>
+          <AppContent />
+        </AppProvider>
+      </ThemeProvider>
+    </ApolloProvider>
   );
 };
 

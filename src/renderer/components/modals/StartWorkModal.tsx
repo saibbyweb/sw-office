@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { Modal, Button, Input } from '../common';
 import { useApp } from '../../context/AppContext';
+import { useQuery } from '@apollo/client';
+import { GET_PROJECTS } from '../../../graphql/queries';
+import { GetProjectsData, Project } from '../../../graphql/types';
 
 interface StartWorkModalProps {
   isOpen: boolean;
@@ -50,12 +53,14 @@ const ButtonGroup = styled.div`
 `;
 
 export const StartWorkModal: React.FC<StartWorkModalProps> = ({ isOpen, onClose }) => {
-  const { startSession, state } = useApp();
+  const { startSession } = useApp();
   const [selectedProject, setSelectedProject] = useState('');
   const [customProject, setCustomProject] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const { loading, error: projectsError, data } = useQuery<GetProjectsData>(GET_PROJECTS);
 
   const formatDate = () => {
     return new Date().toLocaleDateString('en-US', {
@@ -79,9 +84,6 @@ export const StartWorkModal: React.FC<StartWorkModalProps> = ({ isOpen, onClose 
         throw new Error('Password is required');
       }
 
-      // Simulate a brief delay for login
-      await new Promise(resolve => setTimeout(resolve, 500));
-
       // For now, accept any password
       const projectName = selectedProject === 'other' ? customProject : selectedProject;
       startSession(projectName);
@@ -93,13 +95,11 @@ export const StartWorkModal: React.FC<StartWorkModalProps> = ({ isOpen, onClose 
     }
   };
 
-  const handleCustomProjectChange = (value: string) => {
-    setCustomProject(value);
-  };
-
-  const handlePasswordChange = (value: string) => {
-    setPassword(value);
-  };
+  if (loading) return null;
+  if (projectsError) {
+    console.error('Error loading projects:', projectsError);
+    return null;
+  }
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
@@ -112,7 +112,7 @@ export const StartWorkModal: React.FC<StartWorkModalProps> = ({ isOpen, onClose 
           onChange={e => setSelectedProject(e.target.value)}
         >
           <option value="">Select Project</option>
-          {state.projects.projects.map(project => (
+          {data?.projects.map((project: Project) => (
             <option key={project.id} value={project.id}>
               {project.name}
             </option>
@@ -124,7 +124,7 @@ export const StartWorkModal: React.FC<StartWorkModalProps> = ({ isOpen, onClose 
           <Input
             label="Custom Project Name"
             value={customProject}
-            onChange={handleCustomProjectChange}
+            onChange={e => setCustomProject(e)}
             placeholder="Enter project name"
             required
           />
@@ -134,7 +134,7 @@ export const StartWorkModal: React.FC<StartWorkModalProps> = ({ isOpen, onClose 
           label="Password"
           type="password"
           value={password}
-          onChange={handlePasswordChange}
+          onChange={e => setPassword(e)}
           placeholder="Enter your password"
           required
         />
