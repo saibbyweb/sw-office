@@ -45,7 +45,6 @@ model User {
   role      UserRole  @default(USER)
   sessions  Session[]
   breaks    Break[]
-  projects  Project[]
   workLogs  WorkLog[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -63,7 +62,7 @@ model Session {
   totalBreakTime Int       @default(0)
   status         SessionStatus @default(ACTIVE)
   projectId      String?   @db.ObjectId
-  project        Project?  @relation(fields: [projectId], references: [id])
+  project        Project?  @relation("sessionProject",fields: [projectId], references: [id])
   breaks         Break[]
   workLogs       WorkLog[]
   segments       Segment[]
@@ -76,15 +75,13 @@ model Session {
 model Project {
   id        String    @id @default(auto()) @map("_id") @db.ObjectId
   name      String
-  isCustom  Boolean   @default(false)
-  userId    String    @db.ObjectId
-  user      User      @relation(fields: [userId], references: [id])
-  sessions  Session[]
-  workLogs  WorkLog[]
+  slug      String    @unique
   segments  Segment[]
+  isActive  Boolean   @default(true)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-
+  sessions  Session[] @relation("sessionProject")
+  workLogs  WorkLog[] @relation("workLogProject")
   @@map("projects")
 }
 
@@ -112,7 +109,7 @@ model WorkLog {
   sessionId String   @db.ObjectId
   session   Session  @relation(fields: [sessionId], references: [id])
   projectId String   @db.ObjectId
-  project   Project  @relation(fields: [projectId], references: [id])
+  project   Project  @relation("workLogProject",fields: [projectId], references: [id])
   content   String
   links     String[]
   createdAt DateTime @default(now())

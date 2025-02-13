@@ -54,8 +54,8 @@ export enum SegmentScalarFieldEnum {
 export enum ProjectScalarFieldEnum {
     id = "id",
     name = "name",
-    isCustom = "isCustom",
-    userId = "userId",
+    slug = "slug",
+    isActive = "isActive",
     createdAt = "createdAt",
     updatedAt = "updatedAt"
 }
@@ -150,11 +150,11 @@ export class Break {
 @ObjectType()
 export class ProjectCount {
     @Field(() => Int, {nullable:false})
+    segments?: number;
+    @Field(() => Int, {nullable:false})
     sessions?: number;
     @Field(() => Int, {nullable:false})
     workLogs?: number;
-    @Field(() => Int, {nullable:false})
-    segments?: number;
 }
 
 @ObjectType()
@@ -163,22 +163,20 @@ export class Project {
     id!: string;
     @Field(() => String, {nullable:false})
     name!: string;
-    @Field(() => Boolean, {defaultValue:false,nullable:false})
-    isCustom!: boolean;
     @Field(() => String, {nullable:false})
-    userId!: string;
+    slug!: string;
+    @Field(() => Boolean, {defaultValue:true,nullable:false})
+    isActive!: boolean;
     @Field(() => Date, {nullable:false})
     createdAt!: Date;
     @Field(() => Date, {nullable:false})
     updatedAt!: Date;
-    @Field(() => User, {nullable:false})
-    user?: InstanceType<typeof User>;
+    @Field(() => [Segment], {nullable:true})
+    segments?: Array<Segment>;
     @Field(() => [Session], {nullable:true})
     sessions?: Array<Session>;
     @Field(() => [WorkLog], {nullable:true})
     workLogs?: Array<WorkLog>;
-    @Field(() => [Segment], {nullable:true})
-    segments?: Array<Segment>;
     @Field(() => ProjectCount, {nullable:false})
     _count?: InstanceType<typeof ProjectCount>;
 }
@@ -266,8 +264,6 @@ export class UserCount {
     @Field(() => Int, {nullable:false})
     breaks?: number;
     @Field(() => Int, {nullable:false})
-    projects?: number;
-    @Field(() => Int, {nullable:false})
     workLogs?: number;
 }
 
@@ -291,8 +287,6 @@ export class User {
     sessions?: Array<Session>;
     @Field(() => [Break], {nullable:true})
     breaks?: Array<Break>;
-    @Field(() => [Project], {nullable:true})
-    projects?: Array<Project>;
     @Field(() => [WorkLog], {nullable:true})
     workLogs?: Array<WorkLog>;
     @Field(() => UserCount, {nullable:false})

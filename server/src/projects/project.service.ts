@@ -1,28 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { Project } from '../generated-nestjs-typegraphql';
-import { CreateProjectInput, UpdateProjectInput } from '../types/project.types';
+import { UpdateProjectInput } from '../types/project.types';
 
 @Injectable()
 export class ProjectService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getUserProjects(userId: string): Promise<Project[]> {
+  async getActiveProjects(): Promise<Project[]> {
     return this.prisma.project.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
-
-  async createProject(
-    userId: string,
-    input: CreateProjectInput,
-  ): Promise<Project> {
-    return this.prisma.project.create({
-      data: {
-        ...input,
-        userId,
-      },
+      where: { isActive: true },
     });
   }
 
@@ -32,7 +19,7 @@ export class ProjectService {
     input: UpdateProjectInput,
   ): Promise<Project> {
     const project = await this.prisma.project.findFirst({
-      where: { id, userId },
+      where: { id },
     });
 
     if (!project) {
@@ -47,7 +34,7 @@ export class ProjectService {
 
   async deleteProject(userId: string, id: string): Promise<boolean> {
     const project = await this.prisma.project.findFirst({
-      where: { id, userId },
+      where: { id },
     });
 
     if (!project) {

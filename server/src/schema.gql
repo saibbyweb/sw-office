@@ -55,13 +55,12 @@ type Project {
   _count: ProjectCount!
   createdAt: DateTime!
   id: ID!
-  isCustom: Boolean!
+  isActive: Boolean!
   name: String!
   segments: [Segment!]
   sessions: [Session!]
+  slug: String!
   updatedAt: DateTime!
-  user: User!
-  userId: String!
   workLogs: [WorkLog!]
 }
 
@@ -74,6 +73,7 @@ type ProjectCount {
 type Query {
   activeSession: Session
   hello: String!
+  projects: [Project!]!
 }
 
 type Segment {
@@ -149,7 +149,6 @@ type User {
   id: ID!
   name: String!
   password: String!
-  projects: [Project!]
   role: UserRole!
   sessions: [Session!]
   updatedAt: DateTime!
@@ -158,7 +157,6 @@ type User {
 
 type UserCount {
   breaks: Int!
-  projects: Int!
   sessions: Int!
   workLogs: Int!
 }
