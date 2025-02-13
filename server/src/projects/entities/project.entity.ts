@@ -1,5 +1,8 @@
 import { ObjectType, Field, ID } from '@nestjs/graphql';
-import { WorkSession } from '../../schema/session.types';
+import { Session } from '../../generated-nestjs-typegraphql';
+import { User } from '../../users/entities/user.entity';
+import { WorkLog } from '../../generated-nestjs-typegraphql';
+import { Segment } from '../../segments/entities/segment.entity';
 
 @ObjectType()
 export class Project {
@@ -15,8 +18,17 @@ export class Project {
   @Field(() => ID)
   userId: string;
 
-  @Field(() => [WorkSession], { nullable: true })
-  sessions?: WorkSession[];
+  @Field(() => User)
+  user: User;
+
+  @Field(() => [Session])
+  sessions: Session[];
+
+  @Field(() => [WorkLog])
+  workLogs: WorkLog[];
+
+  @Field(() => [Segment])
+  segments: Segment[];
 
   @Field(() => Date)
   createdAt: Date;

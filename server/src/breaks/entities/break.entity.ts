@@ -1,5 +1,5 @@
 import { ObjectType, Field, ID, Int, registerEnumType } from '@nestjs/graphql';
-import { WorkSession } from '../../schema/session.types';
+import { Session } from '../../generated-nestjs-typegraphql';
 import { User } from '../../users/entities/user.entity';
 import { Segment } from '../../segments/entities/segment.entity';
 import { BreakType } from '../../common/enums';
@@ -23,8 +23,8 @@ export class Break {
   @Field(() => ID)
   sessionId: string;
 
-  @Field(() => WorkSession)
-  session: WorkSession;
+  @Field(() => Session)
+  session: Session;
 
   @Field(() => BreakType)
   type: BreakType;

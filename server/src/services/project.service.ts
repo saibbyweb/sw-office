@@ -1,10 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-import {
-  Project,
-  CreateProjectInput,
-  UpdateProjectInput,
-} from '../schema/project.types';
+import { Project } from '../generated-nestjs-typegraphql';
+import { CreateProjectInput, UpdateProjectInput } from '../types/project.types';
 
 @Injectable()
 export class ProjectService {

@@ -2,7 +2,8 @@ import { Resolver, Mutation, Args, ID } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { JwtGuard } from '../auth/guards/jwt.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { Break, StartBreakInput } from '../schema/break.types';
+import { Break } from '../generated-nestjs-typegraphql';
+import { StartBreakInput } from '../types/break.types';
 import { BreakService } from '../services/break.service';
 
 @Resolver(() => Break)

@@ -1,7 +1,17 @@
-import { ObjectType, Field, ID } from '@nestjs/graphql';
-import { WorkSession } from '../../schema/session.types';
-import { Project } from '../../schema/project.types';
-import { Break } from '../../schema/break.types';
+import { ObjectType, Field, ID, Int, registerEnumType } from '@nestjs/graphql';
+import { Session } from '../../generated-nestjs-typegraphql';
+import { Project } from '../../generated-nestjs-typegraphql';
+import { Break } from '../../generated-nestjs-typegraphql';
+
+export enum SegmentType {
+  WORK = 'WORK',
+  BREAK = 'BREAK',
+}
+
+registerEnumType(SegmentType, {
+  name: 'SegmentType',
+  description: 'The type of segment',
+});
 
 @ObjectType()
 export class Segment {
@@ -11,11 +21,11 @@ export class Segment {
   @Field(() => ID)
   sessionId: string;
 
-  @Field(() => WorkSession)
-  session: WorkSession;
+  @Field(() => Session)
+  session: Session;
 
-  @Field()
-  type: string;
+  @Field(() => SegmentType)
+  type: SegmentType;
 
   @Field(() => ID, { nullable: true })
   projectId?: string;
@@ -35,12 +45,12 @@ export class Segment {
   @Field(() => Date, { nullable: true })
   endTime?: Date;
 
+  @Field(() => Int)
+  duration: number;
+
   @Field(() => Date)
   createdAt: Date;
 
   @Field(() => Date)
   updatedAt: Date;
-
-  @Field(() => Date, { nullable: true })
-  duration: number;
 }

@@ -1,6 +1,6 @@
 import { ObjectType, Field, ID } from '@nestjs/graphql';
-import { WorkSession } from '../../schema/session.types';
-import { Project } from '../../schema/project.types';
+import { Session } from '../../generated-nestjs-typegraphql';
+import { Project } from '../../generated-nestjs-typegraphql';
 import { User } from '../../users/entities/user.entity';
 
 @ObjectType()
@@ -17,8 +17,8 @@ export class WorkLog {
   @Field(() => ID)
   sessionId: string;
 
-  @Field(() => WorkSession)
-  session: WorkSession;
+  @Field(() => Session)
+  session: Session;
 
   @Field(() => ID)
   projectId: string;

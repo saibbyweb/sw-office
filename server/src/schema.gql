@@ -5,20 +5,35 @@
 input AddWorkLogInput {
   content: String!
   links: [String!]! = []
-  projectId: ID!
-  sessionId: ID!
+  projectId: String!
+  sessionId: String!
 }
 
 type Break {
+  _count: BreakCount!
   createdAt: DateTime!
   duration: Int!
   endTime: DateTime
   id: ID!
-  sessionId: ID!
+  segments: [Segment!]
+  session: Session!
+  sessionId: String!
   startTime: DateTime!
   type: String!
   updatedAt: DateTime!
-  userId: ID!
+  user: User!
+  userId: String!
+}
+
+type BreakCount {
+  segments: Int!
+}
+
+"""The type of break"""
+enum BreakType {
+  LUNCH
+  OTHER
+  SHORT
 }
 
 """
@@ -30,65 +45,129 @@ type Mutation {
   addWorkLog(input: AddWorkLogInput!): WorkLog!
   deleteWorkLog(id: ID!): Boolean!
   endBreak(id: ID!): Break!
-  endSession(id: ID!): WorkSession!
+  endSession(id: ID!): Session!
   startBreak(input: StartBreakInput!, sessionId: ID!): Break!
-  startSession(input: StartSessionInput!): WorkSession!
-  switchProject(input: SwitchProjectInput!, sessionId: ID!): WorkSession!
+  startSession(input: StartSessionInput!): Session!
+  switchProject(input: SwitchProjectInput!, sessionId: ID!): Session!
   updateWorkLog(id: ID!, input: UpdateWorkLogInput!): WorkLog!
 }
 
 type Project {
+  _count: ProjectCount!
   createdAt: DateTime!
   id: ID!
   isCustom: Boolean!
   name: String!
+  segments: [Segment!]
+  sessions: [Session!]
   updatedAt: DateTime!
-  userId: ID!
+  user: User!
+  userId: String!
+  workLogs: [WorkLog!]
+}
+
+type ProjectCount {
+  segments: Int!
+  sessions: Int!
+  workLogs: Int!
 }
 
 type Query {
-  activeSession: WorkSession
+  activeSession: Session
   hello: String!
 }
 
-input StartBreakInput {
+type Segment {
+  break: Break
+  breakId: String
+  createdAt: DateTime!
+  duration: Int!
+  endTime: DateTime
+  id: ID!
+  project: Project
+  projectId: String
+  session: Session!
+  sessionId: String!
+  startTime: DateTime!
   type: String!
+  updatedAt: DateTime!
+}
+
+type Session {
+  _count: SessionCount!
+  breaks: [Break!]
+  createdAt: DateTime!
+  endTime: DateTime
+  id: ID!
+  project: Project
+  projectId: String
+  segments: [Segment!]
+  startTime: DateTime!
+  status: String!
+  totalBreakTime: Int!
+  totalDuration: Int!
+  updatedAt: DateTime!
+  user: User!
+  userId: String!
+  workLogs: [WorkLog!]
+}
+
+type SessionCount {
+  breaks: Int!
+  segments: Int!
+  workLogs: Int!
+}
+
+input StartBreakInput {
+  type: BreakType!
 }
 
 input StartSessionInput {
-  projectId: ID!
+  projectId: String!
 }
 
 input SwitchProjectInput {
-  projectId: ID!
+  projectId: String!
 }
 
 input UpdateWorkLogInput {
   content: String
   links: [String!]
-  projectId: ID
+  projectId: String
+}
+
+type User {
+  _count: UserCount!
+  breaks: [Break!]
+  createdAt: DateTime!
+  email: String!
+  id: ID!
+  name: String!
+  password: String!
+  projects: [Project!]
+  role: String!
+  sessions: [Session!]
+  updatedAt: DateTime!
+  workLogs: [WorkLog!]
+}
+
+type UserCount {
+  breaks: Int!
+  projects: Int!
+  sessions: Int!
+  workLogs: Int!
 }
 
 type WorkLog {
   content: String!
   createdAt: DateTime!
   id: ID!
-  links: [String!]!
-  projectId: ID!
-  sessionId: ID!
+  links: [String!]
+  project: Project!
+  projectId: String!
+  session: Session!
+  sessionId: String!
   updatedAt: DateTime!
-  userId: ID!
-}
-
-type WorkSession {
-  createdAt: DateTime!
-  endTime: DateTime
-  id: ID!
-  projectId: ID
-  startTime: DateTime!
-  status: String!
-  totalBreakTime: Int!
-  totalDuration: Int!
-  updatedAt: DateTime!
-  userId: ID!
+  user: User!
+  userId: String!
 }

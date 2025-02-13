@@ -8,6 +8,18 @@ generator client {
   provider = "prisma-client-js"
 }
 
+generator nestgraphql {
+  provider = "prisma-nestjs-graphql"
+  output                = "../src/generated-nestjs-typegraphql"
+  fields_Validator_from = "class-validator"
+  emitSingle            = true
+  emitBlocks            = ["models", "enums"]
+
+  // for yarn monorepos
+  // provider = "prisma-nestjs-graphql"
+  // output = "./@generated/nestjs-type-graphql"
+}
+
 model User {
   id        String    @id @default(auto()) @map("_id") @db.ObjectId
   email     String    @unique

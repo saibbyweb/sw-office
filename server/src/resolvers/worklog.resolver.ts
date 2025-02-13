@@ -2,11 +2,8 @@ import { Resolver, Mutation, Args, ID } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { JwtGuard } from '../auth/guards/jwt.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import {
-  WorkLog,
-  AddWorkLogInput,
-  UpdateWorkLogInput,
-} from '../schema/worklog.types';
+import { WorkLog } from '../generated-nestjs-typegraphql';
+import { AddWorkLogInput, UpdateWorkLogInput } from '../types/worklog.types';
 import { WorkLogService } from '../services/worklog.service';
 
 @Resolver(() => WorkLog)

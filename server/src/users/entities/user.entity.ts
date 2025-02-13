@@ -1,8 +1,8 @@
 import { ObjectType, Field, ID, registerEnumType } from '@nestjs/graphql';
-import { WorkSession } from '../../schema/session.types';
-import { Project } from '../../schema/project.types';
-import { Break } from '../../schema/break.types';
-import { WorkLog } from '../../schema/worklog.types';
+import { Session } from '../../generated-nestjs-typegraphql';
+import { Project } from '../../generated-nestjs-typegraphql';
+import { Break } from '../../generated-nestjs-typegraphql';
+import { WorkLog } from '../../generated-nestjs-typegraphql';
 import { UserRole } from '../../common/enums';
 
 registerEnumType(UserRole, {
@@ -27,8 +27,8 @@ export class User {
   @Field(() => UserRole)
   role: UserRole;
 
-  @Field(() => [WorkSession], { nullable: true })
-  sessions?: WorkSession[];
+  @Field(() => [Session], { nullable: true })
+  sessions?: Session[];
 
   @Field(() => [Break], { nullable: true })
   breaks?: Break[];

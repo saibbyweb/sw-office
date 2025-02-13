@@ -1,18 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-import {
-  WorkSession,
-  StartSessionInput,
-  SwitchProjectInput,
-  SessionStatus,
-} from '../schema/session.types';
-import { SegmentType } from '../schema/segment.types';
+import { Session } from '../generated-nestjs-typegraphql';
+import { StartSessionInput, SwitchProjectInput } from '../types/session.types';
+import { SegmentType } from '../segments/entities/segment.entity';
+import { SessionStatus } from '../common/enums';
 
 @Injectable()
 export class SessionService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getActiveSession(userId: string): Promise<WorkSession | null> {
+  async getActiveSession(userId: string): Promise<Session | null> {
     return this.prisma.session.findFirst({
       where: {
         userId,
@@ -24,7 +21,7 @@ export class SessionService {
   async startSession(
     userId: string,
     input: StartSessionInput,
-  ): Promise<WorkSession> {
+  ): Promise<Session> {
     const session = await this.prisma.$transaction(async (tx) => {
       // Create the session
       const session = await tx.session.create({
@@ -53,7 +50,7 @@ export class SessionService {
     return session;
   }
 
-  async endSession(userId: string, sessionId: string): Promise<WorkSession> {
+  async endSession(userId: string, sessionId: string): Promise<Session> {
     const now = new Date();
 
     return this.prisma.$transaction(async (tx) => {
@@ -114,7 +111,7 @@ export class SessionService {
     userId: string,
     sessionId: string,
     input: SwitchProjectInput,
-  ): Promise<WorkSession> {
+  ): Promise<Session> {
     const now = new Date();
 
     return this.prisma.$transaction(async (tx) => {

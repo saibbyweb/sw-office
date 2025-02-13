@@ -1,11 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-import {
-  WorkLog,
-  AddWorkLogInput,
-  UpdateWorkLogInput,
-} from '../schema/worklog.types';
-import { SessionStatus } from '../schema/session.types';
+import { WorkLog } from '../generated-nestjs-typegraphql';
+import { AddWorkLogInput, UpdateWorkLogInput } from '../types/worklog.types';
+import { SessionStatus } from '../common/enums';
 
 @Injectable()
 export class WorkLogService {
