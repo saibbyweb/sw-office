@@ -1,5 +1,5 @@
 import { Resolver, Query } from '@nestjs/graphql';
-import { User } from './entities/user.entity';
+import { User } from 'src/generated-nestjs-typegraphql';
 
 @Resolver(() => User)
 export class UsersResolver {

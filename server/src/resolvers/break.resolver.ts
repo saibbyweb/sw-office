@@ -7,7 +7,7 @@ import { StartBreakInput } from '../types/break.types';
 import { BreakService } from '../services/break.service';
 
 @Resolver(() => Break)
-@UseGuards(JwtGuard)
+// @UseGuards(JwtGuard)
 export class BreakResolver {
   constructor(private readonly breakService: BreakService) {}
 

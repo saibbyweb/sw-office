@@ -1,7 +1,7 @@
 import { ObjectType, Field, ID } from '@nestjs/graphql';
 import { Session } from '../../generated-nestjs-typegraphql';
 import { Project } from '../../generated-nestjs-typegraphql';
-import { User } from '../../users/entities/user.entity';
+import { User } from 'src/generated-nestjs-typegraphql';
 
 @ObjectType()
 export class WorkLog {

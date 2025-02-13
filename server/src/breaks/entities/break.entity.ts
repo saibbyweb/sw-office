@@ -1,6 +1,6 @@
 import { ObjectType, Field, ID, Int } from '@nestjs/graphql';
 import { Session } from '../../generated-nestjs-typegraphql';
-import { User } from '../../users/entities/user.entity';
+import { User } from 'src/generated-nestjs-typegraphql';
 import { Segment } from '../../segments/entities/segment.entity';
 import { BreakType } from '../../generated-nestjs-typegraphql';
 

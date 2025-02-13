@@ -9,6 +9,11 @@ input AddWorkLogInput {
   sessionId: String!
 }
 
+type AuthPayload {
+  token: String!
+  user: User!
+}
+
 type Break {
   _count: BreakCount!
   createdAt: DateTime!
@@ -40,11 +45,20 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
+input LoginInput {
+  email: String!
+  password: String!
+}
+
 type Mutation {
   addWorkLog(input: AddWorkLogInput!): WorkLog!
   deleteWorkLog(id: ID!): Boolean!
   endBreak(id: ID!): Break!
   endSession(id: ID!): Session!
+  login(input: LoginInput!): AuthPayload!
+  logout: Boolean!
+  register(input: RegisterInput!): AuthPayload!
+  registerSeedUser: AuthPayload!
   startBreak(input: StartBreakInput!, sessionId: ID!): Break!
   startSession(input: StartSessionInput!): Session!
   switchProject(input: SwitchProjectInput!, sessionId: ID!): Session!
@@ -74,6 +88,12 @@ type Query {
   activeSession: Session
   hello: String!
   projects: [Project!]!
+}
+
+input RegisterInput {
+  email: String!
+  name: String!
+  password: String!
 }
 
 type Segment {

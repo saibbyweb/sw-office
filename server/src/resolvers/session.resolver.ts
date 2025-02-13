@@ -7,7 +7,7 @@ import { StartSessionInput, SwitchProjectInput } from '../types/session.types';
 import { SessionService } from '../services/session.service';
 
 @Resolver(() => Session)
-@UseGuards(JwtGuard)
+// @UseGuards(JwtGuard)
 export class SessionResolver {
   constructor(private readonly sessionService: SessionService) {}
 

@@ -2,6 +2,7 @@ import { Resolver, Mutation, Args } from '@nestjs/graphql';
 import { AuthService } from './auth.service';
 import { LoginInput, RegisterInput } from '../users/dto/auth.input';
 import { AuthPayload } from './dto/auth.payload';
+import { UnauthorizedException } from '@nestjs/common';
 
 @Resolver()
 export class AuthResolver {
@@ -17,8 +18,31 @@ export class AuthResolver {
     return this.authService.register(input);
   }
 
+  @Mutation(() => AuthPayload, { name: 'registerSeedUser' })
+  async registerSeedUser() {
+    try {
+      return await this.authService.register({
+        email: 'xyz@gmail.com',
+        password: 'password123',
+        name: 'Seed User',
+      });
+    } catch (error) {
+      // If user already exists, try to log them in instead
+      if (
+        error instanceof UnauthorizedException &&
+        error.message === 'Email already registered'
+      ) {
+        return await this.authService.login({
+          email: 'xyz@gmail.com',
+          password: 'password123',
+        });
+      }
+      throw error;
+    }
+  }
+
   @Mutation(() => Boolean)
-  async logout() {
+  logout() {
     // TODO: Implement token blacklisting if needed
     return true;
   }

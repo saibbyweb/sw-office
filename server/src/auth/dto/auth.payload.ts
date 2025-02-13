@@ -1,5 +1,5 @@
 import { ObjectType, Field } from '@nestjs/graphql';
-import { User } from '../../users/entities/user.entity';
+import { User } from 'src/generated-nestjs-typegraphql';
 
 @ObjectType()
 export class AuthPayload {
