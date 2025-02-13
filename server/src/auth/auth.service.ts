@@ -3,8 +3,8 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginInput, RegisterInput } from '../users/dto/auth.input';
 import * as bcrypt from 'bcrypt';
-import { Prisma, User } from '@prisma/client';
-import { UserRole } from '../common/enums';
+import { User } from '@prisma/client';
+import { UserRole } from 'src/generated-nestjs-typegraphql';
 
 @Injectable()
 export class AuthService {

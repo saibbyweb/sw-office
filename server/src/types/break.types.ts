@@ -1,5 +1,5 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { BreakType } from '../common/enums';
+import { BreakType } from 'src/generated-nestjs-typegraphql';
 
 @InputType()
 export class StartBreakInput {

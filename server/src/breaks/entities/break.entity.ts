@@ -1,13 +1,8 @@
-import { ObjectType, Field, ID, Int, registerEnumType } from '@nestjs/graphql';
+import { ObjectType, Field, ID, Int } from '@nestjs/graphql';
 import { Session } from '../../generated-nestjs-typegraphql';
 import { User } from '../../users/entities/user.entity';
 import { Segment } from '../../segments/entities/segment.entity';
-import { BreakType } from '../../common/enums';
-
-registerEnumType(BreakType, {
-  name: 'BreakType',
-  description: 'The type of break',
-});
+import { BreakType } from '../../generated-nestjs-typegraphql';
 
 @ObjectType()
 export class Break {

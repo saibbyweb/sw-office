@@ -1,14 +1,8 @@
-import { ObjectType, Field, ID, registerEnumType } from '@nestjs/graphql';
-import { Session } from '../../generated-nestjs-typegraphql';
+import { ObjectType, Field, ID } from '@nestjs/graphql';
+import { Session, UserRole } from '../../generated-nestjs-typegraphql';
 import { Project } from '../../generated-nestjs-typegraphql';
 import { Break } from '../../generated-nestjs-typegraphql';
 import { WorkLog } from '../../generated-nestjs-typegraphql';
-import { UserRole } from '../../common/enums';
-
-registerEnumType(UserRole, {
-  name: 'UserRole',
-  description: 'The role of a user',
-});
 
 @ObjectType()
 export class User {

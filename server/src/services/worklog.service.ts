@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { WorkLog } from '../generated-nestjs-typegraphql';
 import { AddWorkLogInput, UpdateWorkLogInput } from '../types/worklog.types';
-import { SessionStatus } from '../common/enums';
 
 @Injectable()
 export class WorkLogService {
@@ -11,7 +10,7 @@ export class WorkLogService {
   async addWorkLog(userId: string, input: AddWorkLogInput): Promise<WorkLog> {
     // Verify session exists and is active
     const session = await this.prisma.session.findFirst({
-      where: { id: input.sessionId, userId, status: SessionStatus.ACTIVE },
+      where: { id: input.sessionId, userId, status: 'ACTIVE' },
     });
 
     if (!session) {
@@ -45,7 +44,7 @@ export class WorkLogService {
       throw new Error('Work log not found');
     }
 
-    if (workLog.session.status !== SessionStatus.ACTIVE) {
+    if (workLog.session.status !== 'ACTIVE') {
       throw new Error('Cannot update work log for completed session');
     }
 
@@ -71,7 +70,7 @@ export class WorkLogService {
       throw new Error('Work log not found');
     }
 
-    if (workLog.session.status !== SessionStatus.ACTIVE) {
+    if (workLog.session.status !== 'ACTIVE') {
       throw new Error('Cannot delete work log for completed session');
     }
 

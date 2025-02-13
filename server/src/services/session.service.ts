@@ -1,9 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-import { Session } from '../generated-nestjs-typegraphql';
+import { Session, SessionStatus } from '../generated-nestjs-typegraphql';
 import { StartSessionInput, SwitchProjectInput } from '../types/session.types';
 import { SegmentType } from '../segments/entities/segment.entity';
-import { SessionStatus } from '../common/enums';
 
 @Injectable()
 export class SessionService {

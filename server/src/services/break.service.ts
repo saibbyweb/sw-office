@@ -3,7 +3,6 @@ import { PrismaService } from '../database/prisma.service';
 import { Break } from '../generated-nestjs-typegraphql';
 import { StartBreakInput } from '../types/break.types';
 import { SegmentType } from '../segments/entities/segment.entity';
-import { SessionStatus } from '../common/enums';
 
 @Injectable()
 export class BreakService {
@@ -19,7 +18,7 @@ export class BreakService {
     return this.prisma.$transaction(async (tx) => {
       // Verify session exists and is active
       const session = await tx.session.findFirst({
-        where: { id: sessionId, userId, status: SessionStatus.ACTIVE },
+        where: { id: sessionId, userId, status: 'ACTIVE' },
       });
 
       if (!session) {
@@ -83,7 +82,7 @@ export class BreakService {
         throw new Error('Active break not found');
       }
 
-      if (breakRecord.session.status !== SessionStatus.ACTIVE) {
+      if (breakRecord.session.status !== 'ACTIVE') {
         throw new Error('Session is not active');
       }
 

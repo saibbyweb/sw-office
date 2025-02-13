@@ -60,14 +60,31 @@ export enum ProjectScalarFieldEnum {
     updatedAt = "updatedAt"
 }
 
+export enum UserRole {
+    USER = "USER",
+    ADMIN = "ADMIN"
+}
+
 export enum SortOrder {
     asc = "asc",
     desc = "desc"
 }
 
+export enum SessionStatus {
+    ACTIVE = "ACTIVE",
+    COMPLETED = "COMPLETED",
+    TERMINATED = "TERMINATED"
+}
+
 export enum QueryMode {
     'default' = "default",
     insensitive = "insensitive"
+}
+
+export enum BreakType {
+    SHORT = "SHORT",
+    LUNCH = "LUNCH",
+    OTHER = "OTHER"
 }
 
 export enum BreakScalarFieldEnum {
@@ -83,8 +100,11 @@ export enum BreakScalarFieldEnum {
 }
 
 registerEnumType(BreakScalarFieldEnum, { name: 'BreakScalarFieldEnum', description: undefined })
+registerEnumType(BreakType, { name: 'BreakType', description: undefined })
 registerEnumType(QueryMode, { name: 'QueryMode', description: undefined })
+registerEnumType(SessionStatus, { name: 'SessionStatus', description: undefined })
 registerEnumType(SortOrder, { name: 'SortOrder', description: undefined })
+registerEnumType(UserRole, { name: 'UserRole', description: undefined })
 registerEnumType(ProjectScalarFieldEnum, { name: 'ProjectScalarFieldEnum', description: undefined })
 registerEnumType(SegmentScalarFieldEnum, { name: 'SegmentScalarFieldEnum', description: undefined })
 registerEnumType(SessionScalarFieldEnum, { name: 'SessionScalarFieldEnum', description: undefined })
@@ -105,8 +125,8 @@ export class Break {
     userId!: string;
     @Field(() => String, {nullable:false})
     sessionId!: string;
-    @Field(() => String, {nullable:false})
-    type!: string;
+    @Field(() => BreakType, {nullable:false})
+    type!: `${BreakType}`;
     @Field(() => Date, {nullable:false})
     startTime!: Date;
     @Field(() => Date, {nullable:true})
@@ -217,8 +237,8 @@ export class Session {
     totalDuration!: number;
     @Field(() => Int, {defaultValue:0,nullable:false})
     totalBreakTime!: number;
-    @Field(() => String, {defaultValue:'ACTIVE',nullable:false})
-    status!: string;
+    @Field(() => SessionStatus, {defaultValue:'ACTIVE',nullable:false})
+    status!: `${SessionStatus}`;
     @Field(() => String, {nullable:true})
     projectId!: string | null;
     @Field(() => Date, {nullable:false})
@@ -261,8 +281,8 @@ export class User {
     password!: string;
     @Field(() => String, {nullable:false})
     name!: string;
-    @Field(() => String, {defaultValue:'USER',nullable:false})
-    role!: string;
+    @Field(() => UserRole, {defaultValue:'USER',nullable:false})
+    role!: `${UserRole}`;
     @Field(() => Date, {nullable:false})
     createdAt!: Date;
     @Field(() => Date, {nullable:false})
