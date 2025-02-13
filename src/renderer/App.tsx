@@ -9,6 +9,7 @@ import { Button, Notification } from './components/common';
 import { StartWorkModal, EndWorkModal, BreakModal, SwitchProjectModal, AddWorkLogModal } from './components/modals';
 import { Timer } from './components/timer/Timer';
 import { useApp } from './context/AppContext';
+import { LoginScreen } from './components/screens/LoginScreen';
 
 const AppContainer = styled.div`
   min-height: 100vh;
@@ -82,6 +83,12 @@ const ActionButtons = styled.div`
   margin-top: ${props => props.theme.spacing.xl};
 `;
 
+const Header = styled.header`
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: ${props => props.theme.spacing.lg};
+`;
+
 const AppContent: React.FC = () => {
   const { state, switchProject, addWorkLog } = useApp();
   const [showStartModal, setShowStartModal] = useState(false);
@@ -90,6 +97,18 @@ const AppContent: React.FC = () => {
   const [showSwitchProjectModal, setShowSwitchProjectModal] = useState(false);
   const [showAddWorkLogModal, setShowAddWorkLogModal] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(localStorage.getItem('authToken'));
+
+  const handleLoginSuccess = (token: string) => {
+    setAuthToken(token);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    setAuthToken(null);
+    client.resetStore();
+    showNotification('success', 'Logged out successfully');
+  };
 
   const handleSwitchProject = (projectId: string) => {
     try {
@@ -114,9 +133,18 @@ const AppContent: React.FC = () => {
     setTimeout(() => setNotification(null), 3000);
   };
 
+  if (!authToken) {
+    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+  }
+
   if (!state.session.isActive) {
     return (
       <AppContainer>
+        <Header>
+          <Button variant="secondary" onClick={handleLogout}>
+            Logout
+          </Button>
+        </Header>
         <MainContent>
           <Button onClick={() => setShowStartModal(true)}>
             Start Work
@@ -132,6 +160,11 @@ const AppContent: React.FC = () => {
 
   return (
     <AppContainer>
+      <Header>
+        <Button variant="secondary" onClick={handleLogout}>
+          Logout
+        </Button>
+      </Header>
       <MainContent>
         <Section>
           <SectionTitle>
