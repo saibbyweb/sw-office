@@ -16,12 +16,11 @@ export interface SessionState {
 export interface Project {
   id: string;
   name: string;
-  isCustom: boolean;
+  isActive: boolean;
 }
 
 export interface ProjectState {
   projects: Project[];
-  currentProject?: Project;
   recentProjects: Project[];
 }
 
@@ -37,14 +36,13 @@ export interface WorkLog {
 export interface WorkLogState {
   logs: WorkLog[];
   isEditing: boolean;
-  currentLog?: WorkLog;
 }
 
 // Common Types
 export interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  children?: React.ReactNode;
+  children: React.ReactNode;
 }
 
 export type BreakType = 'short' | 'lunch' | 'other';

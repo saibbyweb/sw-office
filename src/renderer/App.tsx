@@ -6,7 +6,7 @@ import { GlobalStyles } from './styles/GlobalStyles';
 import { ApolloProvider } from '@apollo/client';
 import { client } from '../lib/apollo';
 import { Button, Notification } from './components/common';
-import { StartWorkModal, EndWorkModal, BreakModal } from './components/modals';
+import { StartWorkModal, EndWorkModal, BreakModal, SwitchProjectModal } from './components/modals';
 import { Timer } from './components/timer/Timer';
 import { useApp } from './context/AppContext';
 
@@ -83,11 +83,21 @@ const ActionButtons = styled.div`
 `;
 
 const AppContent: React.FC = () => {
-  const { state } = useApp();
+  const { state, switchProject } = useApp();
   const [showStartModal, setShowStartModal] = useState(false);
   const [showEndModal, setShowEndModal] = useState(false);
   const [showBreakModal, setShowBreakModal] = useState(false);
+  const [showSwitchProjectModal, setShowSwitchProjectModal] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+
+  const handleSwitchProject = (projectId: string) => {
+    try {
+      switchProject(projectId);
+      showNotification('success', 'Project switched successfully');
+    } catch (error) {
+      showNotification('error', error instanceof Error ? error.message : 'Failed to switch project');
+    }
+  };
 
   const showNotification = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
@@ -135,7 +145,14 @@ const AppContent: React.FC = () => {
         <Section>
           <SectionHeader>
             <SectionTitle>Current Project: {state.session.project}</SectionTitle>
-            <Button variant="secondary" size="small">
+            <Button 
+              variant="secondary" 
+              size="small"
+              onClick={() => {
+                console.log('Switch project button clicked');
+                setShowSwitchProjectModal(true);
+              }}
+            >
               Switch Project
             </Button>
           </SectionHeader>
@@ -209,6 +226,11 @@ const AppContent: React.FC = () => {
       <BreakModal
         isOpen={showBreakModal}
         onClose={() => setShowBreakModal(false)}
+      />
+      <SwitchProjectModal
+        isOpen={showSwitchProjectModal}
+        onClose={() => setShowSwitchProjectModal(false)}
+        onSwitch={handleSwitchProject}
       />
 
       {notification && (
