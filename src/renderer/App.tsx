@@ -6,7 +6,7 @@ import { GlobalStyles } from './styles/GlobalStyles';
 import { ApolloProvider } from '@apollo/client';
 import { client } from '../lib/apollo';
 import { Button, Notification } from './components/common';
-import { StartWorkModal, EndWorkModal, BreakModal, SwitchProjectModal } from './components/modals';
+import { StartWorkModal, EndWorkModal, BreakModal, SwitchProjectModal, AddWorkLogModal } from './components/modals';
 import { Timer } from './components/timer/Timer';
 import { useApp } from './context/AppContext';
 
@@ -83,11 +83,12 @@ const ActionButtons = styled.div`
 `;
 
 const AppContent: React.FC = () => {
-  const { state, switchProject } = useApp();
+  const { state, switchProject, addWorkLog } = useApp();
   const [showStartModal, setShowStartModal] = useState(false);
   const [showEndModal, setShowEndModal] = useState(false);
   const [showBreakModal, setShowBreakModal] = useState(false);
   const [showSwitchProjectModal, setShowSwitchProjectModal] = useState(false);
+  const [showAddWorkLogModal, setShowAddWorkLogModal] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
   const handleSwitchProject = (projectId: string) => {
@@ -96,6 +97,15 @@ const AppContent: React.FC = () => {
       showNotification('success', 'Project switched successfully');
     } catch (error) {
       showNotification('error', error instanceof Error ? error.message : 'Failed to switch project');
+    }
+  };
+
+  const handleAddWorkLog = (content: string, links: string[]) => {
+    try {
+      addWorkLog(content, links);
+      showNotification('success', 'Work log added successfully');
+    } catch (error) {
+      showNotification('error', error instanceof Error ? error.message : 'Failed to add work log');
     }
   };
 
@@ -164,7 +174,11 @@ const AppContent: React.FC = () => {
               <span role="img" aria-label="logs">📝</span>
               Work Logs
             </SectionTitle>
-            <Button variant="secondary" size="small">
+            <Button 
+              variant="secondary" 
+              size="small"
+              onClick={() => setShowAddWorkLogModal(true)}
+            >
               Add Work Log
             </Button>
           </SectionHeader>
@@ -231,6 +245,11 @@ const AppContent: React.FC = () => {
         isOpen={showSwitchProjectModal}
         onClose={() => setShowSwitchProjectModal(false)}
         onSwitch={handleSwitchProject}
+      />
+      <AddWorkLogModal
+        isOpen={showAddWorkLogModal}
+        onClose={() => setShowAddWorkLogModal(false)}
+        onSave={handleAddWorkLog}
       />
 
       {notification && (
