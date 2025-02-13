@@ -1,0 +1,94 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+input AddWorkLogInput {
+  content: String!
+  links: [String!]! = []
+  projectId: ID!
+  sessionId: ID!
+}
+
+type Break {
+  createdAt: DateTime!
+  duration: Int!
+  endTime: DateTime
+  id: ID!
+  sessionId: ID!
+  startTime: DateTime!
+  type: String!
+  updatedAt: DateTime!
+  userId: ID!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type Mutation {
+  addWorkLog(input: AddWorkLogInput!): WorkLog!
+  deleteWorkLog(id: ID!): Boolean!
+  endBreak(id: ID!): Break!
+  endSession(id: ID!): WorkSession!
+  startBreak(input: StartBreakInput!, sessionId: ID!): Break!
+  startSession(input: StartSessionInput!): WorkSession!
+  switchProject(input: SwitchProjectInput!, sessionId: ID!): WorkSession!
+  updateWorkLog(id: ID!, input: UpdateWorkLogInput!): WorkLog!
+}
+
+type Project {
+  createdAt: DateTime!
+  id: ID!
+  isCustom: Boolean!
+  name: String!
+  updatedAt: DateTime!
+  userId: ID!
+}
+
+type Query {
+  activeSession: WorkSession
+  hello: String!
+}
+
+input StartBreakInput {
+  type: String!
+}
+
+input StartSessionInput {
+  projectId: ID!
+}
+
+input SwitchProjectInput {
+  projectId: ID!
+}
+
+input UpdateWorkLogInput {
+  content: String
+  links: [String!]
+  projectId: ID
+}
+
+type WorkLog {
+  content: String!
+  createdAt: DateTime!
+  id: ID!
+  links: [String!]!
+  projectId: ID!
+  sessionId: ID!
+  updatedAt: DateTime!
+  userId: ID!
+}
+
+type WorkSession {
+  createdAt: DateTime!
+  endTime: DateTime
+  id: ID!
+  projectId: ID
+  startTime: DateTime!
+  status: String!
+  totalBreakTime: Int!
+  totalDuration: Int!
+  updatedAt: DateTime!
+  userId: ID!
+}

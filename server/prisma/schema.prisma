@@ -1,0 +1,111 @@
+// prisma/schema.prisma
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  email     String    @unique
+  password  String
+  name      String
+  role      String    @default("USER") // "USER" | "ADMIN"
+  sessions  Session[]
+  breaks    Break[]
+  projects  Project[]
+  workLogs  WorkLog[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("users")
+}
+
+model Session {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String    @db.ObjectId
+  user           User      @relation(fields: [userId], references: [id])
+  startTime      DateTime  @default(now())
+  endTime        DateTime?
+  totalDuration  Int       @default(0)
+  totalBreakTime Int       @default(0)
+  status         String    @default("ACTIVE") // "ACTIVE" | "COMPLETED" | "TERMINATED"
+  projectId      String?   @db.ObjectId
+  project        Project?  @relation(fields: [projectId], references: [id])
+  breaks         Break[]
+  workLogs       WorkLog[]
+  segments       Segment[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("sessions")
+}
+
+model Project {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  isCustom  Boolean   @default(false)
+  userId    String    @db.ObjectId
+  user      User      @relation(fields: [userId], references: [id])
+  sessions  Session[]
+  workLogs  WorkLog[]
+  segments  Segment[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("projects")
+}
+
+model Break {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String    @db.ObjectId
+  user      User      @relation(fields: [userId], references: [id])
+  sessionId String    @db.ObjectId
+  session   Session   @relation(fields: [sessionId], references: [id])
+  type      String    // "SHORT" | "LUNCH" | "OTHER"
+  startTime DateTime  @default(now())
+  endTime   DateTime?
+  duration  Int       @default(0)
+  segments  Segment[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("breaks")
+}
+
+model WorkLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  sessionId String   @db.ObjectId
+  session   Session  @relation(fields: [sessionId], references: [id])
+  projectId String   @db.ObjectId
+  project   Project  @relation(fields: [projectId], references: [id])
+  content   String
+  links     String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("work_logs")
+}
+
+model Segment {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId String    @db.ObjectId
+  session   Session   @relation(fields: [sessionId], references: [id])
+  type      String    // "WORK" | "BREAK"
+  projectId String?   @db.ObjectId
+  project   Project?  @relation(fields: [projectId], references: [id])
+  breakId   String?   @db.ObjectId
+  break     Break?    @relation(fields: [breakId], references: [id])
+  startTime DateTime  @default(now())
+  endTime   DateTime?
+  duration  Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("segments")
+} 

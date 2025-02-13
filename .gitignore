@@ -3,6 +3,8 @@ node_modules/
 
 # Production build
 dist/
+*/.env
+server/.env
 
 # Logs
 logs
