@@ -27,6 +27,16 @@ export interface Session {
     break?: Break;
   }>;
   breaks: Break[];
+  workLogs: Array<{
+    id: string;
+    content: string;
+    links: string[];
+    createdAt: string;
+    project: {
+      id: string;
+      name: string;
+    };
+  }>;
   duration: number;
 }
 

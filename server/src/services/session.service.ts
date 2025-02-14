@@ -81,7 +81,7 @@ export class SessionService {
 
       // End current segment
       const activeSegment = await tx.segment.findFirst({
-        where: { sessionId, endTime: null },
+        where: { sessionId, endTime: { isSet: false } },
         orderBy: { startTime: 'desc' },
       });
 

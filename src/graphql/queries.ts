@@ -56,6 +56,16 @@ export const ACTIVE_SESSION = gql`
           type
         }
       }
+      workLogs {
+        id
+        content
+        links
+        createdAt
+        project {
+          id
+          name
+        }
+      }
     }
   }
 `;
