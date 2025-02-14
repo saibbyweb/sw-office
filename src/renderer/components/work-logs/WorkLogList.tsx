@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import { useQuery } from '@apollo/client';
-import { SESSION_WORK_LOGS } from '../../../graphql/queries';
+import { useQuery, useMutation } from '@apollo/client';
+import { SESSION_WORK_LOGS, DELETE_WORK_LOG } from '../../../graphql/queries';
 import { SessionWorkLogsData, SessionWorkLogsVariables, WorkLog } from '../../../graphql/types';
 import { AddWorkLogModal } from '../modals/AddWorkLogModal';
+import { ConfirmDeleteModal } from '../modals/ConfirmDeleteModal';
 import { Button } from '../common';
 
 interface WorkLogListProps {
@@ -76,9 +77,24 @@ const WorkLogActions = styled.div`
   margin-left: auto;
 `;
 
-const EditButton = styled(Button)`
+const ActionButton = styled(Button)`
   padding: 4px 8px;
   font-size: 0.75rem;
+  min-width: auto;
+`;
+
+const DeleteIcon = styled.span`
+  color: ${props => props.theme.colors.error};
+  cursor: pointer;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 1;
+  }
 `;
 
 const formatDate = (dateString: string) => {
@@ -113,6 +129,9 @@ const getDisplayUrl = (urlString: string): string => {
 
 export const WorkLogList: React.FC<WorkLogListProps> = ({ sessionId }) => {
   const [editingWorkLog, setEditingWorkLog] = useState<WorkLog | null>(null);
+  const [deletingWorkLog, setDeletingWorkLog] = useState<WorkLog | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const { data, loading, error } = useQuery<SessionWorkLogsData, SessionWorkLogsVariables>(
     SESSION_WORK_LOGS,
     {
@@ -121,12 +140,65 @@ export const WorkLogList: React.FC<WorkLogListProps> = ({ sessionId }) => {
     }
   );
 
+  const [deleteWorkLogMutation] = useMutation(DELETE_WORK_LOG, {
+    onCompleted: () => {
+      setIsDeleting(false);
+      setDeletingWorkLog(null);
+    },
+    onError: (error) => {
+      console.error('Delete work log error:', error);
+      setIsDeleting(false);
+    },
+    update: (cache, { data: mutationData }) => {
+      if (!mutationData?.deleteWorkLog || !sessionId) return;
+
+      const existingData = cache.readQuery<SessionWorkLogsData, SessionWorkLogsVariables>({
+        query: SESSION_WORK_LOGS,
+        variables: { sessionId }
+      });
+
+      if (!existingData?.sessionWorkLogs) return;
+
+      cache.writeQuery<SessionWorkLogsData, SessionWorkLogsVariables>({
+        query: SESSION_WORK_LOGS,
+        variables: { sessionId },
+        data: {
+          sessionWorkLogs: existingData.sessionWorkLogs.filter(
+            log => log.id !== deletingWorkLog?.id
+          )
+        }
+      });
+    }
+  });
+
   const handleEdit = (workLog: WorkLog) => {
     setEditingWorkLog(workLog);
   };
 
   const handleCloseEdit = () => {
     setEditingWorkLog(null);
+  };
+
+  const handleDelete = (workLog: WorkLog) => {
+    setDeletingWorkLog(workLog);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingWorkLog) return;
+
+    try {
+      setIsDeleting(true);
+      await deleteWorkLogMutation({
+        variables: { id: deletingWorkLog.id }
+      });
+    } catch (err) {
+      console.error('Delete work log error:', err);
+      setIsDeleting(false);
+    }
+  };
+
+  const handleCloseDelete = () => {
+    setDeletingWorkLog(null);
   };
 
   if (loading) {
@@ -149,13 +221,20 @@ export const WorkLogList: React.FC<WorkLogListProps> = ({ sessionId }) => {
             <WorkLogHeader>
               <ProjectName>{log.project.name}</ProjectName>
               <WorkLogActions>
-                <EditButton
+                <ActionButton
                   variant="secondary"
                   size="small"
                   onClick={() => handleEdit(log)}
                 >
                   Edit
-                </EditButton>
+                </ActionButton>
+                <ActionButton
+                  variant="error"
+                  size="small"
+                  onClick={() => handleDelete(log)}
+                >
+                  🗑️
+                </ActionButton>
                 <Timestamp>{formatDate(log.createdAt)}</Timestamp>
               </WorkLogActions>
             </WorkLogHeader>
@@ -189,6 +268,14 @@ export const WorkLogList: React.FC<WorkLogListProps> = ({ sessionId }) => {
         isOpen={!!editingWorkLog}
         onClose={handleCloseEdit}
         editWorkLog={editingWorkLog}
+      />
+
+      <ConfirmDeleteModal
+        isOpen={!!deletingWorkLog}
+        onClose={handleCloseDelete}
+        workLog={deletingWorkLog}
+        onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
       />
     </>
   );

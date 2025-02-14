@@ -164,4 +164,10 @@ export const UPDATE_WORK_LOG = gql`
       }
     }
   }
+`;
+
+export const DELETE_WORK_LOG = gql`
+  mutation DeleteWorkLog($id: ID!) {
+    deleteWorkLog(id: $id)
+  }
 `; 
