@@ -11,10 +11,19 @@ import { Timer } from './components/timer/Timer';
 import { useApp } from './context/AppContext';
 import { LoginScreen } from './components/screens/LoginScreen';
 import { ME, ACTIVE_SESSION, START_BREAK, END_BREAK } from '../graphql/queries';
-import { ActiveSessionData, StartBreakData, EndBreakData, StartBreakVariables, EndBreakVariables, BreakType } from '../graphql/types';
+import { 
+  ActiveSessionData, 
+  StartBreakData, 
+  EndBreakData, 
+  StartBreakVariables, 
+  EndBreakVariables, 
+  BreakType,
+  Session 
+} from '../graphql/types';
 import { BreakTimer } from './components/timer/BreakTimer';
 import { WorkLogList } from './components/work-logs/WorkLogList';
 import { SegmentsList } from './components/segments/SegmentsList';
+import { StatsCard } from './components/common/StatsCard';
 
 const AppContainer = styled.div`
   height: 100%;
@@ -25,18 +34,19 @@ const AppContainer = styled.div`
 `;
 
 const MainContent = styled.main`
-  max-width: 800px;
+  max-width: 1200px;
   margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: ${props => props.theme.spacing.xl};
-  padding-bottom: ${props => props.theme.spacing.xl};
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: ${props => props.theme.spacing.md};
+  padding: ${props => props.theme.spacing.md};
 `;
 
-const Section = styled.section`
-  background: ${props => props.theme.colors.background}80;
-  border-radius: 12px;
-  padding: ${props => props.theme.spacing.lg};
+const Section = styled.section<{ fullWidth?: boolean }>`
+  background: ${props => props.theme.colors.background}10;
+  border-radius: 16px;
+  padding: ${props => props.theme.spacing.md};
+  grid-column: ${props => props.fullWidth ? '1 / -1' : 'auto'};
 `;
 
 const SectionHeader = styled.div`
@@ -99,6 +109,25 @@ const UserInfo = styled.div`
   font-size: 0.875rem;
 `;
 
+const StatsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: ${props => props.theme.spacing.md};
+`;
+
+const formatDuration = (ms: number) => {
+  const hours = Math.floor(ms / (1000 * 60 * 60));
+  const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((ms % (1000 * 60)) / 1000);
+
+  const parts: string[] = [];
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  if (seconds > 0) parts.push(`${seconds}s`);
+
+  return parts.join(' ') || '0s';
+};
+
 const AppContent: React.FC = () => {
   const { state, startSession, switchProject, addWorkLog, startBreak, endBreak } = useApp();
   const [showStartModal, setShowStartModal] = useState(false);
@@ -121,6 +150,7 @@ const AppContent: React.FC = () => {
 
   const { data: sessionData, loading: sessionLoading } = useQuery<ActiveSessionData>(ACTIVE_SESSION, {
     skip: !authToken,
+    pollInterval: 1000,
     onCompleted: (data) => {
       console.log('Active session data:', data);
       if (data?.activeSession) {
@@ -239,6 +269,21 @@ const AppContent: React.FC = () => {
     }
   };
 
+  const calculateTotalDuration = (segments: Session['segments'], type: 'WORK' | 'BREAK'): number => {
+    if (!segments) return 0;
+    const now = Date.now();
+    return segments
+      .filter(segment => segment.type === type)
+      .reduce((total: number, segment: Session['segments'][0]) => {
+        if (segment.endTime) {
+          return total + segment.duration;
+        }
+        // For active segment, calculate up to current time
+        const startTime = new Date(segment.startTime).getTime();
+        return total + Math.floor((now - startTime) / 1000);
+      }, 0);
+  };
+
   if (!authToken) {
     return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
   }
@@ -269,44 +314,45 @@ const AppContent: React.FC = () => {
           </Button>
         </Header>
         <MainContent>
-          <Section>
-            <SectionTitle>
-              <span role="img" aria-label="active">⚡</span>
-              {state.session.isOnBreak ? 'On Break' : 'Active Session'}
-            </SectionTitle>
-            <Timer
-              startTime={state.session.startTime}
-              isRunning={!state.session.isOnBreak}
-            />
-            {state.session.isOnBreak && state.session.currentBreak && (
-              <BreakTimer
-                startTime={state.session.currentBreak.startTime}
-                isRunning={true}
+          <Section fullWidth>
+            <StatsGrid>
+              <StatsCard
+                title="Active Time"
+                value={formatDuration(
+                  calculateTotalDuration(sessionData?.activeSession?.segments || [], 'WORK') * 1000
+                )}
+                color={theme.colors.primary}
+                icon="⚡"
+                subtitle={state.session.isOnBreak ? 'On Break' : 'Currently Working'}
               />
-            )}
-          </Section>
+              
+              <StatsCard
+                title="Break Time"
+                value={formatDuration(
+                  calculateTotalDuration(sessionData?.activeSession?.segments || [], 'BREAK') * 1000
+                )}
+                color={theme.colors.warning}
+                icon="⏸️"
+              />
 
-          <Section>
-            <SectionTitle>Today's Progress (0.0%)</SectionTitle>
-            <ProgressBar>
-              <ProgressFill progress={0} />
-            </ProgressBar>
-          </Section>
-
-          <Section>
-            <SectionHeader>
-              <SectionTitle>Current Project: {projectName}</SectionTitle>
-              <Button 
-                variant="secondary" 
-                size="small"
-                onClick={() => setShowSwitchProjectModal(true)}
+              <StatsCard
+                title="Current Project"
+                value={projectName || 'No Project'}
+                color={theme.colors.info}
+                icon="🎯"
               >
-                Switch Project
-              </Button>
-            </SectionHeader>
+                <Button 
+                  variant="secondary" 
+                  size="small"
+                  onClick={() => setShowSwitchProjectModal(true)}
+                >
+                  Switch Project
+                </Button>
+              </StatsCard>
+            </StatsGrid>
           </Section>
 
-          <Section>
+          <Section fullWidth>
             <SectionHeader>
               <SectionTitle>
                 <span role="img" aria-label="logs">📝</span>
@@ -325,7 +371,7 @@ const AppContent: React.FC = () => {
             )}
           </Section>
 
-          <Section>
+          <Section fullWidth>
             <SectionHeader>
               <SectionTitle>
                 <span role="img" aria-label="segments">📊</span>
@@ -337,45 +383,25 @@ const AppContent: React.FC = () => {
             )}
           </Section>
 
-          <TimerSection>
-            <Section>
-              <SectionTitle>
-                <span role="img" aria-label="break">⏸️</span>
-                Break Time
-              </SectionTitle>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginTop: '0.5rem' }}>
-                {Math.floor(state.session.breakTime / (1000 * 60 * 60))}h {Math.floor((state.session.breakTime % (1000 * 60 * 60)) / (1000 * 60))}m {Math.floor((state.session.breakTime % (1000 * 60)) / 1000)}s
-              </div>
-            </Section>
-
-            <Section>
-              <SectionTitle>
-                <span role="img" aria-label="remaining">⏰</span>
-                Time Remaining
-              </SectionTitle>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginTop: '0.5rem' }}>
-                7h 59m 55s
-              </div>
-            </Section>
-          </TimerSection>
-
-          <ActionButtons>
-            <Button
-              variant="warning"
-              onClick={() => setShowBreakModal(true)}
-            >
-              {state.session.isOnBreak ? 'End Break' : 'Take Break'}
-            </Button>
-            <Button
-              variant="error"
-              onClick={() => setShowEndModal(true)}
-            >
-              End Work
-            </Button>
-            <Button variant="secondary">
-              View Stats
-            </Button>
-          </ActionButtons>
+          <Section fullWidth>
+            <ActionButtons>
+              <Button
+                variant="warning"
+                onClick={() => setShowBreakModal(true)}
+              >
+                {state.session.isOnBreak ? 'End Break' : 'Take Break'}
+              </Button>
+              <Button
+                variant="error"
+                onClick={() => setShowEndModal(true)}
+              >
+                End Work
+              </Button>
+              <Button variant="secondary">
+                View Stats
+              </Button>
+            </ActionButtons>
+          </Section>
         </MainContent>
 
         <EndWorkModal

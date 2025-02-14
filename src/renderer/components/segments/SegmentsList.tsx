@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Session } from '../../../graphql/types';
 
@@ -10,59 +10,143 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${props => props.theme.spacing.md};
-  margin-top: ${props => props.theme.spacing.md};
 `;
 
-const SegmentItem = styled.div`
-  padding: ${props => props.theme.spacing.md};
-  background: ${props => props.theme.colors.background}80;
-  border-radius: 8px;
-  border: 1px solid ${props => props.theme.colors.secondary}20;
+const GroupContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${props => props.theme.spacing.sm};
 `;
 
-const SegmentHeader = styled.div`
+const GroupHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: ${props => props.theme.spacing.sm};
+  margin-bottom: ${props => props.theme.spacing.xs};
 `;
 
-const SegmentType = styled.span<{ type: 'WORK' | 'BREAK' }>`
-  padding: 4px 8px;
-  border-radius: 4px;
+const GroupTitle = styled.div`
   font-size: 0.875rem;
+  color: ${props => props.theme.colors.text}80;
   font-weight: 500;
-  background: ${props => props.type === 'WORK' 
-    ? props.theme.colors.primary + '20'
-    : props.theme.colors.warning + '20'};
+`;
+
+const TotalDuration = styled.div<{ type: 'WORK' | 'BREAK' }>`
+  font-size: 0.875rem;
+  font-family: monospace;
+  color: ${props => props.type === 'WORK' 
+    ? props.theme.colors.primary 
+    : props.theme.colors.warning};
+  font-weight: 500;
+`;
+
+const SegmentsRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${props => props.theme.spacing.sm};
+`;
+
+const SegmentChip = styled.div<{ type: 'WORK' | 'BREAK'; isActive?: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.xs};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  background: ${props => {
+    if (props.isActive) {
+      return props.type === 'WORK' 
+        ? props.theme.colors.primary + '30'
+        : props.theme.colors.warning + '30';
+    }
+    return props.type === 'WORK' 
+      ? props.theme.colors.primary + '15'
+      : props.theme.colors.warning + '15';
+  }};
+  border: 1px solid ${props => {
+    if (props.isActive) {
+      return props.type === 'WORK'
+        ? props.theme.colors.primary
+        : props.theme.colors.warning;
+    }
+    return props.type === 'WORK'
+      ? props.theme.colors.primary + '30'
+      : props.theme.colors.warning + '30';
+  }};
+  border-radius: 20px;
+  font-size: 0.875rem;
+  position: relative;
+  
+  ${props => props.isActive && `
+    &::after {
+      content: '';
+      position: absolute;
+      right: 8px;
+      top: 8px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: ${props.type === 'WORK' 
+        ? props.theme.colors.primary 
+        : props.theme.colors.warning};
+      animation: pulse 2s infinite;
+    }
+  `}
+
+  @keyframes pulse {
+    0% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 ${props => props.type === 'WORK' 
+        ? props.theme.colors.primary + '70'
+        : props.theme.colors.warning + '70'};
+    }
+    70% {
+      transform: scale(1);
+      box-shadow: 0 0 0 6px ${props => props.type === 'WORK'
+        ? props.theme.colors.primary + '00'
+        : props.theme.colors.warning + '00'};
+    }
+    100% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 ${props => props.type === 'WORK'
+        ? props.theme.colors.primary + '00'
+        : props.theme.colors.warning + '00'};
+    }
+  }
+`;
+
+const Type = styled.span<{ type: 'WORK' | 'BREAK' }>`
   color: ${props => props.type === 'WORK'
     ? props.theme.colors.primary
     : props.theme.colors.warning};
-`;
-
-const ProjectName = styled.span`
-  color: ${props => props.theme.colors.text};
   font-weight: 500;
 `;
 
-const TimeInfo = styled.div`
-  display: flex;
-  justify-content: space-between;
+const Project = styled.span`
   color: ${props => props.theme.colors.text}80;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 `;
 
 const Duration = styled.span`
-  font-family: monospace;
   color: ${props => props.theme.colors.text};
+  font-family: monospace;
+  font-size: 0.75rem;
 `;
 
-const formatTime = (dateString: string) => {
-  return new Date(dateString).toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  });
+const Separator = styled.span`
+  color: ${props => props.theme.colors.text}40;
+  margin: 0 ${props => props.theme.spacing.xs};
+`;
+
+const calculateSegmentDuration = (segment: Session['segments'][0], now: number): number => {
+  if (segment.endTime) {
+    return segment.duration;
+  }
+  // For active segment, calculate duration up to current time
+  const startTime = new Date(segment.startTime).getTime();
+  return Math.floor((now - startTime) / 1000);
 };
 
 const formatDuration = (seconds: number) => {
@@ -73,34 +157,94 @@ const formatDuration = (seconds: number) => {
   const parts = [];
   if (hours > 0) parts.push(`${hours}h`);
   if (minutes > 0) parts.push(`${minutes}m`);
-  if (remainingSeconds > 0) parts.push(`${remainingSeconds}s`);
-
-  return parts.join(' ') || '0s';
+  parts.push(`${remainingSeconds}s`);
+  
+  return parts.join(' ');
 };
 
 export const SegmentsList: React.FC<SegmentsListProps> = ({ segments }) => {
+  const [currentTime, setCurrentTime] = useState(Date.now());
+  const workSegments = segments.filter(s => s.type === 'WORK');
+  const breakSegments = segments.filter(s => s.type === 'BREAK');
+
+  // Update current time every second for active segment
+  useEffect(() => {
+    const hasActiveSegment = segments.some(s => !s.endTime);
+    if (!hasActiveSegment) return;
+
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [segments]);
+
+  const calculateTotalDuration = (segments: Session['segments']) => {
+    return segments.reduce((total, segment) => {
+      return total + calculateSegmentDuration(segment, currentTime);
+    }, 0);
+  };
+
+  const totalWorkDuration = calculateTotalDuration(workSegments);
+  const totalBreakDuration = calculateTotalDuration(breakSegments);
+
+  const renderSegment = (segment: Session['segments'][0]) => (
+    <SegmentChip 
+      key={segment.id} 
+      type={segment.type}
+      isActive={!segment.endTime}
+    >
+      <Type type={segment.type}>
+        {segment.type === 'WORK' ? '💻' : '☕️'}
+      </Type>
+      {segment.project && (
+        <>
+          <Separator>·</Separator>
+          <Project>{segment.project.name}</Project>
+        </>
+      )}
+      {segment.break && (
+        <>
+          <Separator>·</Separator>
+          <Project>{segment.break.type}</Project>
+        </>
+      )}
+      <Separator>·</Separator>
+      <Duration>
+        {formatDuration(calculateSegmentDuration(segment, currentTime))}
+      </Duration>
+    </SegmentChip>
+  );
+
   return (
     <Container>
-      {segments.map(segment => (
-        <SegmentItem key={segment.id}>
-          <SegmentHeader>
-            <SegmentType type={segment.type}>
-              {segment.type === 'WORK' ? 'Work' : 'Break'}
-              {segment.break && ` - ${segment.break.type}`}
-            </SegmentType>
-            {segment.project && (
-              <ProjectName>{segment.project.name}</ProjectName>
-            )}
-          </SegmentHeader>
-          <TimeInfo>
-            <div>
-              {formatTime(segment.startTime)}
-              {segment.endTime ? ` - ${formatTime(segment.endTime)}` : ' - Active'}
-            </div>
-            <Duration>{formatDuration(segment.duration)}</Duration>
-          </TimeInfo>
-        </SegmentItem>
-      ))}
+      {workSegments.length > 0 && (
+        <GroupContainer>
+          <GroupHeader>
+            <GroupTitle>Work Segments</GroupTitle>
+            <TotalDuration type="WORK">
+              Total: {formatDuration(totalWorkDuration)}
+            </TotalDuration>
+          </GroupHeader>
+          <SegmentsRow>
+            {workSegments.map(renderSegment)}
+          </SegmentsRow>
+        </GroupContainer>
+      )}
+      
+      {breakSegments.length > 0 && (
+        <GroupContainer>
+          <GroupHeader>
+            <GroupTitle>Break Segments</GroupTitle>
+            <TotalDuration type="BREAK">
+              Total: {formatDuration(totalBreakDuration)}
+            </TotalDuration>
+          </GroupHeader>
+          <SegmentsRow>
+            {breakSegments.map(renderSegment)}
+          </SegmentsRow>
+        </GroupContainer>
+      )}
     </Container>
   );
 }; 

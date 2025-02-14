@@ -2,19 +2,20 @@ import { Theme } from '../types';
 
 export const theme: Theme = {
   colors: {
-    primary: '#007AFF',
-    secondary: '#5856D6',
-    success: '#34C759',
-    warning: '#FF9500',
-    error: '#FF3B30',
-    background: '#FFFFFF',
-    text: '#000000'
+    primary: '#6366f1',
+    secondary: '#64748b',
+    success: '#22c55e',
+    warning: '#f59e0b',
+    error: '#ef4444',
+    info: '#0ea5e9',
+    background: '#1e293b',
+    text: '#f8fafc'
   },
   spacing: {
-    xs: '0.25rem',
-    sm: '0.5rem',
-    md: '1rem',
-    lg: '1.5rem',
-    xl: '2rem'
+    xs: '4px',
+    sm: '8px',
+    md: '16px',
+    lg: '24px',
+    xl: '32px'
   }
 }; 

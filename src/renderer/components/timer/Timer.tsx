@@ -32,19 +32,25 @@ const formatTime = (ms: number) => {
 };
 
 export const Timer: React.FC<TimerProps> = ({ 
-  startTime = 0, 
+  startTime = Date.now(), 
   isRunning
 }) => {
-  const [elapsed, setElapsed] = useState(0);
+  const [elapsed, setElapsed] = useState(() => {
+    if (!startTime || !isRunning) return 0;
+    return Date.now() - startTime;
+  });
 
   useEffect(() => {
-    if (!isRunning || !startTime) {
+    if (!isRunning) {
+      setElapsed(0);
       return;
     }
 
+    // Set initial elapsed time
+    setElapsed(Date.now() - startTime);
+
     const interval = setInterval(() => {
-      const now = Date.now();
-      setElapsed(now - startTime);
+      setElapsed(Date.now() - startTime);
     }, 1000);
 
     return () => clearInterval(interval);

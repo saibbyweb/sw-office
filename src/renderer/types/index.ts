@@ -2,16 +2,17 @@
 export interface SessionState {
   isActive: boolean;
   startTime: number;
+  elapsedTime: number;
+  breakTime: number;
   project: string;
+  isOnBreak: boolean;
+  currentBreak: {
+    id: string;
+    startTime: number;
+    type: string;
+  } | null;
   totalDuration: number;
   totalActiveTime: number;
-  breakTime: number;
-  isOnBreak: boolean;
-  currentBreak?: {
-    id: string;
-    type: string;
-    startTime: number;
-  };
 }
 
 // Project Types
@@ -73,6 +74,7 @@ export interface Theme {
     success: string;
     warning: string;
     error: string;
+    info: string;
     background: string;
     text: string;
   };
