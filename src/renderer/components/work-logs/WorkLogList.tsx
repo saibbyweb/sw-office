@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useQuery } from '@apollo/client';
 import { SESSION_WORK_LOGS } from '../../../graphql/queries';
 import { SessionWorkLogsData, SessionWorkLogsVariables, WorkLog } from '../../../graphql/types';
+import { AddWorkLogModal } from '../modals/AddWorkLogModal';
+import { Button } from '../common';
 
 interface WorkLogListProps {
   sessionId: string;
@@ -68,6 +70,17 @@ const EmptyState = styled.div`
   font-style: italic;
 `;
 
+const WorkLogActions = styled.div`
+  display: flex;
+  gap: ${props => props.theme.spacing.sm};
+  margin-left: auto;
+`;
+
+const EditButton = styled(Button)`
+  padding: 4px 8px;
+  font-size: 0.75rem;
+`;
+
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
   return date.toLocaleString('en-US', {
@@ -99,6 +112,7 @@ const getDisplayUrl = (urlString: string): string => {
 };
 
 export const WorkLogList: React.FC<WorkLogListProps> = ({ sessionId }) => {
+  const [editingWorkLog, setEditingWorkLog] = useState<WorkLog | null>(null);
   const { data, loading, error } = useQuery<SessionWorkLogsData, SessionWorkLogsVariables>(
     SESSION_WORK_LOGS,
     {
@@ -106,6 +120,14 @@ export const WorkLogList: React.FC<WorkLogListProps> = ({ sessionId }) => {
       skip: !sessionId
     }
   );
+
+  const handleEdit = (workLog: WorkLog) => {
+    setEditingWorkLog(workLog);
+  };
+
+  const handleCloseEdit = () => {
+    setEditingWorkLog(null);
+  };
 
   if (loading) {
     return <EmptyState>Loading work logs...</EmptyState>;
@@ -120,38 +142,54 @@ export const WorkLogList: React.FC<WorkLogListProps> = ({ sessionId }) => {
   }
 
   return (
-    <Container>
-      {data.sessionWorkLogs.map((log: WorkLog) => (
-        <WorkLogItem key={log.id}>
-          <WorkLogHeader>
-            <ProjectName>{log.project.name}</ProjectName>
-            <Timestamp>{formatDate(log.createdAt)}</Timestamp>
-          </WorkLogHeader>
-          <Content>{log.content}</Content>
-          {log.links.length > 0 && (
-            <LinksList>
-              {log.links.filter(link => link.trim()).map((link, index) => {
-                // Only render valid URLs or show as plain text
-                const validUrl = isValidUrl(link);
-                return validUrl ? (
-                  <Link 
-                    key={index} 
-                    href={link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {getDisplayUrl(link)}
-                  </Link>
-                ) : (
-                  <span key={index} style={{ fontSize: '0.875rem', color: '#666' }}>
-                    {getDisplayUrl(link)}
-                  </span>
-                );
-              })}
-            </LinksList>
-          )}
-        </WorkLogItem>
-      ))}
-    </Container>
+    <>
+      <Container>
+        {data.sessionWorkLogs.map((log: WorkLog) => (
+          <WorkLogItem key={log.id}>
+            <WorkLogHeader>
+              <ProjectName>{log.project.name}</ProjectName>
+              <WorkLogActions>
+                <EditButton
+                  variant="secondary"
+                  size="small"
+                  onClick={() => handleEdit(log)}
+                >
+                  Edit
+                </EditButton>
+                <Timestamp>{formatDate(log.createdAt)}</Timestamp>
+              </WorkLogActions>
+            </WorkLogHeader>
+            <Content>{log.content}</Content>
+            {log.links.length > 0 && (
+              <LinksList>
+                {log.links.filter(link => link.trim()).map((link, index) => {
+                  const validUrl = isValidUrl(link);
+                  return validUrl ? (
+                    <Link 
+                      key={index} 
+                      href={link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {getDisplayUrl(link)}
+                    </Link>
+                  ) : (
+                    <span key={index} style={{ fontSize: '0.875rem', color: '#666' }}>
+                      {getDisplayUrl(link)}
+                    </span>
+                  );
+                })}
+              </LinksList>
+            )}
+          </WorkLogItem>
+        ))}
+      </Container>
+
+      <AddWorkLogModal
+        isOpen={!!editingWorkLog}
+        onClose={handleCloseEdit}
+        editWorkLog={editingWorkLog}
+      />
+    </>
   );
 }; 

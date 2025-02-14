@@ -2,18 +2,20 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Modal, Button, Input } from '../common';
 import { useMutation, useQuery } from '@apollo/client';
-import { ACTIVE_SESSION, ADD_WORK_LOG, SESSION_WORK_LOGS } from '../../../graphql/queries';
+import { ACTIVE_SESSION, ADD_WORK_LOG, UPDATE_WORK_LOG, SESSION_WORK_LOGS } from '../../../graphql/queries';
 import { 
   ActiveSessionData, 
   SessionWorkLogsData,
   SessionWorkLogsVariables,
   AddWorkLogInput,
-  WorkLog 
+  WorkLog,
+  UpdateWorkLogInput 
 } from '../../../graphql/types';
 
 interface AddWorkLogModalProps {
   isOpen: boolean;
   onClose: () => void;
+  editWorkLog?: WorkLog | null;
 }
 
 const ModalContent = styled.div`
@@ -80,6 +82,7 @@ const Optional = styled.span`
 export const AddWorkLogModal: React.FC<AddWorkLogModalProps> = ({
   isOpen,
   onClose,
+  editWorkLog
 }) => {
   const [content, setContent] = useState('');
   const [linksText, setLinksText] = useState('');
@@ -103,13 +106,11 @@ export const AddWorkLogModal: React.FC<AddWorkLogModalProps> = ({
       update: (cache, { data }) => {
         if (!data?.addWorkLog || !sessionData?.activeSession?.id) return;
 
-        // Read existing work logs
         const existingData = cache.readQuery<SessionWorkLogsData, SessionWorkLogsVariables>({
           query: SESSION_WORK_LOGS,
           variables: { sessionId: sessionData.activeSession.id }
         });
 
-        // Write back to cache with new work log at the start
         cache.writeQuery<SessionWorkLogsData, SessionWorkLogsVariables>({
           query: SESSION_WORK_LOGS,
           variables: { sessionId: sessionData.activeSession.id },
@@ -121,13 +122,31 @@ export const AddWorkLogModal: React.FC<AddWorkLogModalProps> = ({
     }
   );
 
+  const [updateWorkLogMutation] = useMutation<{ updateWorkLog: WorkLog }, { input: UpdateWorkLogInput }>(
+    UPDATE_WORK_LOG,
+    {
+      onCompleted: () => {
+        setIsLoading(false);
+        onClose();
+      },
+      onError: (error) => {
+        console.error('Update work log error:', error);
+        setError(error.message);
+        setIsLoading(false);
+      }
+    }
+  );
+
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen && editWorkLog) {
+      setContent(editWorkLog.content);
+      setLinksText(editWorkLog.links.join('\n'));
+    } else if (!isOpen) {
       setContent('');
       setLinksText('');
       setError('');
     }
-  }, [isOpen]);
+  }, [isOpen, editWorkLog]);
 
   const handleSubmit = async () => {
     try {
@@ -138,25 +157,37 @@ export const AddWorkLogModal: React.FC<AddWorkLogModalProps> = ({
         throw new Error('Please describe your work');
       }
 
-      if (!sessionData?.activeSession?.id) {
-        throw new Error('No active session found');
-      }
-
       const links = linksText
         .split('\n')
         .map(link => link.trim())
         .filter(Boolean);
 
-      await addWorkLogMutation({
-        variables: {
-          input: {
-            sessionId: sessionData.activeSession.id,
-            projectId: sessionData.activeSession.projectId || '',
-            content: content.trim(),
-            links
+      if (editWorkLog) {
+        await updateWorkLogMutation({
+          variables: {
+            input: {
+              workLogId: editWorkLog.id,
+              content: content.trim(),
+              links
+            }
           }
+        });
+      } else {
+        if (!sessionData?.activeSession?.id) {
+          throw new Error('No active session found');
         }
-      });
+
+        await addWorkLogMutation({
+          variables: {
+            input: {
+              sessionId: sessionData.activeSession.id,
+              projectId: sessionData.activeSession.projectId || '',
+              content: content.trim(),
+              links
+            }
+          }
+        });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setIsLoading(false);
@@ -166,7 +197,7 @@ export const AddWorkLogModal: React.FC<AddWorkLogModalProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <ModalContent>
-        <Title>Add Work Log</Title>
+        <Title>{editWorkLog ? 'Edit Work Log' : 'Add Work Log'}</Title>
 
         <Section>
           <TextArea
@@ -203,7 +234,7 @@ export const AddWorkLogModal: React.FC<AddWorkLogModalProps> = ({
             onClick={handleSubmit}
             isLoading={isLoading}
           >
-            Save
+            {editWorkLog ? 'Update' : 'Save'}
           </Button>
         </ButtonGroup>
       </ModalContent>

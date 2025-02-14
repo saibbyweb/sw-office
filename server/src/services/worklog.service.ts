@@ -91,6 +91,11 @@ export class WorkLogService {
         ...(input.content && { content: input.content }),
         ...(input.links && { links: input.links }),
       },
+      include: {
+        user: true,
+        project: true,
+        session: true,
+      },
     });
   }
 

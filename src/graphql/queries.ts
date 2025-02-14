@@ -145,4 +145,23 @@ export const ADD_WORK_LOG = gql`
       }
     }
   }
+`;
+
+export const UPDATE_WORK_LOG = gql`
+  mutation UpdateWorkLog($input: UpdateWorkLogInput!) {
+    updateWorkLog(input: $input) {
+      id
+      content
+      links
+      createdAt
+      project {
+        id
+        name
+      }
+      user {
+        id
+        name
+      }
+    }
+  }
 `; 

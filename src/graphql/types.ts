@@ -119,6 +119,16 @@ export interface AddWorkLogInput {
   links: string[];
 }
 
+export interface UpdateWorkLogInput {
+  workLogId: string;
+  content: string;
+  links: string[];
+}
+
 export interface AddWorkLogData {
   addWorkLog: WorkLog;
+}
+
+export interface UpdateWorkLogData {
+  updateWorkLog: WorkLog;
 } 
