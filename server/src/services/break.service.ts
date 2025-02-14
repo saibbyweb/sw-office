@@ -8,17 +8,13 @@ import { SegmentType } from '../segments/entities/segment.entity';
 export class BreakService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async startBreak(
-    userId: string,
-    sessionId: string,
-    input: StartBreakInput,
-  ): Promise<Break> {
+  async startBreak(userId: string, input: StartBreakInput): Promise<Break> {
     const now = new Date();
 
     return this.prisma.$transaction(async (tx) => {
       // Verify session exists and is active
       const session = await tx.session.findFirst({
-        where: { id: sessionId, userId, status: 'ACTIVE' },
+        where: { id: input.sessionId, userId, status: 'ACTIVE' },
       });
 
       if (!session) {
@@ -27,7 +23,7 @@ export class BreakService {
 
       // End current work segment
       const activeSegment = await tx.segment.findFirst({
-        where: { sessionId, endTime: null },
+        where: { sessionId: input.sessionId, endTime: null },
         orderBy: { startTime: 'desc' },
       });
 
@@ -47,7 +43,7 @@ export class BreakService {
       const breakRecord = await tx.break.create({
         data: {
           userId,
-          sessionId,
+          sessionId: input.sessionId,
           type: input.type,
           startTime: now,
           duration: 0,
@@ -57,7 +53,7 @@ export class BreakService {
       // Create break segment
       await tx.segment.create({
         data: {
-          sessionId,
+          sessionId: input.sessionId,
           type: SegmentType.BREAK,
           breakId: breakRecord.id,
           startTime: now,
@@ -74,7 +70,7 @@ export class BreakService {
     return this.prisma.$transaction(async (tx) => {
       // Get break record and verify ownership
       const breakRecord = await tx.break.findFirst({
-        where: { id: breakId, userId, endTime: null },
+        where: { id: breakId, userId, endTime: { isSet: false } },
         include: { session: true },
       });
 
@@ -91,7 +87,7 @@ export class BreakService {
         where: {
           sessionId: breakRecord.sessionId,
           breakId,
-          endTime: null,
+          endTime: { isSet: false },
         },
       });
 

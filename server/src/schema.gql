@@ -53,13 +53,13 @@ input LoginInput {
 type Mutation {
   addWorkLog(input: AddWorkLogInput!): WorkLog!
   deleteWorkLog(id: ID!): Boolean!
-  endBreak(id: ID!): Break!
+  endBreak(breakId: ID!): Break!
   endSession(id: ID!): Session!
   login(input: LoginInput!): AuthPayload!
   logout: Boolean!
   register(input: RegisterInput!): AuthPayload!
   registerSeedUser: AuthPayload!
-  startBreak(input: StartBreakInput!, sessionId: ID!): Break!
+  startBreak(input: StartBreakInput!): Break!
   startSession(input: StartSessionInput!): Session!
   switchProject(input: SwitchProjectInput!, sessionId: ID!): Session!
   updateWorkLog(id: ID!, input: UpdateWorkLogInput!): WorkLog!
@@ -145,6 +145,7 @@ enum SessionStatus {
 }
 
 input StartBreakInput {
+  sessionId: ID!
   type: BreakType!
 }
 
