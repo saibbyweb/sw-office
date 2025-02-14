@@ -14,6 +14,7 @@ import { ME, ACTIVE_SESSION, START_BREAK, END_BREAK } from '../graphql/queries';
 import { ActiveSessionData, StartBreakData, EndBreakData, StartBreakVariables, EndBreakVariables, BreakType } from '../graphql/types';
 import { BreakTimer } from './components/timer/BreakTimer';
 import { WorkLogList } from './components/work-logs/WorkLogList';
+import { SegmentsList } from './components/segments/SegmentsList';
 
 const AppContainer = styled.div`
   height: 100%;
@@ -321,6 +322,18 @@ const AppContent: React.FC = () => {
             </SectionHeader>
             {sessionData?.activeSession && (
               <WorkLogList sessionId={sessionData.activeSession.id} />
+            )}
+          </Section>
+
+          <Section>
+            <SectionHeader>
+              <SectionTitle>
+                <span role="img" aria-label="segments">📊</span>
+                Session Segments
+              </SectionTitle>
+            </SectionHeader>
+            {sessionData?.activeSession?.segments && (
+              <SegmentsList segments={sessionData.activeSession.segments} />
             )}
           </Section>
 

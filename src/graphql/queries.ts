@@ -35,6 +35,21 @@ export const ACTIVE_SESSION = gql`
       }
       totalDuration
       totalBreakTime
+      segments {
+        id
+        type
+        startTime
+        endTime
+        duration
+        project {
+          id
+          name
+        }
+        break {
+          id
+          type
+        }
+      }
     }
   }
 `;

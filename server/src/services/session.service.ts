@@ -22,6 +22,7 @@ export class SessionService {
       },
       include: {
         project: true,
+        segments: true,
         breaks: {
           where: {
             endTime: {

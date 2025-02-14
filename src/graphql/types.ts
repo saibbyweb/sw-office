@@ -22,6 +22,21 @@ export interface Session {
   totalDuration: number;
   totalBreakTime: number;
   userId: string;
+  segments: Array<{
+    id: string;
+    type: 'WORK' | 'BREAK';
+    startTime: string;
+    endTime?: string;
+    duration: number;
+    project?: {
+      id: string;
+      name: string;
+    };
+    break?: {
+      id: string;
+      type: BreakType;
+    };
+  }>;
 }
 
 export interface StartSessionData {
