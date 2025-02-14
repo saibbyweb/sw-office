@@ -13,6 +13,19 @@ export class SessionService {
       where: {
         userId,
         status: SessionStatus.ACTIVE,
+        endTime: {
+          isSet: false,
+        },
+      },
+      include: {
+        project: true,
+        breaks: {
+          where: {
+            endTime: {
+              isSet: false,
+            },
+          },
+        },
       },
     });
   }
