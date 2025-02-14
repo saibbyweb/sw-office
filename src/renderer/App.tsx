@@ -14,7 +14,8 @@ import { ME, ACTIVE_SESSION } from '../graphql/queries';
 import { ActiveSessionData } from '../graphql/types';
 
 const AppContainer = styled.div`
-  min-height: 100vh;
+  height: 100%;
+  overflow-y: auto;
   background-color: ${props => props.theme.colors.background};
   color: ${props => props.theme.colors.text};
   padding: ${props => props.theme.spacing.xl};
@@ -26,6 +27,7 @@ const MainContent = styled.main`
   display: flex;
   flex-direction: column;
   gap: ${props => props.theme.spacing.xl};
+  padding-bottom: ${props => props.theme.spacing.xl};
 `;
 
 const Section = styled.section`
