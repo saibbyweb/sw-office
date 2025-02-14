@@ -10,7 +10,7 @@ interface RequestWithUser {
   };
 }
 
-interface GraphQLContext {
+export interface GraphQLContext {
   req: RequestWithUser;
 }
 
