@@ -1,24 +1,14 @@
-import { ObjectType, Field, ID, Int, registerEnumType } from '@nestjs/graphql';
-import { Session } from '../../generated-nestjs-typegraphql';
-import { Project } from '../../generated-nestjs-typegraphql';
-import { Break } from '../../generated-nestjs-typegraphql';
-
-export enum SegmentType {
-  WORK = 'WORK',
-  BREAK = 'BREAK',
-}
-
-registerEnumType(SegmentType, {
-  name: 'SegmentType',
-  description: 'The type of segment',
-});
+import { ObjectType, Field, ID } from '@nestjs/graphql';
+import { SegmentType, Session } from '../../generated-nestjs-typegraphql';
+import { Break } from '../../breaks/entities/break.entity';
+import { Project } from '../../projects/entities/project.entity';
 
 @ObjectType()
 export class Segment {
   @Field(() => ID)
   id: string;
 
-  @Field(() => ID)
+  @Field(() => String)
   sessionId: string;
 
   @Field(() => Session)
@@ -27,13 +17,13 @@ export class Segment {
   @Field(() => SegmentType)
   type: SegmentType;
 
-  @Field(() => ID, { nullable: true })
+  @Field(() => String, { nullable: true })
   projectId?: string;
 
   @Field(() => Project, { nullable: true })
   project?: Project;
 
-  @Field(() => ID, { nullable: true })
+  @Field(() => String, { nullable: true })
   breakId?: string;
 
   @Field(() => Break, { nullable: true })
@@ -45,7 +35,7 @@ export class Segment {
   @Field(() => Date, { nullable: true })
   endTime?: Date;
 
-  @Field(() => Int)
+  @Field(() => Number)
   duration: number;
 
   @Field(() => Date)

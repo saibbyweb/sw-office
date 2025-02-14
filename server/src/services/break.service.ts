@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-import { Break } from '../generated-nestjs-typegraphql';
+import { Break, SegmentType } from '../generated-nestjs-typegraphql';
 import { StartBreakInput } from '../types/break.types';
-import { SegmentType } from '../segments/entities/segment.entity';
 
 @Injectable()
 export class BreakService {

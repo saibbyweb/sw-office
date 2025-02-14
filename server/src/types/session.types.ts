@@ -15,4 +15,9 @@ export class SwitchProjectInput {
   @IsString()
   @IsNotEmpty()
   projectId: string;
+
+  @Field()
+  @IsString()
+  @IsNotEmpty()
+  sessionId: string;
 }

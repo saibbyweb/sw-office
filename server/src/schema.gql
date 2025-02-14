@@ -61,7 +61,7 @@ type Mutation {
   registerSeedUser: AuthPayload!
   startBreak(input: StartBreakInput!): Break!
   startSession(input: StartSessionInput!): Session!
-  switchProject(input: SwitchProjectInput!, sessionId: ID!): Session!
+  switchProject(input: SwitchProjectInput!): Session!
   updateWorkLog(id: ID!, input: UpdateWorkLogInput!): WorkLog!
 }
 
@@ -109,8 +109,13 @@ type Segment {
   session: Session!
   sessionId: String!
   startTime: DateTime!
-  type: String!
+  type: SegmentType!
   updatedAt: DateTime!
+}
+
+enum SegmentType {
+  BREAK
+  WORK
 }
 
 type Session {
@@ -155,6 +160,7 @@ input StartSessionInput {
 
 input SwitchProjectInput {
   projectId: String!
+  sessionId: String!
 }
 
 input UpdateWorkLogInput {

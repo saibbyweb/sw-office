@@ -45,10 +45,9 @@ export class SessionResolver {
   @UseGuards(JwtGuard)
   async switchProject(
     @Context() context: GraphQLContext,
-    @Args('sessionId', { type: () => ID }) sessionId: string,
     @Args('input') input: SwitchProjectInput,
   ): Promise<Session> {
     const userId = context.req.user.id;
-    return this.sessionService.switchProject(userId, sessionId, input);
+    return this.sessionService.switchProject(userId, input.sessionId, input);
   }
 }

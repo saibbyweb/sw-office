@@ -76,6 +76,11 @@ export enum SessionStatus {
     TERMINATED = "TERMINATED"
 }
 
+export enum SegmentType {
+    WORK = "WORK",
+    BREAK = "BREAK"
+}
+
 export enum QueryMode {
     'default' = "default",
     insensitive = "insensitive"
@@ -102,6 +107,7 @@ export enum BreakScalarFieldEnum {
 registerEnumType(BreakScalarFieldEnum, { name: 'BreakScalarFieldEnum', description: undefined })
 registerEnumType(BreakType, { name: 'BreakType', description: undefined })
 registerEnumType(QueryMode, { name: 'QueryMode', description: undefined })
+registerEnumType(SegmentType, { name: 'SegmentType', description: undefined })
 registerEnumType(SessionStatus, { name: 'SessionStatus', description: undefined })
 registerEnumType(SortOrder, { name: 'SortOrder', description: undefined })
 registerEnumType(UserRole, { name: 'UserRole', description: undefined })
@@ -187,8 +193,8 @@ export class Segment {
     id!: string;
     @Field(() => String, {nullable:false})
     sessionId!: string;
-    @Field(() => String, {nullable:false})
-    type!: string;
+    @Field(() => SegmentType, {nullable:false})
+    type!: `${SegmentType}`;
     @Field(() => String, {nullable:true})
     projectId!: string | null;
     @Field(() => String, {nullable:true})

@@ -1,8 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-import { Session, SessionStatus } from '../generated-nestjs-typegraphql';
+import {
+  SegmentType,
+  Session,
+  SessionStatus,
+} from '../generated-nestjs-typegraphql';
 import { StartSessionInput, SwitchProjectInput } from '../types/session.types';
-import { SegmentType } from '../segments/entities/segment.entity';
 
 @Injectable()
 export class SessionService {
@@ -138,7 +141,7 @@ export class SessionService {
 
       // End current segment
       const activeSegment = await tx.segment.findFirst({
-        where: { sessionId, endTime: null },
+        where: { sessionId, endTime: { isSet: false } },
         orderBy: { startTime: 'desc' },
       });
 

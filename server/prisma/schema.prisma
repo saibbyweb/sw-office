@@ -32,6 +32,11 @@ enum BreakType {
   OTHER
 }
 
+enum SegmentType {
+  WORK
+  BREAK
+}
+
 enum UserRole {
   USER
   ADMIN
@@ -122,7 +127,7 @@ model Segment {
   id        String    @id @default(auto()) @map("_id") @db.ObjectId
   sessionId String    @db.ObjectId
   session   Session   @relation(fields: [sessionId], references: [id])
-  type      String    // "WORK" | "BREAK"
+  type      SegmentType
   projectId String?   @db.ObjectId
   project   Project?  @relation(fields: [projectId], references: [id])
   breakId   String?   @db.ObjectId
