@@ -35,6 +35,12 @@ export const ACTIVE_SESSION = gql`
       }
       totalDuration
       totalBreakTime
+      breaks {
+        id
+        type
+        startTime
+        endTime
+      }
       segments {
         id
         type

@@ -22,6 +22,18 @@ export class BreakService {
         throw new Error('Active session not found');
       }
 
+      // Check for existing active breaks
+      const existingActiveBreak = await tx.break.findFirst({
+        where: {
+          userId,
+          endTime: { isSet: false },
+        },
+      });
+
+      if (existingActiveBreak) {
+        throw new Error('User already has an active break');
+      }
+
       // End current work segment
       const activeSegment = await tx.segment.findFirst({
         where: { sessionId: input.sessionId, endTime: { isSet: false } },

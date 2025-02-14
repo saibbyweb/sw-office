@@ -156,12 +156,16 @@ const AppContent: React.FC = () => {
       if (data?.activeSession) {
         const session = data.activeSession;
         const startTime = new Date(session.startTime).getTime();
-        console.log('Starting session with:', {
-          projectId: session.projectId,
-          startTime,
-          session
-        });
+        
+        // Initialize session
         startSession(session.projectId || '', startTime);
+
+        // Check for active break
+        const activeBreak = session.breaks?.find(b => !b.endTime);
+        if (activeBreak) {
+          console.log('Found active break:', activeBreak);
+          startBreak(activeBreak.id, activeBreak.type);
+        }
       }
     },
     onError: (error) => {

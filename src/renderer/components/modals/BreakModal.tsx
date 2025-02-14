@@ -115,6 +115,11 @@ export const BreakModal: React.FC<BreakModalProps> = ({
     }
   };
 
+  // Find active break segment
+  const activeBreakSegment = sessionData?.activeSession?.segments?.find(
+    segment => segment.type === 'BREAK' && !segment.endTime
+  );
+
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <ModalContent>
@@ -125,7 +130,7 @@ export const BreakModal: React.FC<BreakModalProps> = ({
         {state.session.isOnBreak ? (
           <>
             <Timer
-              startTime={state.session.currentBreak?.startTime}
+              startTime={activeBreakSegment ? new Date(activeBreakSegment.startTime).getTime() : undefined}
               isRunning={true}
             />
             <ButtonGroup>

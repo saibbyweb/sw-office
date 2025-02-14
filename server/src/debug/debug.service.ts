@@ -87,4 +87,58 @@ export class DebugService {
       recentWorkLogs,
     };
   }
+
+  async cleanupInconsistentBreaks(): Promise<{ cleanedBreaks: number }> {
+    const now = new Date();
+
+    // Find all active breaks
+    const activeBreaks = await this.prisma.break.findMany({
+      where: {
+        endTime: { isSet: false },
+      },
+      include: {
+        session: true,
+      },
+    });
+
+    // Group breaks by userId to identify users with multiple active breaks
+    const breaksByUser = activeBreaks.reduce((acc, breakItem) => {
+      const breaks = acc.get(breakItem.userId) || [];
+      breaks.push(breakItem);
+      acc.set(breakItem.userId, breaks);
+      return acc;
+    }, new Map<string, Break[]>());
+
+    let cleanedBreaks = 0;
+
+    // For each user with multiple breaks, keep only the most recent one
+    for (const [userId, breaks] of breaksByUser.entries()) {
+      if (breaks.length > 1) {
+        // Sort breaks by startTime in descending order
+        breaks.sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
+
+        // Keep the most recent break, end all others
+        const [mostRecent, ...oldBreaks] = breaks;
+
+        // End all old breaks
+        await Promise.all(
+          oldBreaks.map((breakItem) =>
+            this.prisma.break.update({
+              where: { id: breakItem.id },
+              data: {
+                endTime: now,
+                duration: Math.floor(
+                  (now.getTime() - breakItem.startTime.getTime()) / 1000,
+                ),
+              },
+            }),
+          ),
+        );
+
+        cleanedBreaks += oldBreaks.length;
+      }
+    }
+
+    return { cleanedBreaks };
+  }
 }

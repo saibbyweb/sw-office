@@ -52,6 +52,7 @@ input LoginInput {
 
 type Mutation {
   addWorkLog(input: AddWorkLogInput!): WorkLog!
+  cleanupInconsistentBreaks: String!
   deleteWorkLog(id: ID!): Boolean!
   endBreak(breakId: ID!): Break!
   endSession(id: ID!): Session!
@@ -86,6 +87,7 @@ type ProjectCount {
 
 type Query {
   activeSession: Session
+  debugData: String!
   hello: String!
   me: User!
   projects: [Project!]!
