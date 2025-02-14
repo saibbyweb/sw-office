@@ -1,13 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Modal, Button } from '../common';
 import { useApp } from '../../context/AppContext';
-import { BreakType } from '../../types';
+import { useMutation, useQuery } from '@apollo/client';
+import { START_BREAK, ACTIVE_SESSION } from '../../../graphql/queries';
+import { StartBreakData, StartBreakVariables, ActiveSessionData, BreakType } from '../../../graphql/types';
 import { Timer } from '../timer/Timer';
 
 interface BreakModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onStartBreak: (type: BreakType) => Promise<void>;
+  onEndBreak: () => Promise<void>;
 }
 
 const ModalContent = styled.div`
@@ -35,6 +39,22 @@ const BreakTypeButton = styled(Button)<{ isSelected?: boolean }>`
   transition: all 0.2s ease;
 `;
 
+const BreakTypeSelect = styled.select`
+  padding: 0.75rem;
+  border: 1px solid ${props => props.theme.colors.secondary}40;
+  border-radius: 8px;
+  font-size: 1rem;
+  outline: none;
+  width: 100%;
+  background-color: ${props => props.theme.colors.background};
+  cursor: pointer;
+
+  &:focus {
+    border-color: ${props => props.theme.colors.primary};
+    box-shadow: 0 0 0 2px ${props => props.theme.colors.primary}20;
+  }
+`;
+
 const ButtonGroup = styled.div`
   display: flex;
   gap: ${props => props.theme.spacing.sm};
@@ -43,29 +63,39 @@ const ButtonGroup = styled.div`
 `;
 
 const breakTypes: { type: BreakType; label: string }[] = [
-  { type: 'short', label: 'Short Break' },
-  { type: 'lunch', label: 'Lunch Break' },
-  { type: 'other', label: 'Other Break' }
+  { type: BreakType.SHORT, label: 'Short Break' },
+  { type: BreakType.LUNCH, label: 'Lunch Break' },
+  { type: BreakType.OTHER, label: 'Other Break' }
 ];
 
-export const BreakModal: React.FC<BreakModalProps> = ({ isOpen, onClose }) => {
-  const { state, startBreak, endBreak } = useApp();
-  const [selectedType, setSelectedType] = useState<BreakType | null>(null);
+export const BreakModal: React.FC<BreakModalProps> = ({ 
+  isOpen, 
+  onClose,
+  onStartBreak,
+  onEndBreak
+}) => {
+  const { state } = useApp();
+  const [selectedType, setSelectedType] = useState<BreakType>(BreakType.SHORT);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleStartBreak = async () => {
+  const { data: sessionData } = useQuery<ActiveSessionData>(ACTIVE_SESSION);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedType(BreakType.SHORT);
+      setError('');
+    }
+  }, [isOpen]);
+
+  const handleSubmit = async () => {
     try {
       setError('');
       setIsLoading(true);
-
-      if (!selectedType) {
-        throw new Error('Please select a break type');
-      }
-
-      startBreak(selectedType);
+      await onStartBreak(selectedType);
       onClose();
     } catch (err) {
+      console.error('Submit error:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setIsLoading(false);
@@ -76,7 +106,7 @@ export const BreakModal: React.FC<BreakModalProps> = ({ isOpen, onClose }) => {
     try {
       setError('');
       setIsLoading(true);
-      endBreak();
+      await onEndBreak();
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -122,7 +152,7 @@ export const BreakModal: React.FC<BreakModalProps> = ({ isOpen, onClose }) => {
               {breakTypes.map(({ type, label }) => (
                 <BreakTypeButton
                   key={type}
-                  variant={type === 'lunch' ? 'warning' : 'secondary'}
+                  variant={type === BreakType.LUNCH ? 'warning' : 'secondary'}
                   onClick={() => setSelectedType(type)}
                   isSelected={selectedType === type}
                 >
@@ -130,6 +160,15 @@ export const BreakModal: React.FC<BreakModalProps> = ({ isOpen, onClose }) => {
                 </BreakTypeButton>
               ))}
             </BreakTypeContainer>
+
+            <BreakTypeSelect
+              value={selectedType}
+              onChange={e => setSelectedType(e.target.value as BreakType)}
+            >
+              <option value={BreakType.SHORT}>Short Break</option>
+              <option value={BreakType.LUNCH}>Lunch Break</option>
+              <option value={BreakType.OTHER}>Other Break</option>
+            </BreakTypeSelect>
 
             {error && (
               <div style={{ color: 'red', fontSize: '0.875rem' }}>{error}</div>
@@ -144,10 +183,8 @@ export const BreakModal: React.FC<BreakModalProps> = ({ isOpen, onClose }) => {
                 Cancel
               </Button>
               <Button
-                variant="warning"
-                onClick={handleStartBreak}
+                onClick={handleSubmit}
                 isLoading={isLoading}
-                disabled={!selectedType}
               >
                 Start Break
               </Button>

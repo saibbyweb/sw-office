@@ -67,4 +67,27 @@ export const START_SESSION = gql`
       }
     }
   }
+`;
+
+export const START_BREAK = gql`
+  mutation StartBreak($input: StartBreakInput!) {
+    startBreak(input: $input) {
+      id
+      type
+      startTime
+      endTime
+      duration
+      sessionId
+    }
+  }
+`;
+
+export const END_BREAK = gql`
+  mutation EndBreak($breakId: ID!) {
+    endBreak(breakId: $breakId) {
+      id
+      endTime
+      duration
+    }
+  }
 `; 

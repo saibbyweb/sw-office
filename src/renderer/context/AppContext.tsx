@@ -10,7 +10,7 @@ interface AppState {
 type Action =
   | { type: 'START_SESSION'; payload: { project: string; startTime: number } }
   | { type: 'END_SESSION' }
-  | { type: 'START_BREAK'; payload: { type: string; startTime: number } }
+  | { type: 'START_BREAK'; payload: { id: string; type: string; startTime: number } }
   | { type: 'END_BREAK' }
   | { type: 'SWITCH_PROJECT'; payload: { project: string } }
   | { type: 'ADD_PROJECT'; payload: Project }
@@ -41,7 +41,7 @@ const AppContext = createContext<{
   dispatch: React.Dispatch<Action>;
   startSession: (project: string, startTime?: number) => void;
   endSession: () => void;
-  startBreak: (type: string) => void;
+  startBreak: (id: string, type: string) => void;
   endBreak: () => void;
   switchProject: (project: string) => void;
   addWorkLog: (content: string, links: string[]) => void;
@@ -73,6 +73,7 @@ const appReducer = (state: AppState, action: Action): AppState => {
           ...state.session,
           isOnBreak: true,
           currentBreak: {
+            id: action.payload.id,
             type: action.payload.type,
             startTime: action.payload.startTime
           }
@@ -140,8 +141,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     dispatch({ type: 'END_SESSION' });
   }, []);
 
-  const startBreak = useCallback((type: string) => {
-    dispatch({ type: 'START_BREAK', payload: { type, startTime: Date.now() } });
+  const startBreak = useCallback((id: string, type: string) => {
+    dispatch({ type: 'START_BREAK', payload: { id, type, startTime: Date.now() } });
   }, []);
 
   const endBreak = useCallback(() => {

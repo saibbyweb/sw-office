@@ -3,15 +3,16 @@ import styled, { ThemeProvider } from 'styled-components';
 import { AppProvider } from './context/AppContext';
 import { theme } from './styles/theme';
 import { GlobalStyles } from './styles/GlobalStyles';
-import { ApolloProvider, useQuery } from '@apollo/client';
+import { ApolloProvider, useQuery, useMutation } from '@apollo/client';
 import { client } from '../lib/apollo';
 import { Button, Notification } from './components/common';
 import { StartWorkModal, EndWorkModal, BreakModal, SwitchProjectModal, AddWorkLogModal } from './components/modals';
 import { Timer } from './components/timer/Timer';
 import { useApp } from './context/AppContext';
 import { LoginScreen } from './components/screens/LoginScreen';
-import { ME, ACTIVE_SESSION } from '../graphql/queries';
-import { ActiveSessionData } from '../graphql/types';
+import { ME, ACTIVE_SESSION, START_BREAK, END_BREAK } from '../graphql/queries';
+import { ActiveSessionData, StartBreakData, EndBreakData, StartBreakVariables, EndBreakVariables, BreakType } from '../graphql/types';
+import { BreakTimer } from './components/timer/BreakTimer';
 
 const AppContainer = styled.div`
   height: 100%;
@@ -102,7 +103,7 @@ const UserInfo = styled.div`
 `;
 
 const AppContent: React.FC = () => {
-  const { state, startSession, switchProject, addWorkLog } = useApp();
+  const { state, startSession, switchProject, addWorkLog, startBreak, endBreak } = useApp();
   const [showStartModal, setShowStartModal] = useState(false);
   const [showEndModal, setShowEndModal] = useState(false);
   const [showBreakModal, setShowBreakModal] = useState(false);
@@ -142,6 +143,29 @@ const AppContent: React.FC = () => {
     },
   });
 
+  const [startBreakMutation] = useMutation<StartBreakData, StartBreakVariables>(START_BREAK, {
+    onCompleted: (data) => {
+      const breakData = data.startBreak;
+      startBreak(breakData.id, breakData.type.toLowerCase());
+      showNotification('success', 'Break started successfully');
+    },
+    onError: (error) => {
+      console.error('Start break error:', error);
+      showNotification('error', 'Failed to start break');
+    },
+  });
+
+  const [endBreakMutation] = useMutation<EndBreakData, EndBreakVariables>(END_BREAK, {
+    onCompleted: () => {
+      endBreak();
+      showNotification('success', 'Break ended successfully');
+    },
+    onError: (error) => {
+      console.error('End break error:', error);
+      showNotification('error', 'Failed to end break');
+    },
+  });
+
   const handleLoginSuccess = (token: string) => {
     setAuthToken(token);
   };
@@ -174,6 +198,48 @@ const AppContent: React.FC = () => {
   const showNotification = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
     setTimeout(() => setNotification(null), 3000);
+  };
+
+  const handleStartBreak = async (type: BreakType) => {
+    try {
+      if (!sessionData?.activeSession?.id) {
+        throw new Error('No active session found');
+      }
+
+      console.log('Starting break with:', {
+        type,
+        sessionId: sessionData.activeSession.id
+      });
+
+      await startBreakMutation({
+        variables: {
+          input: {
+            type,
+            sessionId: sessionData.activeSession.id
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Start break error:', error);
+      showNotification('error', error instanceof Error ? error.message : 'Failed to start break');
+    }
+  };
+
+  const handleEndBreak = async () => {
+    try {
+      if (!state.session.currentBreak) {
+        throw new Error('No active break found');
+      }
+
+      await endBreakMutation({
+        variables: {
+          breakId: state.session.currentBreak.id
+        }
+      });
+    } catch (error) {
+      console.error('End break error:', error);
+      showNotification('error', error instanceof Error ? error.message : 'Failed to end break');
+    }
   };
 
   if (!authToken) {
@@ -209,13 +275,19 @@ const AppContent: React.FC = () => {
           <Section>
             <SectionTitle>
               <span role="img" aria-label="active">⚡</span>
-              Active Session
+              {state.session.isOnBreak ? 'On Break' : 'Active Session'}
             </SectionTitle>
             <Timer
               startTime={state.session.startTime}
               isRunning={!state.session.isOnBreak}
               variant={state.session.isOnBreak ? 'break' : 'session'}
             />
+            {state.session.isOnBreak && state.session.currentBreak && (
+              <BreakTimer
+                startTime={state.session.currentBreak.startTime}
+                isRunning={true}
+              />
+            )}
           </Section>
 
           <Section>
@@ -283,9 +355,8 @@ const AppContent: React.FC = () => {
             <Button
               variant="warning"
               onClick={() => setShowBreakModal(true)}
-              disabled={state.session.isOnBreak}
             >
-              {state.session.isOnBreak ? 'On Break' : 'Take Break'}
+              {state.session.isOnBreak ? 'End Break' : 'Take Break'}
             </Button>
             <Button
               variant="error"
@@ -306,6 +377,8 @@ const AppContent: React.FC = () => {
         <BreakModal
           isOpen={showBreakModal}
           onClose={() => setShowBreakModal(false)}
+          onStartBreak={handleStartBreak}
+          onEndBreak={handleEndBreak}
         />
         <SwitchProjectModal
           isOpen={showSwitchProjectModal}

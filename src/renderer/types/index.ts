@@ -7,6 +7,7 @@ export interface SessionState {
   breakTime: number;
   isOnBreak: boolean;
   currentBreak?: {
+    id: string;
     type: string;
     startTime: number;
   };
