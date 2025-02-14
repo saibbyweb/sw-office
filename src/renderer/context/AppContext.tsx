@@ -39,7 +39,7 @@ const initialState: AppState = {
 const AppContext = createContext<{
   state: AppState;
   dispatch: React.Dispatch<Action>;
-  startSession: (project: string) => void;
+  startSession: (project: string, startTime?: number) => void;
   endSession: () => void;
   startBreak: (type: string) => void;
   endBreak: () => void;
@@ -55,7 +55,7 @@ const appReducer = (state: AppState, action: Action): AppState => {
         session: {
           ...state.session,
           isActive: true,
-          startTime: action.payload.startTime,
+          startTime: action.payload.startTime || Date.now(),
           project: action.payload.project
         }
       };
@@ -132,8 +132,8 @@ const appReducer = (state: AppState, action: Action): AppState => {
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
-  const startSession = useCallback((project: string) => {
-    dispatch({ type: 'START_SESSION', payload: { project, startTime: Date.now() } });
+  const startSession = useCallback((project: string, startTime?: number) => {
+    dispatch({ type: 'START_SESSION', payload: { project, startTime: startTime || Date.now() } });
   }, []);
 
   const endSession = useCallback(() => {

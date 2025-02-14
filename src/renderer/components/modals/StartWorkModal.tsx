@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import { Modal, Button, Input } from '../common';
+import { Modal, Button } from '../common';
 import { useApp } from '../../context/AppContext';
-import { useQuery } from '@apollo/client';
-import { GET_PROJECTS } from '../../../graphql/queries';
+import { useMutation, useQuery } from '@apollo/client';
+import { GET_PROJECTS, START_SESSION } from '../../../graphql/queries';
 import { GetProjectsData, Project } from '../../../graphql/types';
 
 interface StartWorkModalProps {
@@ -55,12 +55,23 @@ const ButtonGroup = styled.div`
 export const StartWorkModal: React.FC<StartWorkModalProps> = ({ isOpen, onClose }) => {
   const { startSession } = useApp();
   const [selectedProject, setSelectedProject] = useState('');
-  const [customProject, setCustomProject] = useState('');
-  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
   const { loading, error: projectsError, data } = useQuery<GetProjectsData>(GET_PROJECTS);
+
+  const [startSessionMutation] = useMutation(START_SESSION, {
+    onCompleted: (data) => {
+      const session = data.startSession;
+      startSession(session.projectId);
+      onClose();
+    },
+    onError: (error) => {
+      console.error('Start session error:', error);
+      setError(error.message);
+      setIsLoading(false);
+    },
+  });
 
   const formatDate = () => {
     return new Date().toLocaleDateString('en-US', {
@@ -76,21 +87,22 @@ export const StartWorkModal: React.FC<StartWorkModalProps> = ({ isOpen, onClose 
       setError('');
       setIsLoading(true);
 
-      if (!selectedProject && !customProject) {
-        throw new Error('Please select or enter a project');
+      if (!selectedProject) {
+        throw new Error('Please select a project');
       }
 
-      if (!password) {
-        throw new Error('Password is required');
-      }
-
-      // For now, accept any password
-      const projectName = selectedProject === 'other' ? customProject : selectedProject;
-      startSession(projectName);
-      onClose();
+      console.log('Starting session with project:', selectedProject);
+      
+      await startSessionMutation({
+        variables: {
+          input: {
+            projectId: selectedProject
+          }
+        }
+      });
     } catch (err) {
+      console.error('Submit error:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -117,27 +129,7 @@ export const StartWorkModal: React.FC<StartWorkModalProps> = ({ isOpen, onClose 
               {project.name}
             </option>
           ))}
-          <option value="other">Other</option>
         </ProjectSelect>
-
-        {selectedProject === 'other' && (
-          <Input
-            label="Custom Project Name"
-            value={customProject}
-            onChange={e => setCustomProject(e)}
-            placeholder="Enter project name"
-            required
-          />
-        )}
-
-        <Input
-          label="Password"
-          type="password"
-          value={password}
-          onChange={e => setPassword(e)}
-          placeholder="Enter your password"
-          required
-        />
 
         {error && (
           <div style={{ color: 'red', fontSize: '0.875rem' }}>{error}</div>
