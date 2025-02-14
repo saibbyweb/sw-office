@@ -87,4 +87,38 @@ export interface SwitchProjectData {
 
 export interface SwitchProjectVariables {
   input: SwitchProjectInput;
+}
+
+export interface WorkLog {
+  id: string;
+  content: string;
+  links: string[];
+  createdAt: string;
+  project: {
+    id: string;
+    name: string;
+  };
+  user: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface SessionWorkLogsData {
+  sessionWorkLogs: WorkLog[];
+}
+
+export interface SessionWorkLogsVariables {
+  sessionId: string;
+}
+
+export interface AddWorkLogInput {
+  sessionId: string;
+  projectId: string;
+  content: string;
+  links: string[];
+}
+
+export interface AddWorkLogData {
+  addWorkLog: WorkLog;
 } 

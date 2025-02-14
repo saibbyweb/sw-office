@@ -103,4 +103,46 @@ export const SWITCH_PROJECT = gql`
       }
     }
   }
+`;
+
+export const SESSION_WORK_LOGS = gql`
+  query SessionWorkLogs($sessionId: ID!) {
+    sessionWorkLogs(sessionId: $sessionId) {
+      id
+      content
+      links
+      createdAt
+      project {
+        id
+        name
+      }
+      user {
+        id
+        name
+      }
+    }
+  }
+`;
+
+export const ADD_WORK_LOG = gql`
+  mutation AddWorkLog($input: AddWorkLogInput!) {
+    addWorkLog(input: $input) {
+      id
+      content
+      links
+      createdAt
+      project {
+        id
+        name
+        isActive
+      }
+      user {
+        id
+        name
+      }
+      session {
+        id
+      }
+    }
+  }
 `; 

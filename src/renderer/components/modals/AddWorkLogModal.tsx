@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { Modal, Button } from '../common';
+import { Modal, Button, Input } from '../common';
+import { useMutation, useQuery } from '@apollo/client';
+import { ACTIVE_SESSION, ADD_WORK_LOG, SESSION_WORK_LOGS } from '../../../graphql/queries';
+import { 
+  ActiveSessionData, 
+  SessionWorkLogsData,
+  SessionWorkLogsVariables,
+  AddWorkLogInput,
+  WorkLog 
+} from '../../../graphql/types';
 
 interface AddWorkLogModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (content: string, links: string[]) => void;
 }
 
 const ModalContent = styled.div`
@@ -24,22 +32,10 @@ const Title = styled.h2`
   gap: ${props => props.theme.spacing.sm};
 `;
 
-const TitleIcon = styled.img`
-  width: 24px;
-  height: 24px;
-`;
-
 const Section = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${props => props.theme.spacing.md};
-`;
-
-const SectionTitle = styled.h3`
-  margin: 0;
-  color: ${props => props.theme.colors.text};
-  font-size: 1.2rem;
-  font-weight: 500;
 `;
 
 const TextArea = styled.textarea`
@@ -84,12 +80,46 @@ const Optional = styled.span`
 export const AddWorkLogModal: React.FC<AddWorkLogModalProps> = ({
   isOpen,
   onClose,
-  onSave,
 }) => {
   const [content, setContent] = useState('');
   const [linksText, setLinksText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const { data: sessionData } = useQuery<ActiveSessionData>(ACTIVE_SESSION);
+
+  const [addWorkLogMutation] = useMutation<{ addWorkLog: WorkLog }, { input: AddWorkLogInput }>(
+    ADD_WORK_LOG,
+    {
+      onCompleted: () => {
+        setIsLoading(false);
+        onClose();
+      },
+      onError: (error) => {
+        console.error('Add work log error:', error);
+        setError(error.message);
+        setIsLoading(false);
+      },
+      update: (cache, { data }) => {
+        if (!data?.addWorkLog || !sessionData?.activeSession?.id) return;
+
+        // Read existing work logs
+        const existingData = cache.readQuery<SessionWorkLogsData, SessionWorkLogsVariables>({
+          query: SESSION_WORK_LOGS,
+          variables: { sessionId: sessionData.activeSession.id }
+        });
+
+        // Write back to cache with new work log at the start
+        cache.writeQuery<SessionWorkLogsData, SessionWorkLogsVariables>({
+          query: SESSION_WORK_LOGS,
+          variables: { sessionId: sessionData.activeSession.id },
+          data: {
+            sessionWorkLogs: [data.addWorkLog, ...(existingData?.sessionWorkLogs || [])]
+          }
+        });
+      }
+    }
+  );
 
   useEffect(() => {
     if (!isOpen) {
@@ -99,7 +129,7 @@ export const AddWorkLogModal: React.FC<AddWorkLogModalProps> = ({
     }
   }, [isOpen]);
 
-  const handleSave = async () => {
+  const handleSubmit = async () => {
     try {
       setError('');
       setIsLoading(true);
@@ -108,16 +138,27 @@ export const AddWorkLogModal: React.FC<AddWorkLogModalProps> = ({
         throw new Error('Please describe your work');
       }
 
+      if (!sessionData?.activeSession?.id) {
+        throw new Error('No active session found');
+      }
+
       const links = linksText
         .split('\n')
         .map(link => link.trim())
         .filter(Boolean);
 
-      onSave(content, links);
-      onClose();
+      await addWorkLogMutation({
+        variables: {
+          input: {
+            sessionId: sessionData.activeSession.id,
+            projectId: sessionData.activeSession.projectId || '',
+            content: content.trim(),
+            links
+          }
+        }
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -125,13 +166,9 @@ export const AddWorkLogModal: React.FC<AddWorkLogModalProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <ModalContent>
-        <Title>
-          <TitleIcon src="path/to/icon.png" alt="" />
-          Add Work Log
-        </Title>
+        <Title>Add Work Log</Title>
 
         <Section>
-          <SectionTitle>What did you work on?</SectionTitle>
           <TextArea
             value={content}
             onChange={e => setContent(e.target.value)}
@@ -140,9 +177,9 @@ export const AddWorkLogModal: React.FC<AddWorkLogModalProps> = ({
         </Section>
 
         <Section>
-          <SectionTitle>
+          <Title>
             Related Links <Optional>(optional)</Optional>
-          </SectionTitle>
+          </Title>
           <LinksArea
             value={linksText}
             onChange={e => setLinksText(e.target.value)}
@@ -163,7 +200,7 @@ export const AddWorkLogModal: React.FC<AddWorkLogModalProps> = ({
             Cancel
           </Button>
           <Button
-            onClick={handleSave}
+            onClick={handleSubmit}
             isLoading={isLoading}
           >
             Save

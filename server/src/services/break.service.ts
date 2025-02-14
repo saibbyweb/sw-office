@@ -9,12 +9,14 @@ export class BreakService {
 
   async startBreak(userId: string, input: StartBreakInput): Promise<Break> {
     const now = new Date();
+    console.log('Starting break with input:', { userId, input, now });
 
     return this.prisma.$transaction(async (tx) => {
       // Verify session exists and is active
       const session = await tx.session.findFirst({
         where: { id: input.sessionId, userId, status: 'ACTIVE' },
       });
+      console.log('Found session:', session);
 
       if (!session) {
         throw new Error('Active session not found');
@@ -25,9 +27,10 @@ export class BreakService {
         where: { sessionId: input.sessionId, endTime: null },
         orderBy: { startTime: 'desc' },
       });
+      console.log('Found active segment:', activeSegment);
 
       if (activeSegment) {
-        await tx.segment.update({
+        const updatedSegment = await tx.segment.update({
           where: { id: activeSegment.id },
           data: {
             endTime: now,
@@ -36,6 +39,7 @@ export class BreakService {
             ),
           },
         });
+        console.log('Updated segment:', updatedSegment);
       }
 
       // Create break record
@@ -48,9 +52,10 @@ export class BreakService {
           duration: 0,
         },
       });
+      console.log('Created break record:', breakRecord);
 
       // Create break segment
-      await tx.segment.create({
+      const breakSegment = await tx.segment.create({
         data: {
           sessionId: input.sessionId,
           type: SegmentType.BREAK,
@@ -58,6 +63,7 @@ export class BreakService {
           startTime: now,
         },
       });
+      console.log('Created break segment:', breakSegment);
 
       return breakRecord;
     });

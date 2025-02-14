@@ -13,6 +13,7 @@ import { LoginScreen } from './components/screens/LoginScreen';
 import { ME, ACTIVE_SESSION, START_BREAK, END_BREAK } from '../graphql/queries';
 import { ActiveSessionData, StartBreakData, EndBreakData, StartBreakVariables, EndBreakVariables, BreakType } from '../graphql/types';
 import { BreakTimer } from './components/timer/BreakTimer';
+import { WorkLogList } from './components/work-logs/WorkLogList';
 
 const AppContainer = styled.div`
   height: 100%;
@@ -68,11 +69,6 @@ const ProgressFill = styled.div<{ progress: number }>`
   height: 100%;
   background: ${props => props.theme.colors.primary};
   transition: width 0.3s ease;
-`;
-
-const WorkLogList = styled.div`
-  color: ${props => props.theme.colors.text}80;
-  font-style: italic;
 `;
 
 const TimerSection = styled.div`
@@ -324,9 +320,9 @@ const AppContent: React.FC = () => {
                 Add Work Log
               </Button>
             </SectionHeader>
-            <WorkLogList>
-              No work logs added yet
-            </WorkLogList>
+            {sessionData?.activeSession && (
+              <WorkLogList sessionId={sessionData.activeSession.id} />
+            )}
           </Section>
 
           <TimerSection>
@@ -388,7 +384,6 @@ const AppContent: React.FC = () => {
         <AddWorkLogModal
           isOpen={showAddWorkLogModal}
           onClose={() => setShowAddWorkLogModal(false)}
-          onSave={handleAddWorkLog}
         />
 
         {notification && (

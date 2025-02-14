@@ -1,4 +1,4 @@
-import { InputType, Field } from '@nestjs/graphql';
+import { InputType, Field, ID } from '@nestjs/graphql';
 
 @InputType()
 export class AddWorkLogInput {
@@ -17,6 +17,9 @@ export class AddWorkLogInput {
 
 @InputType()
 export class UpdateWorkLogInput {
+  @Field(() => ID)
+  workLogId: string;
+
   @Field({ nullable: true })
   projectId?: string;
 

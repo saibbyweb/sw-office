@@ -62,7 +62,7 @@ type Mutation {
   startBreak(input: StartBreakInput!): Break!
   startSession(input: StartSessionInput!): Session!
   switchProject(input: SwitchProjectInput!): Session!
-  updateWorkLog(id: ID!, input: UpdateWorkLogInput!): WorkLog!
+  updateWorkLog(input: UpdateWorkLogInput!): WorkLog!
 }
 
 type Project {
@@ -89,6 +89,7 @@ type Query {
   hello: String!
   me: User!
   projects: [Project!]!
+  sessionWorkLogs(sessionId: ID!): [WorkLog!]!
 }
 
 input RegisterInput {
@@ -167,6 +168,7 @@ input UpdateWorkLogInput {
   content: String
   links: [String!]
   projectId: String
+  workLogId: ID!
 }
 
 type User {

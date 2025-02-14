@@ -7,6 +7,36 @@ import { AddWorkLogInput, UpdateWorkLogInput } from '../types/worklog.types';
 export class WorkLogService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async getSessionWorkLogs(
+    userId: string,
+    sessionId: string,
+  ): Promise<WorkLog[]> {
+    // Verify session exists and belongs to user
+    const session = await this.prisma.session.findFirst({
+      where: { id: sessionId, userId },
+    });
+
+    if (!session) {
+      throw new Error('Session not found');
+    }
+
+    // Get work logs for the session
+    return this.prisma.workLog.findMany({
+      where: {
+        sessionId,
+        userId,
+      },
+      include: {
+        user: true,
+        project: true,
+        session: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
   async addWorkLog(userId: string, input: AddWorkLogInput): Promise<WorkLog> {
     // Verify session exists and is active
     const session = await this.prisma.session.findFirst({
@@ -25,6 +55,11 @@ export class WorkLogService {
         projectId: input.projectId,
         content: input.content,
         links: input.links,
+      },
+      include: {
+        user: true,
+        project: true,
+        session: true,
       },
     });
   }
