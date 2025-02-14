@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Modal, Button, Input } from '../common';
-import { useQuery } from '@apollo/client';
-import { GET_PROJECTS } from '../../../graphql/queries';
-import { GetProjectsData, Project } from '../../../graphql/types';
+import { useQuery, useMutation } from '@apollo/client';
+import { GET_PROJECTS, ACTIVE_SESSION, SWITCH_PROJECT } from '../../../graphql/queries';
+import { 
+  GetProjectsData, 
+  Project, 
+  ActiveSessionData,
+  SwitchProjectData,
+  SwitchProjectVariables 
+} from '../../../graphql/types';
 
 interface SwitchProjectModalProps {
   isOpen: boolean;
@@ -58,6 +64,27 @@ export const SwitchProjectModal: React.FC<SwitchProjectModalProps> = ({
   const [error, setError] = useState('');
 
   const { loading, error: projectsError, data } = useQuery<GetProjectsData>(GET_PROJECTS);
+  const { data: sessionData } = useQuery<ActiveSessionData>(ACTIVE_SESSION);
+
+  const [switchProjectMutation] = useMutation<SwitchProjectData, SwitchProjectVariables>(
+    SWITCH_PROJECT,
+    {
+      onCompleted: (data) => {
+        const project = data.switchProject.project;
+        if (project) {
+          onSwitch(project.id);
+        }
+        setIsLoading(false);
+        onClose();
+      },
+      onError: (error) => {
+        console.error('Switch project error:', error);
+        setError(error.message);
+        setIsLoading(false);
+      },
+      refetchQueries: [{ query: ACTIVE_SESSION }],
+    }
+  );
 
   useEffect(() => {
     if (!isOpen) {
@@ -68,7 +95,6 @@ export const SwitchProjectModal: React.FC<SwitchProjectModalProps> = ({
   }, [isOpen]);
 
   const handleSubmit = async () => {
-    console.log('handleSubmit');
     try {
       setError('');
       setIsLoading(true);
@@ -77,12 +103,22 @@ export const SwitchProjectModal: React.FC<SwitchProjectModalProps> = ({
         throw new Error('Please select or enter a project');
       }
 
+      if (!sessionData?.activeSession?.id) {
+        throw new Error('No active session found');
+      }
+
       const projectId = selectedProject === 'other' ? customProject : selectedProject;
-      onSwitch(projectId);
-      onClose();
+
+      await switchProjectMutation({
+        variables: {
+          input: {
+            projectId,
+            sessionId: sessionData.activeSession.id
+          }
+        }
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -98,8 +134,12 @@ export const SwitchProjectModal: React.FC<SwitchProjectModalProps> = ({
         >
           <option value="">Select Project</option>
           {data?.projects?.map((project: Project) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
+            <option 
+              key={project.id} 
+              value={project.id}
+              disabled={project.id === sessionData?.activeSession?.projectId}
+            >
+              {project.name} {project.id === sessionData?.activeSession?.projectId ? '(Current)' : ''}
             </option>
           ))}
           <option value="other">Other</option>
@@ -136,6 +176,7 @@ export const SwitchProjectModal: React.FC<SwitchProjectModalProps> = ({
           <Button
             onClick={handleSubmit}
             isLoading={isLoading || loading}
+            disabled={selectedProject === sessionData?.activeSession?.projectId}
           >
             Switch Project
           </Button>

@@ -90,4 +90,17 @@ export const END_BREAK = gql`
       duration
     }
   }
+`;
+
+export const SWITCH_PROJECT = gql`
+  mutation SwitchProject($input: SwitchProjectInput!) {
+    switchProject(input: $input) {
+      id
+      projectId
+      project {
+        id
+        name
+      }
+    }
+  }
 `; 

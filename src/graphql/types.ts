@@ -74,4 +74,17 @@ export interface EndBreakVariables {
 
 export interface StartBreakVariables {
   input: StartBreakInput;
+}
+
+export interface SwitchProjectInput {
+  projectId: string;
+  sessionId: string;
+}
+
+export interface SwitchProjectData {
+  switchProject: Session;
+}
+
+export interface SwitchProjectVariables {
+  input: SwitchProjectInput;
 } 
