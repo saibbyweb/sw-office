@@ -87,6 +87,7 @@ type ProjectCount {
 type Query {
   activeSession: Session
   hello: String!
+  me: User!
   projects: [Project!]!
 }
 
