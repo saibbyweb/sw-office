@@ -170,4 +170,16 @@ export const DELETE_WORK_LOG = gql`
   mutation DeleteWorkLog($id: ID!) {
     deleteWorkLog(id: $id)
   }
+`;
+
+export const END_SESSION = gql`
+  mutation EndSession($id: ID!) {
+    endSession(id: $id) {
+      id
+      endTime
+      status
+      totalDuration
+      totalBreakTime
+    }
+  }
 `; 

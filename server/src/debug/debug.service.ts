@@ -1,11 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import {
+  Session,
+  Break,
+  Segment,
+  WorkLog,
+} from '../generated-nestjs-typegraphql';
+
+interface DebugData {
+  activeSessions: Session[];
+  activeBreaks: Break[];
+  recentSegments: Segment[];
+  recentWorkLogs: WorkLog[];
+}
 
 @Injectable()
 export class DebugService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getDebugData() {
+  async getDebugData(): Promise<DebugData> {
     const [activeSessions, activeBreaks, recentSegments, recentWorkLogs] =
       await Promise.all([
         // Get active sessions with user and project info
@@ -36,7 +49,7 @@ export class DebugService {
           },
         }),
 
-        // Get recent segments
+        // Get recent segments with all related info
         this.prisma.segment.findMany({
           take: 50,
           orderBy: {
@@ -46,14 +59,14 @@ export class DebugService {
             session: {
               include: {
                 user: true,
-                project: true,
               },
             },
+            project: true,
             break: true,
           },
         }),
 
-        // Get recent work logs
+        // Get recent work logs with all related info
         this.prisma.workLog.findMany({
           take: 50,
           orderBy: {

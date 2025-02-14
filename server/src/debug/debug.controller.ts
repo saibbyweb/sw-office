@@ -1,6 +1,34 @@
 import { Controller, Get, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { DebugService } from './debug.service';
+import {
+  Session,
+  Break,
+  Segment,
+  WorkLog,
+} from '../generated-nestjs-typegraphql';
+
+interface DebugData {
+  activeSessions: Session[];
+  activeBreaks: Break[];
+  recentSegments: Segment[];
+  recentWorkLogs: WorkLog[];
+}
+
+const formatDuration = (seconds: number): string => {
+  if (seconds === 0) return '0s';
+
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = seconds % 60;
+
+  const parts: string[] = [];
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  if (remainingSeconds > 0) parts.push(`${remainingSeconds}s`);
+
+  return parts.join(' ');
+};
 
 @Controller('debug')
 export class DebugController {
@@ -8,7 +36,7 @@ export class DebugController {
 
   @Get()
   async renderDebugPage(@Res() res: Response) {
-    const data = await this.debugService.getDebugData();
+    const data: DebugData = await this.debugService.getDebugData();
 
     const html = `
       <!DOCTYPE html>
@@ -78,6 +106,17 @@ export class DebugController {
               color: #666;
               font-size: 0.875rem;
             }
+            .duration {
+              font-family: monospace;
+              font-size: 0.875rem;
+            }
+            .break-type {
+              padding: 0.25rem 0.5rem;
+              border-radius: 4px;
+              font-size: 0.875rem;
+              background: #fef7e0;
+              color: #b06000;
+            }
           </style>
         </head>
         <body>
@@ -96,22 +135,26 @@ export class DebugController {
                   <th>Start Time</th>
                   <th>Duration</th>
                   <th>Break Time</th>
+                  <th>Active Time</th>
                 </tr>
               </thead>
               <tbody>
                 ${data.activeSessions
-                  .map(
-                    (session) => `
-                  <tr>
-                    <td>${session.id}</td>
-                    <td>${session.user.name}</td>
-                    <td>${session.project?.name || 'No Project'}</td>
-                    <td>${new Date(session.startTime).toLocaleString()}</td>
-                    <td>${Math.floor(session.totalDuration / 60)}m</td>
-                    <td>${Math.floor(session.totalBreakTime / 60)}m</td>
-                  </tr>
-                `,
-                  )
+                  .map((session) => {
+                    const activeTime =
+                      session.totalDuration - session.totalBreakTime;
+                    return `
+                        <tr>
+                          <td>${session.id}</td>
+                          <td>${session.user?.name || 'Unknown'}</td>
+                          <td>${session.project?.name || 'No Project'}</td>
+                          <td>${new Date(session.startTime).toLocaleString()}</td>
+                          <td class="duration">${formatDuration(session.totalDuration)}</td>
+                          <td class="duration">${formatDuration(session.totalBreakTime)}</td>
+                          <td class="duration">${formatDuration(activeTime)}</td>
+                        </tr>
+                      `;
+                  })
                   .join('')}
               </tbody>
             </table>
@@ -126,22 +169,28 @@ export class DebugController {
                   <th>User</th>
                   <th>Type</th>
                   <th>Start Time</th>
+                  <th>Duration</th>
                   <th>Session ID</th>
                 </tr>
               </thead>
               <tbody>
                 ${data.activeBreaks
-                  .map(
-                    (break_) => `
-                  <tr>
-                    <td>${break_.id}</td>
-                    <td>${break_.user.name}</td>
-                    <td>${break_.type}</td>
-                    <td>${new Date(break_.startTime).toLocaleString()}</td>
-                    <td>${break_.sessionId}</td>
-                  </tr>
-                `,
-                  )
+                  .map((break_) => {
+                    const duration = Math.floor(
+                      (Date.now() - new Date(break_.startTime).getTime()) /
+                        1000,
+                    );
+                    return `
+                        <tr>
+                          <td>${break_.id}</td>
+                          <td>${break_.user?.name || 'Unknown'}</td>
+                          <td><span class="break-type">${break_.type}</span></td>
+                          <td>${new Date(break_.startTime).toLocaleString()}</td>
+                          <td class="duration">${formatDuration(duration)}</td>
+                          <td>${break_.sessionId}</td>
+                        </tr>
+                      `;
+                  })
                   .join('')}
               </tbody>
             </table>
@@ -157,23 +206,37 @@ export class DebugController {
                   <th>Start Time</th>
                   <th>End Time</th>
                   <th>Duration</th>
+                  <th>Project</th>
+                  <th>Break Type</th>
                   <th>Session ID</th>
                 </tr>
               </thead>
               <tbody>
                 ${data.recentSegments
-                  .map(
-                    (segment) => `
-                  <tr>
-                    <td>${segment.id}</td>
-                    <td>${segment.type}</td>
-                    <td>${new Date(segment.startTime).toLocaleString()}</td>
-                    <td>${segment.endTime ? new Date(segment.endTime).toLocaleString() : 'Active'}</td>
-                    <td>${Math.floor(segment.duration / 60)}m</td>
-                    <td>${segment.sessionId}</td>
-                  </tr>
-                `,
-                  )
+                  .map((segment) => {
+                    const duration = segment.endTime
+                      ? Math.floor(
+                          (new Date(segment.endTime).getTime() -
+                            new Date(segment.startTime).getTime()) /
+                            1000,
+                        )
+                      : Math.floor(
+                          (Date.now() - new Date(segment.startTime).getTime()) /
+                            1000,
+                        );
+                    return `
+                        <tr>
+                          <td>${segment.id}</td>
+                          <td>${segment.type}</td>
+                          <td>${new Date(segment.startTime).toLocaleString()}</td>
+                          <td>${segment.endTime ? new Date(segment.endTime).toLocaleString() : 'Active'}</td>
+                          <td class="duration">${formatDuration(duration)}</td>
+                          <td>${segment.project?.name || '-'}</td>
+                          <td>${segment.break?.type || '-'}</td>
+                          <td>${segment.sessionId}</td>
+                        </tr>
+                      `;
+                  })
                   .join('')}
               </tbody>
             </table>
@@ -189,20 +252,22 @@ export class DebugController {
                   <th>Project</th>
                   <th>Content</th>
                   <th>Created At</th>
+                  <th>Session</th>
                 </tr>
               </thead>
               <tbody>
                 ${data.recentWorkLogs
                   .map(
                     (log) => `
-                  <tr>
-                    <td>${log.id}</td>
-                    <td>${log.user.name}</td>
-                    <td>${log.project.name}</td>
-                    <td>${log.content}</td>
-                    <td>${new Date(log.createdAt).toLocaleString()}</td>
-                  </tr>
-                `,
+                      <tr>
+                        <td>${log.id}</td>
+                        <td>${log.user?.name || 'Unknown'}</td>
+                        <td>${log.project?.name || 'Unknown Project'}</td>
+                        <td>${log.content}</td>
+                        <td>${new Date(log.createdAt).toLocaleString()}</td>
+                        <td>${log.session?.id || 'Unknown Session'}</td>
+                      </tr>
+                    `,
                   )
                   .join('')}
               </tbody>

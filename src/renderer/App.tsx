@@ -276,7 +276,6 @@ const AppContent: React.FC = () => {
             <Timer
               startTime={state.session.startTime}
               isRunning={!state.session.isOnBreak}
-              variant={state.session.isOnBreak ? 'break' : 'session'}
             />
             {state.session.isOnBreak && state.session.currentBreak && (
               <BreakTimer

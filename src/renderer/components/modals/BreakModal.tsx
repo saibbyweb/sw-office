@@ -127,7 +127,6 @@ export const BreakModal: React.FC<BreakModalProps> = ({
             <Timer
               startTime={state.session.currentBreak?.startTime}
               isRunning={true}
-              variant="break"
             />
             <ButtonGroup>
               <Button

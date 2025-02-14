@@ -4,6 +4,7 @@ export interface SessionState {
   startTime: number;
   project: string;
   totalDuration: number;
+  totalActiveTime: number;
   breakTime: number;
   isOnBreak: boolean;
   currentBreak?: {

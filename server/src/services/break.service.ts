@@ -24,7 +24,7 @@ export class BreakService {
 
       // End current work segment
       const activeSegment = await tx.segment.findFirst({
-        where: { sessionId: input.sessionId, endTime: null },
+        where: { sessionId: input.sessionId, endTime: { isSet: false } },
         orderBy: { startTime: 'desc' },
       });
       console.log('Found active segment:', activeSegment);

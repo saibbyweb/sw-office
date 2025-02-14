@@ -1,68 +1,60 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
-import { motion } from 'framer-motion';
-import { useTimer } from '../../hooks/useTimer';
 
 interface TimerProps {
   startTime?: number;
-  isRunning?: boolean;
-  onTick?: (elapsed: number) => void;
-  variant?: 'session' | 'break';
+  isRunning: boolean;
 }
 
-const TimerContainer = styled(motion.div)<{ variant: TimerProps['variant'] }>`
+const TimerContainer = styled.div`
   display: flex;
-  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  gap: ${props => props.theme.spacing.xs};
-  padding: ${props => props.theme.spacing.md};
-  border-radius: 12px;
-  background-color: ${props =>
-    props.variant === 'break'
-      ? `${props.theme.colors.warning}15`
-      : `${props.theme.colors.primary}15`};
+  margin-top: ${props => props.theme.spacing.md};
 `;
 
 const TimerDisplay = styled.div`
-  font-family: monospace;
   font-size: 2.5rem;
   font-weight: bold;
-  color: ${props => props.theme.colors.text};
-  letter-spacing: 2px;
+  color: ${props => props.theme.colors.primary};
 `;
 
-const Label = styled.span<{ variant: TimerProps['variant'] }>`
-  font-size: 0.875rem;
-  color: ${props =>
-    props.variant === 'break'
-      ? props.theme.colors.warning
-      : props.theme.colors.primary};
-  font-weight: 500;
-`;
+const formatTime = (ms: number) => {
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
 
-export const Timer: React.FC<TimerProps> = ({
-  startTime,
-  isRunning = false,
-  onTick,
-  variant = 'session'
+  const displayHours = hours.toString().padStart(2, '0');
+  const displayMinutes = (minutes % 60).toString().padStart(2, '0');
+  const displaySeconds = (seconds % 60).toString().padStart(2, '0');
+
+  return `${displayHours}:${displayMinutes}:${displaySeconds}`;
+};
+
+export const Timer: React.FC<TimerProps> = ({ 
+  startTime = 0, 
+  isRunning
 }) => {
-  const { formattedTime } = useTimer({
-    startTime,
-    autoStart: isRunning,
-    onTick
-  });
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!isRunning || !startTime) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setElapsed(now - startTime);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [startTime, isRunning]);
 
   return (
-    <TimerContainer
-      variant={variant}
-      initial={{ scale: 0.95, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ duration: 0.2 }}
-    >
-      <Label variant={variant}>
-        {variant === 'break' ? 'Break Duration' : 'Session Duration'}
-      </Label>
-      <TimerDisplay>{formattedTime.formatted}</TimerDisplay>
+    <TimerContainer>
+      <TimerDisplay>
+        {formatTime(elapsed)}
+      </TimerDisplay>
     </TimerContainer>
   );
 }; 

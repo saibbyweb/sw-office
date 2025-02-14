@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import { Modal, Button, Input } from '../common';
+import { Modal, Button } from '../common';
+import { useMutation, useQuery } from '@apollo/client';
+import { ACTIVE_SESSION, END_SESSION } from '../../../graphql/queries';
+import { ActiveSessionData } from '../../../graphql/types';
 import { useApp } from '../../context/AppContext';
 
 interface EndWorkModalProps {
@@ -11,132 +14,77 @@ interface EndWorkModalProps {
 const ModalContent = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${props => props.theme.spacing.md};
+  gap: ${props => props.theme.spacing.lg};
 `;
 
 const Title = styled.h2`
   margin: 0;
-  color: ${props => props.theme.colors.text};
+  color: ${props => props.theme.colors.error};
   font-size: 1.5rem;
   font-weight: 600;
 `;
 
-const Summary = styled.div`
-  background-color: ${props => props.theme.colors.background};
-  border-radius: 8px;
-  padding: ${props => props.theme.spacing.md};
-  border: 1px solid ${props => props.theme.colors.secondary}20;
-`;
-
-const SummaryItem = styled.div`
-  display: flex;
-  justify-content: space-between;
-  padding: ${props => props.theme.spacing.xs} 0;
-  border-bottom: 1px solid ${props => props.theme.colors.secondary}20;
-
-  &:last-child {
-    border-bottom: none;
-  }
-`;
-
-const Label = styled.span`
-  color: ${props => props.theme.colors.text}80;
-  font-size: 0.875rem;
-`;
-
-const Value = styled.span`
+const Message = styled.p`
   color: ${props => props.theme.colors.text};
-  font-weight: 500;
-`;
-
-const TextArea = styled.textarea`
-  padding: 0.75rem;
-  border: 1px solid ${props => props.theme.colors.secondary}40;
-  border-radius: 8px;
-  font-size: 1rem;
-  outline: none;
-  width: 100%;
-  min-height: 100px;
-  resize: vertical;
-
-  &:focus {
-    border-color: ${props => props.theme.colors.primary};
-    box-shadow: 0 0 0 2px ${props => props.theme.colors.primary}20;
-  }
+  margin: 0;
 `;
 
 const ButtonGroup = styled.div`
   display: flex;
-  gap: ${props => props.theme.spacing.sm};
   justify-content: flex-end;
+  gap: ${props => props.theme.spacing.sm};
   margin-top: ${props => props.theme.spacing.md};
 `;
 
-export const EndWorkModal: React.FC<EndWorkModalProps> = ({ isOpen, onClose }) => {
-  const { state, endSession, addWorkLog } = useApp();
-  const [workLog, setWorkLog] = useState('');
+export const EndWorkModal: React.FC<EndWorkModalProps> = ({
+  isOpen,
+  onClose,
+}) => {
+  const { endSession } = useApp();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const formatDuration = (ms: number) => {
-    const hours = Math.floor(ms / (1000 * 60 * 60));
-    const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-    return `${hours}h ${minutes}m`;
-  };
+  const { data: sessionData } = useQuery<ActiveSessionData>(ACTIVE_SESSION);
 
-  const handleSubmit = async () => {
+  const [endSessionMutation] = useMutation(END_SESSION, {
+    onCompleted: () => {
+      endSession();
+      setIsLoading(false);
+      onClose();
+    },
+    onError: (error) => {
+      console.error('End session error:', error);
+      setError(error.message);
+      setIsLoading(false);
+    },
+    refetchQueries: [{ query: ACTIVE_SESSION }]
+  });
+
+  const handleConfirm = async () => {
     try {
       setError('');
       setIsLoading(true);
 
-      if (workLog.trim()) {
-        addWorkLog(workLog.trim(), []);
+      if (!sessionData?.activeSession?.id) {
+        throw new Error('No active session found');
       }
 
-      endSession();
-      onClose();
+      await endSessionMutation({
+        variables: { id: sessionData.activeSession.id }
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
       setIsLoading(false);
     }
   };
-
-  const sessionDuration = Date.now() - state.session.startTime;
-  const netDuration = sessionDuration - state.session.breakTime;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <ModalContent>
         <Title>End Work Session</Title>
-
-        <Summary>
-          <SummaryItem>
-            <Label>Project</Label>
-            <Value>{state.session.project}</Value>
-          </SummaryItem>
-          <SummaryItem>
-            <Label>Total Duration</Label>
-            <Value>{formatDuration(sessionDuration)}</Value>
-          </SummaryItem>
-          <SummaryItem>
-            <Label>Break Time</Label>
-            <Value>{formatDuration(state.session.breakTime)}</Value>
-          </SummaryItem>
-          <SummaryItem>
-            <Label>Net Work Time</Label>
-            <Value>{formatDuration(netDuration)}</Value>
-          </SummaryItem>
-        </Summary>
-
-        <div>
-          <Label>Work Log (Optional)</Label>
-          <TextArea
-            value={workLog}
-            onChange={e => setWorkLog(e.target.value)}
-            placeholder="What did you work on? Add any notes or links..."
-          />
-        </div>
+        <Message>
+          Are you sure you want to end your current work session? This action cannot be undone.
+        </Message>
 
         {error && (
           <div style={{ color: 'red', fontSize: '0.875rem' }}>{error}</div>
@@ -151,10 +99,11 @@ export const EndWorkModal: React.FC<EndWorkModalProps> = ({ isOpen, onClose }) =
             Cancel
           </Button>
           <Button
-            onClick={handleSubmit}
+            variant="error"
+            onClick={handleConfirm}
             isLoading={isLoading}
           >
-            End Work
+            End Session
           </Button>
         </ButtonGroup>
       </ModalContent>

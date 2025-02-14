@@ -23,6 +23,7 @@ const initialState: AppState = {
     startTime: 0,
     project: '',
     totalDuration: 0,
+    totalActiveTime: 0,
     breakTime: 0,
     isOnBreak: false
   },
@@ -56,14 +57,18 @@ const appReducer = (state: AppState, action: Action): AppState => {
           ...state.session,
           isActive: true,
           startTime: action.payload.startTime || Date.now(),
-          project: action.payload.project
+          project: action.payload.project,
+          totalActiveTime: 0
         }
       };
     case 'END_SESSION':
       return {
         ...state,
         session: {
-          ...initialState.session
+          ...initialState.session,
+          totalActiveTime: state.session.isOnBreak 
+            ? state.session.totalActiveTime 
+            : state.session.totalActiveTime + (Date.now() - state.session.startTime)
         }
       };
     case 'START_BREAK':
@@ -76,7 +81,8 @@ const appReducer = (state: AppState, action: Action): AppState => {
             id: action.payload.id,
             type: action.payload.type,
             startTime: action.payload.startTime
-          }
+          },
+          totalActiveTime: state.session.totalActiveTime + (Date.now() - state.session.startTime)
         }
       };
     case 'END_BREAK':
@@ -86,7 +92,8 @@ const appReducer = (state: AppState, action: Action): AppState => {
           ...state.session,
           isOnBreak: false,
           currentBreak: undefined,
-          breakTime: state.session.breakTime + (Date.now() - (state.session.currentBreak?.startTime || 0))
+          breakTime: state.session.breakTime + (Date.now() - (state.session.currentBreak?.startTime || 0)),
+          startTime: Date.now() // Reset start time for active session
         }
       };
     case 'SWITCH_PROJECT':
