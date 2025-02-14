@@ -11,32 +11,23 @@ export interface GetProjectsData {
 
 export interface Session {
   id: string;
-  startTime: string;
-  endTime?: string;
-  status: 'ACTIVE' | 'COMPLETED' | 'TERMINATED';
-  projectId?: string;
-  project?: {
-    id: string;
-    name: string;
-  };
-  totalDuration: number;
-  totalBreakTime: number;
   userId: string;
+  projectId: string | null;
+  project: Project | null;
+  status: string;
+  startTime: string;
+  endTime: string | null;
   segments: Array<{
     id: string;
     type: 'WORK' | 'BREAK';
     startTime: string;
-    endTime?: string;
+    endTime: string | null;
     duration: number;
-    project?: {
-      id: string;
-      name: string;
-    };
-    break?: {
-      id: string;
-      type: BreakType;
-    };
+    project?: Project;
+    break?: Break;
   }>;
+  breaks: Break[];
+  duration: number;
 }
 
 export interface StartSessionData {
@@ -63,11 +54,10 @@ export enum BreakType {
 
 export interface Break {
   id: string;
-  type: BreakType;
+  type: string;
   startTime: string;
-  endTime?: string;
+  endTime: string | null;
   duration: number;
-  sessionId: string;
 }
 
 export interface StartBreakInput {

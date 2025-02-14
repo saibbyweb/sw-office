@@ -8,7 +8,8 @@ import {
   Project, 
   ActiveSessionData,
   SwitchProjectData,
-  SwitchProjectVariables 
+  SwitchProjectVariables,
+  Break 
 } from '../../../graphql/types';
 
 interface SwitchProjectModalProps {
@@ -105,6 +106,12 @@ export const SwitchProjectModal: React.FC<SwitchProjectModalProps> = ({
 
       if (!sessionData?.activeSession?.id) {
         throw new Error('No active session found');
+      }
+
+      // Check if there's an active break
+      const activeBreak = sessionData.activeSession.breaks?.find((b: Break) => !b.endTime);
+      if (activeBreak) {
+        throw new Error('Cannot switch project during an active break');
       }
 
       const projectId = selectedProject === 'other' ? customProject : selectedProject;

@@ -191,10 +191,10 @@ export const SegmentsList: React.FC<SegmentsListProps> = ({ segments }) => {
   const renderSegment = (segment: Session['segments'][0]) => (
     <SegmentChip 
       key={segment.id} 
-      type={segment.type}
+      type={segment.type as 'WORK' | 'BREAK'}
       isActive={!segment.endTime}
     >
-      <Type type={segment.type}>
+      <Type type={segment.type as 'WORK' | 'BREAK'}>
         {segment.type === 'WORK' ? '💻' : '☕️'}
       </Type>
       {segment.project && (

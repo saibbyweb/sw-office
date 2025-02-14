@@ -345,6 +345,8 @@ const AppContent: React.FC = () => {
                   variant="secondary" 
                   size="small"
                   onClick={() => setShowSwitchProjectModal(true)}
+                  disabled={state.session.isOnBreak}
+                  title={state.session.isOnBreak ? "Cannot switch project during a break" : ""}
                 >
                   Switch Project
                 </Button>
