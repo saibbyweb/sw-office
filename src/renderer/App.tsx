@@ -148,9 +148,8 @@ const AppContent: React.FC = () => {
     },
   });
 
-  const { data: sessionData, loading: sessionLoading } = useQuery<ActiveSessionData>(ACTIVE_SESSION, {
+  const { data: sessionData, loading: sessionLoading, refetch: refetchSession } = useQuery<ActiveSessionData>(ACTIVE_SESSION, {
     skip: !authToken,
-    pollInterval: 5000,
     onCompleted: (data) => {
       console.log('Active session data:', data);
       if (data?.activeSession) {
@@ -208,21 +207,31 @@ const AppContent: React.FC = () => {
     showNotification('success', 'Logged out successfully');
   };
 
-  const handleSwitchProject = (projectId: string) => {
+  const handleSwitchProject = async (projectId: string) => {
     try {
-      switchProject(projectId);
-      showNotification('success', 'Project switched successfully');
-    } catch (error) {
-      showNotification('error', error instanceof Error ? error.message : 'Failed to switch project');
+      if (!sessionData?.activeSession?.id) {
+        throw new Error('No active session found');
+      }
+
+      await switchProject(projectId);
+      await refetchSession();
+    } catch (err) {
+      console.error('Handle switch project error:', err);
+      showNotification('error', err instanceof Error ? err.message : 'Failed to switch project');
     }
   };
 
-  const handleAddWorkLog = (content: string, links: string[]) => {
+  const handleAddWorkLog = async (content: string, links: string[]) => {
     try {
-      addWorkLog(content, links);
-      showNotification('success', 'Work log added successfully');
-    } catch (error) {
-      showNotification('error', error instanceof Error ? error.message : 'Failed to add work log');
+      if (!sessionData?.activeSession?.id) {
+        throw new Error('No active session found');
+      }
+
+      await addWorkLog(content, links);
+      await refetchSession();
+    } catch (err) {
+      console.error('Handle add work log error:', err);
+      showNotification('error', err instanceof Error ? err.message : 'Failed to add work log');
     }
   };
 
@@ -237,39 +246,37 @@ const AppContent: React.FC = () => {
         throw new Error('No active session found');
       }
 
-      console.log('Starting break with:', {
-        type,
-        sessionId: sessionData.activeSession.id
-      });
-
       await startBreakMutation({
         variables: {
           input: {
             type,
-            sessionId: sessionData.activeSession.id
-          }
-        }
+            sessionId: sessionData.activeSession.id,
+          },
+        },
       });
-    } catch (error) {
-      console.error('Start break error:', error);
-      showNotification('error', error instanceof Error ? error.message : 'Failed to start break');
+      await refetchSession();
+    } catch (err) {
+      console.error('Handle start break error:', err);
+      showNotification('error', err instanceof Error ? err.message : 'Failed to start break');
     }
   };
 
   const handleEndBreak = async () => {
     try {
-      if (!state.session.currentBreak) {
+      if (!state.session.currentBreak?.id) {
         throw new Error('No active break found');
       }
 
       await endBreakMutation({
         variables: {
-          breakId: state.session.currentBreak.id
-        }
+          breakId: state.session.currentBreak.id,
+        },
       });
-    } catch (error) {
-      console.error('End break error:', error);
-      showNotification('error', error instanceof Error ? error.message : 'Failed to end break');
+      endBreak();
+      await refetchSession();
+    } catch (err) {
+      console.error('Handle end break error:', err);
+      showNotification('error', err instanceof Error ? err.message : 'Failed to end break');
     }
   };
 
