@@ -7,7 +7,8 @@
     "start": "electron .",
     "build": "tsc && vite build",
     "watch": "tsc -w",
-    "dev": "vite build && tsc && electron ."
+    "dev": "vite build && tsc && electron .",
+    "server-dev": "cd server && yarn run start:dev"
   },
   "author": "",
   "license": "ISC",

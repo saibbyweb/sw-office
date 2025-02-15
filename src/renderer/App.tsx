@@ -150,7 +150,7 @@ const AppContent: React.FC = () => {
 
   const { data: sessionData, loading: sessionLoading } = useQuery<ActiveSessionData>(ACTIVE_SESSION, {
     skip: !authToken,
-    pollInterval: 1000,
+    pollInterval: 5000,
     onCompleted: (data) => {
       console.log('Active session data:', data);
       if (data?.activeSession) {

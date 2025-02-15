@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 @Injectable()
 export class PrismaService
@@ -7,9 +7,25 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   constructor() {
-    super({
-      log: ['query', 'info', 'warn', 'error'],
-    });
+    super();
+    this.$use(
+      async (
+        params: Prisma.MiddlewareParams,
+        next: (params: Prisma.MiddlewareParams) => Promise<unknown>,
+      ) => {
+        const before = Date.now();
+        const result = await next(params);
+        const after = Date.now();
+        const duration = after - before;
+
+        if (params.model && params.action) {
+          console.log(
+            `[Prisma Query] ${params.action} ${params.model} - ${duration}ms`,
+          );
+        }
+        return result;
+      },
+    );
   }
 
   async onModuleInit() {

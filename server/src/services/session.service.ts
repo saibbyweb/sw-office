@@ -79,6 +79,27 @@ export class SessionService {
         throw new Error('Active session not found');
       }
 
+      // End any active break
+      const activeBreak = await tx.break.findFirst({
+        where: {
+          sessionId,
+          userId,
+          endTime: { isSet: false },
+        },
+      });
+
+      if (activeBreak) {
+        await tx.break.update({
+          where: { id: activeBreak.id },
+          data: {
+            endTime: now,
+            duration: Math.floor(
+              (now.getTime() - activeBreak.startTime.getTime()) / 1000,
+            ),
+          },
+        });
+      }
+
       // End current segment
       const activeSegment = await tx.segment.findFirst({
         where: { sessionId, endTime: { isSet: false } },
