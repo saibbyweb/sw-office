@@ -45,6 +45,14 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
+input GetSessionsInput {
+  endDate: DateTime
+  projectIds: [String!]
+  sortDescending: Boolean
+  startDate: DateTime
+  statuses: [SessionStatus!]
+}
+
 input LoginInput {
   email: String!
   password: String!
@@ -92,6 +100,7 @@ type Query {
   me: User!
   projects: [Project!]!
   sessionWorkLogs(sessionId: ID!): [WorkLog!]!
+  userSessions(input: GetSessionsInput!): [Session!]!
 }
 
 input RegisterInput {

@@ -213,4 +213,41 @@ export const END_SESSION = gql`
       totalBreakTime
     }
   }
+`;
+
+export const GET_USER_SESSIONS = gql`
+  query GetUserSessions($input: GetSessionsInput!) {
+    userSessions(input: $input) {
+      id
+      startTime
+      endTime
+      status
+      totalDuration
+      totalBreakTime
+      project {
+        id
+        name
+      }
+      segments {
+        id
+        type
+        startTime
+        endTime
+        duration
+        project {
+          id
+          name
+        }
+      }
+      workLogs {
+        id
+        content
+        createdAt
+        project {
+          id
+          name
+        }
+      }
+    }
+  }
 `; 

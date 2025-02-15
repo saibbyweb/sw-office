@@ -1,5 +1,6 @@
 import { InputType, Field } from '@nestjs/graphql';
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsDate } from 'class-validator';
+import { SessionStatus } from '../generated-nestjs-typegraphql';
 
 @InputType()
 export class StartSessionInput {
@@ -20,4 +21,29 @@ export class SwitchProjectInput {
   @IsString()
   @IsNotEmpty()
   sessionId: string;
+}
+
+@InputType()
+export class GetSessionsInput {
+  @Field(() => Date, { nullable: true })
+  @IsOptional()
+  @IsDate()
+  startDate?: Date;
+
+  @Field(() => Date, { nullable: true })
+  @IsOptional()
+  @IsDate()
+  endDate?: Date;
+
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  projectIds?: string[];
+
+  @Field(() => [SessionStatus], { nullable: true })
+  @IsOptional()
+  statuses?: SessionStatus[];
+
+  @Field(() => Boolean, { nullable: true })
+  @IsOptional()
+  sortDescending?: boolean;
 }

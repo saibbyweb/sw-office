@@ -24,6 +24,7 @@ import { BreakTimer } from './components/timer/BreakTimer';
 import { WorkLogList } from './components/work-logs/WorkLogList';
 import { SegmentsList } from './components/segments/SegmentsList';
 import { StatsCard } from './components/common/StatsCard';
+import { PastSessionsScreen } from './components/screens/PastSessionsScreen';
 
 const AppContainer = styled.div`
   height: 100%;
@@ -98,6 +99,8 @@ const ActionButtons = styled.div`
 const Header = styled.header`
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: ${props => props.theme.spacing.md};
   margin-bottom: ${props => props.theme.spacing.lg};
 `;
 
@@ -137,6 +140,7 @@ const AppContent: React.FC = () => {
   const [showAddWorkLogModal, setShowAddWorkLogModal] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(localStorage.getItem('authToken'));
+  const [showPastSessions, setShowPastSessions] = useState(false);
 
   const { data: userData, loading: userLoading } = useQuery(ME, {
     skip: !authToken,
@@ -299,6 +303,10 @@ const AppContent: React.FC = () => {
     return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
   }
 
+  if (showPastSessions) {
+    return <PastSessionsScreen onBack={() => setShowPastSessions(false)} />;
+  }
+
   if (userLoading || sessionLoading) {
     return <div>Loading...</div>;
   }
@@ -320,7 +328,16 @@ const AppContent: React.FC = () => {
           <UserInfo>
             {userData?.me.name} ({userData?.me.email})
           </UserInfo>
-          <Button variant="secondary" onClick={handleLogout}>
+          <Button 
+            variant="secondary" 
+            onClick={() => setShowPastSessions(true)}
+          >
+            View History
+          </Button>
+          <Button 
+            variant="secondary" 
+            onClick={handleLogout}
+          >
             Logout
           </Button>
         </Header>
@@ -453,7 +470,16 @@ const AppContent: React.FC = () => {
         <UserInfo>
           {userData?.me.name} ({userData?.me.email})
         </UserInfo>
-        <Button variant="secondary" onClick={handleLogout}>
+        <Button 
+          variant="secondary" 
+          onClick={() => setShowPastSessions(true)}
+        >
+          View History
+        </Button>
+        <Button 
+          variant="secondary" 
+          onClick={handleLogout}
+        >
           Logout
         </Button>
       </Header>

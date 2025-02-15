@@ -2,13 +2,27 @@ import { Resolver, Mutation, Args, ID, Query, Context } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { JwtGuard } from '../auth/guards/jwt.guard';
 import { Session } from '../generated-nestjs-typegraphql';
-import { StartSessionInput, SwitchProjectInput } from '../types/session.types';
+import {
+  StartSessionInput,
+  SwitchProjectInput,
+  GetSessionsInput,
+} from '../types/session.types';
 import { SessionService } from '../services/session.service';
 import { GraphQLContext } from 'src/users/users.resolver';
 
 @Resolver(() => Session)
 export class SessionResolver {
   constructor(private readonly sessionService: SessionService) {}
+
+  @Query(() => [Session])
+  @UseGuards(JwtGuard)
+  async userSessions(
+    @Context() context: GraphQLContext,
+    @Args('input') input: GetSessionsInput,
+  ): Promise<Session[]> {
+    const userId = context.req.user.id;
+    return this.sessionService.getUserSessions(userId, input);
+  }
 
   @Query(() => Session, { nullable: true })
   @UseGuards(JwtGuard)

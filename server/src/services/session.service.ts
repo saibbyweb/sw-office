@@ -5,7 +5,12 @@ import {
   Session,
   SessionStatus,
 } from '../generated-nestjs-typegraphql';
-import { StartSessionInput, SwitchProjectInput } from '../types/session.types';
+import {
+  StartSessionInput,
+  SwitchProjectInput,
+  GetSessionsInput,
+} from '../types/session.types';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class SessionService {
@@ -196,6 +201,63 @@ export class SessionService {
           projectId: input.projectId,
         },
       });
+    });
+  }
+
+  async getUserSessions(
+    userId: string,
+    input: GetSessionsInput,
+  ): Promise<Session[]> {
+    const {
+      startDate,
+      endDate,
+      projectIds,
+      statuses,
+      sortDescending = true,
+    } = input;
+
+    const where: Prisma.SessionWhereInput = {
+      userId,
+      ...(startDate && {
+        startTime: {
+          gte: startDate,
+        },
+      }),
+      ...(endDate && {
+        endTime: {
+          lte: endDate,
+        },
+      }),
+      ...(projectIds?.length && {
+        projectId: {
+          in: projectIds,
+        },
+      }),
+      ...(statuses?.length && {
+        status: {
+          in: statuses,
+        },
+      }),
+    };
+
+    return this.prisma.session.findMany({
+      where,
+      orderBy: {
+        startTime: sortDescending ? 'desc' : 'asc',
+      },
+      include: {
+        project: true,
+        segments: {
+          include: {
+            project: true,
+          },
+        },
+        workLogs: {
+          include: {
+            project: true,
+          },
+        },
+      },
     });
   }
 }
