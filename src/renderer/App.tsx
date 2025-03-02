@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled, { ThemeProvider } from 'styled-components';
 import { AppProvider } from './context/AppContext';
 import { theme } from './styles/theme';
@@ -25,6 +25,29 @@ import { WorkLogList } from './components/work-logs/WorkLogList';
 import { SegmentsList } from './components/segments/SegmentsList';
 import { StatsCard } from './components/common/StatsCard';
 import { PastSessionsScreen } from './components/screens/PastSessionsScreen';
+import { UpdateHandler } from './components/UpdateHandler';
+const { ipcRenderer } = window.require('electron');
+
+const VersionTag = styled.div`
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 0.75rem;
+  color: ${props => props.theme.colors.text}60;
+  opacity: 0.7;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+`;
+
+const NewVersionBadge = styled.span`
+  background-color: ${props => props.theme.colors.primary};
+  color: white;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: bold;
+`;
 
 const AppContainer = styled.div`
   height: 100%;
@@ -141,6 +164,7 @@ const AppContent: React.FC = () => {
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(localStorage.getItem('authToken'));
   const [showPastSessions, setShowPastSessions] = useState(false);
+  const [appVersion, setAppVersion] = useState<string>('1.0.0');
 
   const { data: userData, loading: userLoading } = useQuery(ME, {
     skip: !authToken,
@@ -299,6 +323,20 @@ const AppContent: React.FC = () => {
       }, 0);
   };
 
+  // Get app version using IPC
+  useEffect(() => {
+    const getAppVersion = async () => {
+      try {
+        const version = await ipcRenderer.invoke('get-app-version');
+        setAppVersion(version);
+      } catch (error) {
+        console.error('Failed to get app version:', error);
+      }
+    };
+    
+    getAppVersion();
+  }, []);
+
   if (!authToken) {
     return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
   }
@@ -324,6 +362,10 @@ const AppContent: React.FC = () => {
 
     return (
       <AppContainer>
+        <VersionTag>
+          v{appVersion}
+          {appVersion === '1.0.2' && <NewVersionBadge>NEW</NewVersionBadge>}
+        </VersionTag>
         <Header>
           <UserInfo>
             {userData?.me.name} ({userData?.me.email})
@@ -460,12 +502,17 @@ const AppContent: React.FC = () => {
             message={notification.message}
           />
         )}
+        <UpdateHandler />
       </AppContainer>
     );
   }
 
   return (
     <AppContainer>
+      <VersionTag>
+        v{appVersion}
+        {appVersion === '1.0.2' && <NewVersionBadge>NEW</NewVersionBadge>}
+      </VersionTag>
       <Header>
         <UserInfo>
           {userData?.me.name} ({userData?.me.email})
