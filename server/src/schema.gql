@@ -64,6 +64,7 @@ type Mutation {
   deleteWorkLog(id: ID!): Boolean!
   endBreak(breakId: ID!): Break!
   endSession(id: ID!): Session!
+  hashPassword(password: String!): String!
   login(input: LoginInput!): AuthPayload!
   logout: Boolean!
   register(input: RegisterInput!): AuthPayload!

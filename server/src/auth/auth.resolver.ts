@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { LoginInput, RegisterInput } from '../users/dto/auth.input';
 import { AuthPayload } from './dto/auth.payload';
 import { UnauthorizedException } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 
 @Resolver()
 export class AuthResolver {
@@ -16,6 +17,12 @@ export class AuthResolver {
   @Mutation(() => AuthPayload)
   async register(@Args('input') input: RegisterInput) {
     return this.authService.register(input);
+  }
+
+  @Mutation(() => String)
+  async hashPassword(@Args('password') password: string) {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    return hashedPassword;
   }
 
   @Mutation(() => AuthPayload, { name: 'registerSeedUser' })

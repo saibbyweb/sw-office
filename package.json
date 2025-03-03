@@ -1,6 +1,6 @@
 {
   "name": "electron-react-app",
-  "version": "1.0.4",
+  "version": "1.0.6",
   "description": "Electron React TypeScript App",
   "main": "dist/main/main.js",
   "scripts": {
@@ -10,8 +10,7 @@
     "dev": "vite build && tsc && electron .",
     "server-dev": "cd server && yarn run start:dev",
     "electron:build": "npm run build && electron-builder build --publish never",
-    "electron:deploy": "npm run build && electron-builder build --publish always",
-    "electron:build-install": "npm run electron:build && node scripts/install-app.js"
+    "electron:deploy": "npm run build && electron-builder build --publish always"
   },
   "author": "",
   "license": "ISC",
