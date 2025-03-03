@@ -146,4 +146,16 @@ export interface AddWorkLogData {
 
 export interface UpdateWorkLogData {
   updateWorkLog: WorkLog;
+}
+
+export interface LatestAppVersionData {
+  latestAppVersion: string;
+}
+
+export interface GetReleaseUrlData {
+  getReleaseUrl: string;
+}
+
+export interface GetReleaseUrlVars {
+  version: string;
 } 

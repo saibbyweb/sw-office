@@ -25,7 +25,7 @@ import { WorkLogList } from './components/work-logs/WorkLogList';
 import { SegmentsList } from './components/segments/SegmentsList';
 import { StatsCard } from './components/common/StatsCard';
 import { PastSessionsScreen } from './components/screens/PastSessionsScreen';
-import { UpdateHandler } from './components/UpdateHandler';
+import { VersionChecker } from './components/VersionChecker';
 const { ipcRenderer } = window.require('electron');
 
 const VersionTag = styled.div`
@@ -364,7 +364,7 @@ const AppContent: React.FC = () => {
       <AppContainer>
         <VersionTag>
           v{appVersion}
-          {appVersion === '1.0.2' && <NewVersionBadge>NEW</NewVersionBadge>}
+          <NewVersionBadge>NEW - FROM THE OVEN</NewVersionBadge>
         </VersionTag>
         <Header>
           <UserInfo>
@@ -502,7 +502,6 @@ const AppContent: React.FC = () => {
             message={notification.message}
           />
         )}
-        <UpdateHandler />
       </AppContainer>
     );
   }
@@ -556,6 +555,7 @@ const App: React.FC = () => {
         <GlobalStyles />
         <AppProvider>
           <AppContent />
+          <VersionChecker />
         </AppProvider>
       </ThemeProvider>
     </ApolloProvider>

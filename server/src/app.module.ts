@@ -9,6 +9,7 @@ import { DatabaseModule } from './database/database.module';
 import { WorkModule } from './modules/work.module';
 import { ProjectsModule } from './projects/projects.module';
 import { DebugModule } from './debug/debug.module';
+import { SystemModule } from './system/system.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { DebugModule } from './debug/debug.module';
     WorkModule,
     ProjectsModule,
     DebugModule,
+    SystemModule,
   ],
 })
 export class AppModule {}
