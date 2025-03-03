@@ -25,6 +25,7 @@ import { WorkLogList } from './components/work-logs/WorkLogList';
 import { SegmentsList } from './components/segments/SegmentsList';
 import { StatsCard } from './components/common/StatsCard';
 import { PastSessionsScreen } from './components/screens/PastSessionsScreen';
+import { UpdateInfo } from './components/common/UpdateInfo';
 const { ipcRenderer } = window.require('electron');
 
 const VersionTag = styled.div`
@@ -365,6 +366,7 @@ const AppContent: React.FC = () => {
           v{appVersion}
           <NewVersionBadge>NEW - FROM THE OVEN</NewVersionBadge>
         </VersionTag>
+        <UpdateInfo />
         <Header>
           <UserInfo>
             {userData?.me.name} ({userData?.me.email})
@@ -511,6 +513,7 @@ const AppContent: React.FC = () => {
         v{appVersion}
         {appVersion === '1.0.2' && <NewVersionBadge>NEW</NewVersionBadge>}
       </VersionTag>
+      <UpdateInfo />
       <Header>
         <UserInfo>
           {userData?.me.name} ({userData?.me.email})

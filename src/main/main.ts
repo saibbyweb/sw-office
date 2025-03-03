@@ -2,12 +2,12 @@ import { app, BrowserWindow, ipcMain } from "electron";
 import path from "path";
 import log from "electron-log";
 import { autoUpdater } from "electron-updater";
-import fs from "fs";
+import { setupAutoUpdater } from "./autoUpdater";
 
 log.transports.file.level = "debug"
 autoUpdater.logger = log
 
-const isDev = process.env.NODE_ENV === "development";
+const isDev = process.env.NODE_ENV !== "development";
 
 // Configure proper logging
 log.transports.file.level = "info";
@@ -44,6 +44,9 @@ const createWindow = () => {
   } else {
     mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
   }
+
+  // Setup auto updater after window is created
+  setupAutoUpdater(isDev, mainWindow);
 };
 
 // This method will be called when Electron has finished
@@ -59,60 +62,6 @@ app.whenReady().then(() => {
       createWindow();
     }
   });
-
-  if (isDev) {
-    // For testing in development
-    autoUpdater.forceDevUpdateConfig = true;
-    autoUpdater.updateConfigPath = path.join(__dirname, 'dev-app-update.yml');
-  }
-
-  autoUpdater.checkForUpdatesAndNotify();
-});
-
-// Optional: Set up event listeners to handle update events
-autoUpdater.on("update-available", () => {
-  // Notify user that an update is available
-  console.log("Update available");
-});
-
-autoUpdater.on("update-downloaded", () => {
-  // Notify user that update is ready to install
-  console.log("Update downloaded");
-});
-
-// Force refresh from the server by clearing the cache
-autoUpdater.on('checking-for-update', () => {
-  log.info('Checking for update...');
-  // Clear cache directory
-  const cacheDir = path.join(app.getPath('userData'), 'update-cache');
-  if (fs.existsSync(cacheDir)) {
-    try {
-      fs.rmdirSync(cacheDir, { recursive: true });
-      log.info('Update cache cleared');
-    } catch (err) {
-      log.error('Failed to clear update cache:', err);
-    }
-  }
-});
-
-autoUpdater.on('update-available', (info) => {
-  console.log('Update available:', info);
-});
-
-autoUpdater.on('update-not-available', (info) => {
-  console.log('Update not available:', info);
-});
-
-autoUpdater.on('error', (err) => {
-  console.log('Error in auto-updater:', err);
-});
-
-autoUpdater.on('download-progress', (progressObj) => {
-  console.log('Download progress:', progressObj);
-});
-
-autoUpdater.on('update-downloaded', (info) => {
-  console.log('Update downloaded:', info);
 });
 
 // Quit when all windows are closed.

@@ -10,7 +10,8 @@
     "dev": "vite build && tsc && electron .",
     "server-dev": "cd server && yarn run start:dev",
     "electron:build": "npm run build && electron-builder build --publish never",
-    "electron:deploy": "npm run build && electron-builder build --publish always"
+    "electron:deploy": "npm run build && electron-builder build --publish always",
+    "electron:build-install": "npm run electron:build && node scripts/install-app.js"
   },
   "author": "",
   "license": "ISC",
