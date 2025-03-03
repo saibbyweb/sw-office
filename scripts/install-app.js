@@ -11,7 +11,8 @@ const platform = process.platform;
 
 if (platform === 'darwin') {
   // For macOS, we'll mount the DMG and copy the app to Applications
-  const dmgPath = path.join(__dirname, `../release/${appName}-${version}.dmg`);
+  const arch = process.arch === 'arm64' ? '-arm64' : '';
+  const dmgPath = path.join(__dirname, `../release/${appName}-${version}${arch}.dmg`);
   
   if (!fs.existsSync(dmgPath)) {
     console.error('DMG file not found:', dmgPath);

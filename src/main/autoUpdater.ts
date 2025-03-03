@@ -5,6 +5,18 @@ import path from "path";
 import fs from "fs";
 import { ipcMain } from "electron";
 
+const hasUpdateFiles = () => {
+  // Check update-cache directory
+  const cacheDir = path.join(app.getPath('userData'), 'update-cache');
+  const hasCacheFiles = fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0;
+
+  // Check pending downloads
+  const pendingDir = path.join(app.getPath('home'), 'Library/Caches/electron-react-app/pending');
+  const hasPendingFiles = fs.existsSync(pendingDir) && fs.readdirSync(pendingDir).length > 0;
+
+  return hasCacheFiles || hasPendingFiles;
+};
+
 const clearUpdateCache = () => {
   let success = true;
   
@@ -38,9 +50,12 @@ const clearUpdateCache = () => {
 export const setupAutoUpdater = (isDev: boolean, mainWindow: BrowserWindow) => {
   // Remove existing handlers first
   ipcMain.removeHandler('clear-updates');
+  ipcMain.removeHandler('check-update-files');
   
   // Prevent auto downloading of updates
   autoUpdater.autoDownload = false;
+  // Disable differential downloads to avoid 404 errors on blockmap
+  autoUpdater.disableDifferentialDownload = true;
 
   if (isDev) {
     // For testing in development
@@ -87,6 +102,7 @@ export const setupAutoUpdater = (isDev: boolean, mainWindow: BrowserWindow) => {
   ipcMain.removeAllListeners('restart-app');
 
   ipcMain.on('start-download', () => {
+    mainWindow.webContents.send('download-started');
     autoUpdater.downloadUpdate();
   });
 
@@ -100,6 +116,10 @@ export const setupAutoUpdater = (isDev: boolean, mainWindow: BrowserWindow) => {
       autoUpdater.checkForUpdates();
     }
     return success;
+  });
+
+  ipcMain.handle('check-update-files', () => {
+    return hasUpdateFiles();
   });
 
   // Add periodic update check (every hour)

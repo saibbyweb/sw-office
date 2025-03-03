@@ -17,11 +17,13 @@
   "license": "ISC",
   "build": {
     "appId": "com.saibbyweb.swoffice",
-    "publish": [{
-      "provider": "github",
-      "owner": "saibbyweb",
-      "repo": "sw-office"
-    }],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "saibbyweb",
+        "repo": "sw-office"
+      }
+    ],
     "productName": "SW Office",
     "directories": {
       "output": "release"
@@ -35,8 +37,16 @@
         "dmg",
         "zip"
       ],
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "notarize": {
+        "teamId": "G2K8QZ7ZS7"
+      }
     },
+    "afterSign": "scripts/notarize.js",
     "win": {
       "target": [
         "nsis"
@@ -50,10 +60,12 @@
     }
   },
   "devDependencies": {
+    "@electron/notarize": "^2.5.0",
     "@types/node": "^22.13.2",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^4.3.4",
+    "dotenv": "^16.4.7",
     "electron": "^34.2.0",
     "electron-builder": "^25.1.8",
     "electron-vite": "^2.3.0",

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import { Snackbar } from './Snackbar';
 const { ipcRenderer } = window.require('electron');
 
 interface UpdateInfo {
@@ -95,6 +96,21 @@ const SecondaryButton = styled(UpdateButton)`
   }
 `;
 
+const Spinner = styled.div`
+  width: 16px;
+  height: 16px;
+  border: 2px solid ${props => props.theme.colors.background};
+  border-top: 2px solid ${props => props.theme.colors.primary};
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 8px auto;
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`;
+
 interface UpdateState {
   currentVersion: string;
   availableVersion: string | null;
@@ -103,6 +119,13 @@ interface UpdateState {
   isUpdateAvailable: boolean;
   isUpdateReady: boolean;
   error: string | null;
+  isInitializingDownload: boolean;
+}
+
+interface SnackbarState {
+  show: boolean;
+  message: string;
+  type: 'success' | 'error';
 }
 
 export const UpdateInfo: React.FC = () => {
@@ -113,9 +136,26 @@ export const UpdateInfo: React.FC = () => {
     isDownloading: false,
     isUpdateAvailable: false,
     isUpdateReady: false,
-    error: null
+    error: null,
+    isInitializingDownload: false
   });
   const [isClearing, setIsClearing] = useState(false);
+  const [hasFiles, setHasFiles] = useState(false);
+  const [snackbar, setSnackbar] = useState<SnackbarState>({
+    show: false,
+    message: '',
+    type: 'success'
+  });
+
+  const checkForUpdateFiles = async () => {
+    try {
+      const hasUpdateFiles = await ipcRenderer.invoke('check-update-files');
+      setHasFiles(hasUpdateFiles);
+    } catch (err) {
+      console.error('Failed to check for update files:', err);
+      setHasFiles(false);
+    }
+  };
 
   useEffect(() => {
     const setupUpdateListeners = async () => {
@@ -123,13 +163,25 @@ export const UpdateInfo: React.FC = () => {
       const version = await ipcRenderer.invoke('get-app-version');
       setUpdateState(prev => ({ ...prev, currentVersion: version }));
 
+      // Check for update files
+      await checkForUpdateFiles();
+
       // Listen for update events
+      ipcRenderer.on('download-started', () => {
+        setUpdateState(prev => ({
+          ...prev,
+          isInitializingDownload: true,
+          error: null
+        }));
+      });
+
       ipcRenderer.on('update-available', (_: any, info: UpdateInfo) => {
         setUpdateState(prev => ({
           ...prev,
           availableVersion: info.version,
           isUpdateAvailable: true,
-          isDownloading: false // Reset download state when new update is available
+          isDownloading: false,
+          isInitializingDownload: false
         }));
       });
 
@@ -138,8 +190,11 @@ export const UpdateInfo: React.FC = () => {
           ...prev,
           downloadProgress: progressObj.percent,
           isDownloading: true,
-          error: null // Clear any previous errors
+          isInitializingDownload: false,
+          error: null
         }));
+        // Update hasFiles state since we're downloading
+        setHasFiles(true);
       });
 
       ipcRenderer.on('update-downloaded', () => {
@@ -147,15 +202,19 @@ export const UpdateInfo: React.FC = () => {
           ...prev,
           isDownloading: false,
           isUpdateReady: true,
+          isInitializingDownload: false,
           error: null
         }));
+        // Check for files again after download
+        checkForUpdateFiles();
       });
 
       ipcRenderer.on('update-error', (_: any, error: ErrorInfo) => {
         setUpdateState(prev => ({
           ...prev,
           error: error.message,
-          isDownloading: false
+          isDownloading: false,
+          isInitializingDownload: false
         }));
       });
     };
@@ -168,6 +227,7 @@ export const UpdateInfo: React.FC = () => {
       ipcRenderer.removeAllListeners('download-progress');
       ipcRenderer.removeAllListeners('update-downloaded');
       ipcRenderer.removeAllListeners('update-error');
+      ipcRenderer.removeAllListeners('download-started');
     };
   }, []);
 
@@ -175,9 +235,21 @@ export const UpdateInfo: React.FC = () => {
     if (updateState.isUpdateReady) {
       ipcRenderer.send('restart-app');
     } else if (updateState.isUpdateAvailable && !updateState.isDownloading) {
-      setUpdateState(prev => ({ ...prev, error: null }));
+      setUpdateState(prev => ({ 
+        ...prev, 
+        error: null,
+        isInitializingDownload: true 
+      }));
       ipcRenderer.send('start-download');
     }
+  };
+
+  const showSnackbar = (message: string, type: 'success' | 'error') => {
+    setSnackbar({
+      show: true,
+      message,
+      type
+    });
   };
 
   const handleClearCache = async () => {
@@ -189,19 +261,25 @@ export const UpdateInfo: React.FC = () => {
           ...prev,
           isDownloading: false,
           downloadProgress: 0,
-          error: null
+          error: null,
+          isUpdateReady: false
         }));
+        showSnackbar('Update cache cleared successfully', 'success');
+        // Check for files again after clearing
+        await checkForUpdateFiles();
       } else {
         setUpdateState(prev => ({
           ...prev,
           error: 'Failed to clear update cache'
         }));
+        showSnackbar('Failed to clear update cache', 'error');
       }
     } catch (err) {
       setUpdateState(prev => ({
         ...prev,
         error: 'Error clearing update cache'
       }));
+      showSnackbar('Error clearing update cache', 'error');
     } finally {
       setIsClearing(false);
     }
@@ -212,48 +290,66 @@ export const UpdateInfo: React.FC = () => {
   }
 
   return (
-    <UpdateInfoContainer>
-      <VersionInfo>
-        <div>Current: v{updateState.currentVersion}</div>
-        {updateState.availableVersion && (
-          <div>Available: v{updateState.availableVersion}</div>
+    <>
+      <UpdateInfoContainer>
+        <VersionInfo>
+          <div>Current: v{updateState.currentVersion}</div>
+          {updateState.availableVersion && (
+            <div>Available: v{updateState.availableVersion}</div>
+          )}
+        </VersionInfo>
+
+        {updateState.isInitializingDownload && (
+          <>
+            <div style={{ textAlign: 'center', marginTop: '8px' }}>
+              Initializing download...
+              <Spinner />
+            </div>
+          </>
         )}
-      </VersionInfo>
 
-      {updateState.isDownloading && (
-        <>
-          <div>Downloading update... {Math.round(updateState.downloadProgress)}%</div>
-          <ProgressBar>
-            <ProgressFill progress={updateState.downloadProgress} />
-          </ProgressBar>
-        </>
-      )}
+        {updateState.isDownloading && (
+          <>
+            <div>Downloading update... {Math.round(updateState.downloadProgress)}%</div>
+            <ProgressBar>
+              <ProgressFill progress={updateState.downloadProgress} />
+            </ProgressBar>
+          </>
+        )}
 
-      {updateState.error && (
-        <div style={{ color: 'red', marginTop: '8px', fontSize: '0.75rem' }}>
-          Error: {updateState.error}
-        </div>
-      )}
+        {updateState.error && (
+          <div style={{ color: 'red', marginTop: '8px', fontSize: '0.75rem' }}>
+            Error: {updateState.error}
+          </div>
+        )}
 
-      <ButtonGroup>
-        <UpdateButton
-          onClick={handleUpdate}
-          disabled={updateState.isDownloading || isClearing}
-        >
-          {updateState.isUpdateReady
-            ? 'Restart to Install'
-            : updateState.isDownloading
-            ? `Downloading... ${Math.round(updateState.downloadProgress)}%`
-            : 'Download Update'}
-        </UpdateButton>
-        <SecondaryButton
-          onClick={handleClearCache}
-          disabled={updateState.isDownloading || isClearing}
-          title="Clear downloaded updates and check again"
-        >
-          {isClearing ? 'Clearing...' : '🗑️ Clear Cache'}
-        </SecondaryButton>
-      </ButtonGroup>
-    </UpdateInfoContainer>
+        <ButtonGroup>
+          <UpdateButton
+            onClick={handleUpdate}
+            disabled={updateState.isDownloading || isClearing || updateState.isInitializingDownload}
+          >
+            {updateState.isUpdateReady
+              ? 'Restart to Install'
+              : updateState.isDownloading || updateState.isInitializingDownload
+              ? `${updateState.isInitializingDownload ? 'Initializing...' : `Downloading... ${Math.round(updateState.downloadProgress)}%`}`
+              : 'Download Update'}
+          </UpdateButton>
+          <SecondaryButton
+            onClick={handleClearCache}
+            disabled={updateState.isDownloading || isClearing || !hasFiles || updateState.isInitializingDownload}
+            title={!hasFiles ? "No update files to clear" : "Clear downloaded updates and check again"}
+          >
+            {isClearing ? 'Clearing...' : '🗑️ Clear Cache'}
+          </SecondaryButton>
+        </ButtonGroup>
+      </UpdateInfoContainer>
+      
+      <Snackbar
+        show={snackbar.show}
+        message={snackbar.message}
+        type={snackbar.type}
+        onClose={() => setSnackbar(prev => ({ ...prev, show: false }))}
+      />
+    </>
   );
 }; 
