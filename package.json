@@ -1,7 +1,8 @@
 {
-  "name": "electron-react-app",
+  "name": "sw-office",
+  "productName": "SW Office",
   "version": "1.0.6",
-  "description": "Electron React TypeScript App",
+  "description": "SW Office - Modern Office Management Solution",
   "main": "dist/main/main.js",
   "scripts": {
     "start": "electron .",
@@ -9,13 +10,20 @@
     "watch": "tsc -w",
     "dev": "vite build && tsc && electron .",
     "server-dev": "cd server && yarn run start:dev",
-    "electron:build": "npm run build && electron-builder build --publish never",
-    "electron:deploy": "npm run build && electron-builder build --publish always"
+    "electron:build": "yarn build && electron-builder build --publish never",
+    "electron:deploy": "yarn build && electron-builder build --publish always",
+    "generate-icons": "electron-icon-builder --input=./build/icon.png --output=build --flatten"
   },
-  "author": "",
+  "author": {
+    "name": "Saibby Web",
+    "email": "hello@saibbyweb.com",
+    "url": "https://saibbyweb.com"
+  },
   "license": "ISC",
   "build": {
     "appId": "com.saibbyweb.swoffice",
+    "productName": "SW Office",
+    "copyright": "Copyright © 2024 Saibby Web",
     "publish": [
       {
         "provider": "github",
@@ -23,9 +31,9 @@
         "repo": "sw-office"
       }
     ],
-    "productName": "SW Office",
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "build"
     },
     "files": [
       "dist/**/*",
@@ -43,20 +51,28 @@
       "entitlementsInherit": "build/entitlements.mac.plist",
       "notarize": {
         "teamId": "G2K8QZ7ZS7"
+      },
+      "icon": "build/icons/icon.icns",
+      "darkModeSupport": true,
+      "extendInfo": {
+        "CFBundleName": "SW Office",
+        "CFBundleDisplayName": "SW Office"
       }
     },
-    "afterSign": "scripts/notarize.js",
     "win": {
       "target": [
         "nsis"
-      ]
+      ],
+      "icon": "build/icons/icon.ico"
     },
     "linux": {
       "target": [
         "AppImage"
       ],
-      "category": "Office"
-    }
+      "category": "Office",
+      "icon": "build/icons/icon.png"
+    },
+    "afterSign": "scripts/notarize.js"
   },
   "devDependencies": {
     "@electron/notarize": "^2.5.0",
@@ -67,6 +83,7 @@
     "dotenv": "^16.4.7",
     "electron": "^34.2.0",
     "electron-builder": "^25.1.8",
+    "electron-icon-builder": "^2.0.1",
     "electron-vite": "^2.3.0",
     "typescript": "^5.7.3",
     "vite": "^6.1.0"
