@@ -1,17 +1,5 @@
 import { gql } from '@apollo/client';
 
-export const LATEST_APP_VERSION = gql`
-  query LatestAppVersion {
-    latestAppVersion
-  }
-`;
-
-export const GET_RELEASE_URL = gql`
-  query GetReleaseUrl($version: String!) {
-    getReleaseUrl(version: $version)
-  }
-`;
-
 export const GET_PROJECTS = gql`
   query GetProjects {
     projects {

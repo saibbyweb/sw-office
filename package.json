@@ -1,6 +1,6 @@
 {
   "name": "electron-react-app",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "description": "Electron React TypeScript App",
   "main": "dist/main/main.js",
   "scripts": {
@@ -15,31 +15,37 @@
   "author": "",
   "license": "ISC",
   "build": {
-    "appId": "com.electron.app",
-    "productName": "SW-Office",
-    "publish": {
+    "appId": "com.saibbyweb.swoffice",
+    "publish": [{
       "provider": "github",
-      "private": true,
       "owner": "saibbyweb",
       "repo": "sw-office"
-    },
-    "mac": {
-      "category": "public.app-category.utilities",
-      "target": [
-        "dmg",
-        "zip"
-      ]
-    },
-    "win": {
-      "target": "nsis"
+    }],
+    "productName": "SW Office",
+    "directories": {
+      "output": "release"
     },
     "files": [
       "dist/**/*",
-      "node_modules/**/*"
+      "package.json"
     ],
-    "directories": {
-      "buildResources": "assets",
-      "output": "release"
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Office"
     }
   },
   "devDependencies": {

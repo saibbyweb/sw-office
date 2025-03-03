@@ -25,7 +25,6 @@ import { WorkLogList } from './components/work-logs/WorkLogList';
 import { SegmentsList } from './components/segments/SegmentsList';
 import { StatsCard } from './components/common/StatsCard';
 import { PastSessionsScreen } from './components/screens/PastSessionsScreen';
-import { VersionChecker } from './components/VersionChecker';
 const { ipcRenderer } = window.require('electron');
 
 const VersionTag = styled.div`
@@ -555,7 +554,6 @@ const App: React.FC = () => {
         <GlobalStyles />
         <AppProvider>
           <AppContent />
-          <VersionChecker />
         </AppProvider>
       </ThemeProvider>
     </ApolloProvider>

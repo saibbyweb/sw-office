@@ -96,13 +96,7 @@ type ProjectCount {
 type Query {
   activeSession: Session
   debugData: String!
-
-  """Get the GitHub release URL for a specific version"""
-  getReleaseUrl(version: String!): String!
   hello: String!
-
-  """Get the latest app version"""
-  latestAppVersion: String!
   me: User!
   projects: [Project!]!
   sessionWorkLogs(sessionId: ID!): [WorkLog!]!
