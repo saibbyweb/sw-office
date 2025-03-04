@@ -1,95 +1,151 @@
 import React from 'react';
-import styled from 'styled-components';
-import { motion } from 'framer-motion';
+import styled, { keyframes } from 'styled-components';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
+const spin = keyframes`
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+`;
+
+interface StyledButtonProps {
+  variant?: 'primary' | 'secondary' | 'warning' | 'error';
   size?: 'small' | 'medium' | 'large';
   isLoading?: boolean;
 }
 
-const StyledButton = styled(motion.button)<ButtonProps>`
-  padding: ${props => {
-    switch (props.size) {
-      case 'small': return '0.5rem 1rem';
-      case 'large': return '1rem 2rem';
-      default: return '0.75rem 1.5rem';
-    }
-  }};
-  border: none;
-  border-radius: 8px;
-  font-size: ${props => {
-    switch (props.size) {
-      case 'small': return '0.875rem';
-      case 'large': return '1.125rem';
-      default: return '1rem';
-    }
-  }};
-  font-weight: 600;
-  cursor: pointer;
+const getBackgroundColor = (variant: string, theme: any) => {
+  switch (variant) {
+    case 'secondary':
+      return `${theme.colors.background}30`;
+    case 'warning':
+      return theme.colors.warning;
+    case 'error':
+      return theme.colors.error;
+    default:
+      return theme.colors.primary;
+  }
+};
+
+const getBorderColor = (variant: string, theme: any) => {
+  switch (variant) {
+    case 'secondary':
+      return `${theme.colors.background}40`;
+    case 'warning':
+      return theme.colors.warning;
+    case 'error':
+      return theme.colors.error;
+    default:
+      return theme.colors.primary;
+  }
+};
+
+const getHoverBackground = (variant: string, theme: any) => {
+  switch (variant) {
+    case 'secondary':
+      return `${theme.colors.background}40`;
+    case 'warning':
+      return `${theme.colors.warning}90`;
+    case 'error':
+      return `${theme.colors.error}90`;
+    default:
+      return `${theme.colors.primary}90`;
+  }
+};
+
+const StyledButton = styled.button<StyledButtonProps>`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  transition: all 0.2s ease;
-  background-color: ${props => {
-    switch (props.variant) {
-      case 'secondary': return props.theme.colors.secondary;
-      case 'success': return props.theme.colors.success;
-      case 'warning': return props.theme.colors.warning;
-      case 'error': return props.theme.colors.error;
-      default: return props.theme.colors.primary;
-    }
-  }};
-  color: white;
-  opacity: ${props => props.disabled ? 0.6 : 1};
+  gap: ${props => props.theme.spacing.sm};
+  padding: ${props => props.size === 'small' 
+    ? `${props.theme.spacing.sm} ${props.theme.spacing.md}` 
+    : `${props.theme.spacing.md} ${props.theme.spacing.lg}`};
+  background: ${props => getBackgroundColor(props.variant || 'primary', props.theme)};
+  color: ${props => props.variant === 'secondary' ? props.theme.colors.text : '#fff'};
+  border: 1px solid ${props => getBorderColor(props.variant || 'primary', props.theme)};
+  border-radius: 12px;
+  font-size: ${props => props.size === 'small' ? '0.875rem' : '0.9375rem'};
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  backdrop-filter: ${props => props.variant === 'secondary' ? 'blur(8px)' : 'none'};
+  opacity: ${props => props.isLoading ? 0.8 : 1};
+  position: relative;
+  overflow: hidden;
 
-  &:hover:not(:disabled) {
+  &:hover {
+    background: ${props => getHoverBackground(props.variant || 'primary', props.theme)};
     transform: translateY(-1px);
-    filter: brightness(110%);
   }
 
-  &:active:not(:disabled) {
+  &:active {
     transform: translateY(0);
   }
 
   &:disabled {
+    opacity: 0.5;
     cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      45deg,
+      transparent 25%,
+      rgba(255, 255, 255, 0.1) 50%,
+      transparent 75%
+    );
+    background-size: 200% 200%;
+    animation: shimmer 2s infinite linear;
+    opacity: ${props => props.isLoading ? 1 : 0};
+    pointer-events: none;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
   }
 `;
 
-const LoadingSpinner = styled(motion.div)`
+const LoadingSpinner = styled.div`
   width: 16px;
   height: 16px;
   border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
   border-radius: 50%;
-  border-top-color: white;
-  animation: spin 1s linear infinite;
-
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
+  animation: ${spin} 0.8s linear infinite;
+  margin-right: ${props => props.theme.spacing.sm};
 `;
 
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary' | 'warning' | 'error';
+  size?: 'small' | 'medium' | 'large';
+  isLoading?: boolean;
+  children: React.ReactNode;
+}
+
 export const Button: React.FC<ButtonProps> = ({
-  children,
   variant = 'primary',
   size = 'medium',
   isLoading = false,
-  disabled,
+  children,
   ...props
 }) => {
   return (
     <StyledButton
       variant={variant}
       size={size}
-      disabled={disabled || isLoading}
-      whileTap={{ scale: 0.98 }}
+      isLoading={isLoading}
+      disabled={isLoading || props.disabled}
       {...props}
     >
-      {isLoading ? <LoadingSpinner /> : children}
+      {isLoading && <LoadingSpinner />}
+      {children}
     </StyledButton>
   );
 }; 

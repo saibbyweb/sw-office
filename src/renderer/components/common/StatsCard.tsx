@@ -46,7 +46,7 @@ interface StatsCardProps {
   title: string;
   value: string | number;
   color: string;
-  icon?: string;
+  icon?: React.ReactNode;
   subtitle?: string;
   children?: React.ReactNode;
 }
@@ -62,7 +62,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
   return (
     <Card bgColor={color}>
       <Title>
-        {icon && <span role="img" aria-label={title}>{icon}</span>}
+        {icon}
         {title}
       </Title>
       <Value color={color}>{value}</Value>

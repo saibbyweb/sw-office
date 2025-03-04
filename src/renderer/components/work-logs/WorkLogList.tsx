@@ -81,6 +81,17 @@ const ActionButton = styled(Button)`
   padding: 4px 8px;
   font-size: 0.75rem;
   min-width: auto;
+
+  &[data-variant="delete"] {
+    color: ${props => props.theme.colors.text};
+    border: 1px solid ${props => props.theme.colors.text}40;
+    background: transparent;
+
+    &:hover {
+      background: ${props => props.theme.colors.text}10;
+      border-color: ${props => props.theme.colors.text}60;
+    }
+  }
 `;
 
 const DeleteIcon = styled.span`
@@ -229,7 +240,7 @@ export const WorkLogList: React.FC<WorkLogListProps> = ({ sessionId }) => {
                   Edit
                 </ActionButton>
                 <ActionButton
-                  variant="error"
+                  data-variant="delete"
                   size="small"
                   onClick={() => handleDelete(log)}
                 >

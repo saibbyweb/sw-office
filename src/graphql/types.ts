@@ -59,6 +59,7 @@ export interface ActiveSessionData {
 export enum BreakType {
   SHORT = 'SHORT',
   LUNCH = 'LUNCH',
+  PRAYER = 'PRAYER',
   OTHER = 'OTHER'
 }
 

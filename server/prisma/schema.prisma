@@ -29,6 +29,7 @@ enum SessionStatus {
 enum BreakType {
   SHORT
   LUNCH
+  PRAYER
   OTHER
 }
 

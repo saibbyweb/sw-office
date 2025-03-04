@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import { Modal, Button } from '../common';
+import { Modal, Button, Select } from '../common';
 import { useApp } from '../../context/AppContext';
 import { useMutation, useQuery } from '@apollo/client';
 import { GET_PROJECTS, START_SESSION } from '../../../graphql/queries';
@@ -27,22 +27,6 @@ const Title = styled.h2`
 const DateDisplay = styled.div`
   color: ${props => props.theme.colors.text}80;
   font-size: 0.875rem;
-`;
-
-const ProjectSelect = styled.select`
-  padding: 0.75rem;
-  border: 1px solid ${props => props.theme.colors.secondary}40;
-  border-radius: 8px;
-  font-size: 1rem;
-  outline: none;
-  width: 100%;
-  background-color: ${props => props.theme.colors.background};
-  cursor: pointer;
-
-  &:focus {
-    border-color: ${props => props.theme.colors.primary};
-    box-shadow: 0 0 0 2px ${props => props.theme.colors.primary}20;
-  }
 `;
 
 const ButtonGroup = styled.div`
@@ -113,23 +97,24 @@ export const StartWorkModal: React.FC<StartWorkModalProps> = ({ isOpen, onClose 
     return null;
   }
 
+  const projectOptions = data?.projects.map((project: Project) => ({
+    value: project.id,
+    label: project.name
+  })) || [];
+
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <ModalContent>
         <Title>Start Work Session</Title>
         <DateDisplay>{formatDate()}</DateDisplay>
 
-        <ProjectSelect
+        <Select
           value={selectedProject}
-          onChange={e => setSelectedProject(e.target.value)}
-        >
-          <option value="">Select Project</option>
-          {data?.projects.map((project: Project) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </ProjectSelect>
+          onChange={setSelectedProject}
+          options={projectOptions}
+          placeholder="Select Project"
+          required
+        />
 
         {error && (
           <div style={{ color: 'red', fontSize: '0.875rem' }}>{error}</div>

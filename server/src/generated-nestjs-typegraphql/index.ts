@@ -89,6 +89,7 @@ export enum QueryMode {
 export enum BreakType {
     SHORT = "SHORT",
     LUNCH = "LUNCH",
+    PRAYER = "PRAYER",
     OTHER = "OTHER"
 }
 

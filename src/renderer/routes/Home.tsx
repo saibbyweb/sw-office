@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@apollo/client';
+import { MdTimer, MdTimerOff, MdWork } from 'react-icons/md';
+import { HiLightningBolt, HiPause, HiViewGrid } from 'react-icons/hi';
 import { ME, ACTIVE_SESSION, START_BREAK, END_BREAK } from '../../graphql/queries';
 import { 
   ActiveSessionData, 
@@ -106,10 +108,49 @@ const StatsGrid = styled.div`
   gap: ${props => props.theme.spacing.md};
 `;
 
+const ProjectButton = styled(Button)`
+  border: 1px solid ${props => props.theme.colors.text}20;
+  box-shadow: 0 2px 4px ${props => props.theme.colors.text}10;
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px ${props => props.theme.colors.text}20;
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    transform: none;
+    box-shadow: none;
+  }
+`;
+
 const ActionButtons = styled.div`
   display: flex;
   gap: ${props => props.theme.spacing.md};
   margin-top: ${props => props.theme.spacing.xl};
+`;
+
+const IconWrapper = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+`;
+
+const EndBreakButton = styled(Button)`
+  margin-top: ${props => props.theme.spacing.sm};
+  background: ${props => props.theme.colors.warning}20;
+  border: 1px solid ${props => props.theme.colors.warning};
+  color: ${props => props.theme.colors.warning};
+  
+  &:hover {
+    background: ${props => props.theme.colors.warning}30;
+  }
+
+  svg {
+    margin-right: 6px;
+  }
 `;
 
 const formatDuration = (ms: number) => {
@@ -124,6 +165,12 @@ const formatDuration = (ms: number) => {
 
   return parts.join(' ') || '0s';
 };
+
+interface IconProps {
+  icon: React.ReactNode;
+}
+
+const StatsCardWithIcon = styled(StatsCard)<IconProps>``;
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -351,7 +398,7 @@ export const Home: React.FC = () => {
     <AppContainer>
       <VersionTag>
         v{appVersion}
-        <NewVersionBadge>NEW - FROM THE OVEN</NewVersionBadge>
+    
       </VersionTag>
       <UpdateInfo />
       <Header>
@@ -380,7 +427,7 @@ export const Home: React.FC = () => {
                 calculateTotalDuration(sessionData?.activeSession?.segments || [], 'WORK') * 1000
               )}
               color={theme.colors.primary}
-              icon="⚡"
+              icon={<IconWrapper><HiLightningBolt /></IconWrapper>}
               subtitle={state.session.isOnBreak ? 'On Break' : 'Currently Working'}
             />
             
@@ -390,16 +437,25 @@ export const Home: React.FC = () => {
                 calculateTotalDuration(sessionData?.activeSession?.segments || [], 'BREAK') * 1000
               )}
               color={theme.colors.warning}
-              icon="⏸️"
-            />
+              icon={<IconWrapper><HiPause /></IconWrapper>}
+            >
+              {state.session.isOnBreak && (
+                <EndBreakButton
+                  size="small"
+                  onClick={() => setShowBreakModal(true)}
+                >
+                  <MdTimerOff /> End Break
+                </EndBreakButton>
+              )}
+            </StatsCard>
 
             <StatsCard
               title="Current Project"
               value={projectName || 'No Project'}
               color={theme.colors.info}
-              icon="🎯"
+              icon={<IconWrapper><HiViewGrid /></IconWrapper>}
             >
-              <Button 
+              <ProjectButton 
                 variant="secondary" 
                 size="small"
                 onClick={() => setShowSwitchProjectModal(true)}
@@ -407,7 +463,7 @@ export const Home: React.FC = () => {
                 title={state.session.isOnBreak ? "Cannot switch project during a break" : ""}
               >
                 Switch Project
-              </Button>
+              </ProjectButton>
             </StatsCard>
           </StatsGrid>
         </Section>
@@ -457,9 +513,7 @@ export const Home: React.FC = () => {
             >
               End Work
             </Button>
-            <Button variant="secondary">
-              View Stats
-            </Button>
+         
           </ActionButtons>
         </Section>
       </MainContent>

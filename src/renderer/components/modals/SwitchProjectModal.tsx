@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { Modal, Button, Input } from '../common';
+import { Modal, Button, Input, Select } from '../common';
 import { useQuery, useMutation } from '@apollo/client';
 import { GET_PROJECTS, ACTIVE_SESSION, SWITCH_PROJECT } from '../../../graphql/queries';
 import { 
@@ -29,22 +29,6 @@ const Title = styled.h2`
   color: ${props => props.theme.colors.text};
   font-size: 1.5rem;
   font-weight: 600;
-`;
-
-const ProjectSelect = styled.select`
-  padding: 0.75rem;
-  border: 1px solid ${props => props.theme.colors.secondary}40;
-  border-radius: 8px;
-  font-size: 1rem;
-  outline: none;
-  width: 100%;
-  background-color: ${props => props.theme.colors.background};
-  cursor: pointer;
-
-  &:focus {
-    border-color: ${props => props.theme.colors.primary};
-    box-shadow: 0 0 0 2px ${props => props.theme.colors.primary}20;
-  }
 `;
 
 const ButtonGroup = styled.div`
@@ -130,27 +114,31 @@ export const SwitchProjectModal: React.FC<SwitchProjectModalProps> = ({
     }
   };
 
+  const projectOptions = data?.projects.map((project: Project) => ({
+    value: project.id,
+    label: `${project.name}${project.id === sessionData?.activeSession?.projectId ? ' (Current)' : ''}`,
+    disabled: project.id === sessionData?.activeSession?.projectId
+  })) || [];
+
+  // Add "Other" option
+  projectOptions.push({
+    value: 'other',
+    label: 'Other',
+    disabled: false
+  });
+
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
       <ModalContent>
         <Title>Switch Project</Title>
 
-        <ProjectSelect
+        <Select
           value={selectedProject}
-          onChange={e => setSelectedProject(e.target.value)}
-        >
-          <option value="">Select Project</option>
-          {data?.projects?.map((project: Project) => (
-            <option 
-              key={project.id} 
-              value={project.id}
-              disabled={project.id === sessionData?.activeSession?.projectId}
-            >
-              {project.name} {project.id === sessionData?.activeSession?.projectId ? '(Current)' : ''}
-            </option>
-          ))}
-          <option value="other">Other</option>
-        </ProjectSelect>
+          onChange={setSelectedProject}
+          options={projectOptions}
+          placeholder="Select Project"
+          required
+        />
 
         {selectedProject === 'other' && (
           <Input
