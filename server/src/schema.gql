@@ -59,9 +59,14 @@ input LoginInput {
   password: String!
 }
 
+type MeetingStatus {
+  isInMeeting: Boolean!
+}
+
 type Mutation {
   addWorkLog(input: AddWorkLogInput!): WorkLog!
   cleanupInconsistentBreaks: String!
+  createOnlineMeeting(endTime: String!, startTime: String!, subject: String!, userId: String!): OnlineMeeting!
   deleteWorkLog(id: ID!): Boolean!
   endBreak(breakId: ID!): Break!
   endSession(id: ID!): Session!
@@ -74,6 +79,14 @@ type Mutation {
   startSession(input: StartSessionInput!): Session!
   switchProject(input: SwitchProjectInput!): Session!
   updateWorkLog(input: UpdateWorkLogInput!): WorkLog!
+}
+
+type OnlineMeeting {
+  endDateTime: String!
+  id: ID!
+  joinUrl: String!
+  startDateTime: String!
+  subject: String!
 }
 
 type Project {
@@ -97,12 +110,14 @@ type ProjectCount {
 
 type Query {
   activeSession: Session
+  checkUserInMeeting(userId: String!): MeetingStatus!
   debugData: String!
+  getAllUsers: [TeamsUser!]!
+  getAllUsersWithPresence: [TeamsUserWithPresence!]!
   hello: String!
   me: User!
   projects: [Project!]!
   sessionWorkLogs(sessionId: ID!): [WorkLog!]!
-  teamUsers: [User!]!
   userSessions(input: GetSessionsInput!): [Session!]!
 }
 
@@ -176,6 +191,21 @@ input StartSessionInput {
 input SwitchProjectInput {
   projectId: String!
   sessionId: String!
+}
+
+type TeamsUser {
+  displayName: String!
+  id: ID!
+  mail: String!
+  userPrincipalName: String!
+}
+
+type TeamsUserWithPresence {
+  displayName: String!
+  id: ID!
+  isInMeeting: Boolean!
+  mail: String!
+  userPrincipalName: String!
 }
 
 input UpdateWorkLogInput {

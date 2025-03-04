@@ -21,6 +21,9 @@
   },
   "dependencies": {
     "@apollo/server": "^4.11.3",
+    "@azure/identity": "^4.7.0",
+    "@microsoft/microsoft-graph-client": "^3.0.7",
+    "@microsoft/microsoft-graph-types": "^2.40.0",
     "@nestjs/apollo": "^13.0.2",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.0",

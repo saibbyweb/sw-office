@@ -4,7 +4,6 @@ import { gql, useQuery } from '@apollo/client';
 import { Card } from '../components/common/Card';
 import { Loader } from '../components/common/Loader';
 import { useNavigate } from 'react-router-dom';
-import { AnimatedBackground } from '../components/common/AnimatedBackground';
 
 const TEAM_USERS_QUERY = gql`
   query GetTeamUsers {
@@ -26,6 +25,43 @@ const TeamsContainer = styled.div`
   min-height: 100vh;
   z-index: 1;
   background-color: ${props => props.theme.colors.background};
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      45deg,
+      ${props => props.theme.colors.background},
+      ${props => `${props.theme.colors.primary}30`},
+      ${props => `${props.theme.colors.info}25`},
+      ${props => props.theme.colors.background}
+    );
+    background-size: 400% 400%;
+    animation: gradient 15s ease infinite;
+    z-index: 0;
+  }
+
+  & > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  @keyframes gradient {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
 `;
 
 const PageHeader = styled.div`
@@ -138,28 +174,25 @@ export const Teams: React.FC = () => {
   if (error) return <div>Error loading team members</div>;
 
   return (
-    <>
-      <AnimatedBackground />
-      <TeamsContainer>
-        <BackButton onClick={() => navigate(-1)} aria-label="Go back" />
-        <PageHeader>
-          <h1>Team Members</h1>
-        </PageHeader>
-        <TeamsGrid>
-          {data?.teamUsers.map((user: any) => (
-            <UserCard key={user.id}>
-              <UserInfo>
-                <UserAvatar url={user.avatarUrl} />
-                <UserDetails>
-                  <UserName>{user.name}</UserName>
-                  <UserEmail>{user.email}</UserEmail>
-                </UserDetails>
-              </UserInfo>
-              <UserRole>{user.role}</UserRole>
-            </UserCard>
-          ))}
-        </TeamsGrid>
-      </TeamsContainer>
-    </>
+    <TeamsContainer>
+      <BackButton onClick={() => navigate(-1)} aria-label="Go back" />
+      <PageHeader>
+        <h1>Team Members</h1>
+      </PageHeader>
+      <TeamsGrid>
+        {data?.teamUsers.map((user: any) => (
+          <UserCard key={user.id}>
+            <UserInfo>
+              <UserAvatar url={user.avatarUrl} />
+              <UserDetails>
+                <UserName>{user.name}</UserName>
+                <UserEmail>{user.email}</UserEmail>
+              </UserDetails>
+            </UserInfo>
+            <UserRole>{user.role}</UserRole>
+          </UserCard>
+        ))}
+      </TeamsGrid>
+    </TeamsContainer>
   );
 }; 
