@@ -10,6 +10,7 @@ import { PrivateRoute } from './components/common/PrivateRoute';
 import { Home } from './routes/Home';
 import { History } from './routes/History';
 import { Login } from './routes/Login';
+import { UpdateInfo } from './components/common/UpdateInfo';
 
 const App: React.FC = () => {
   return (
@@ -32,6 +33,7 @@ const App: React.FC = () => {
               } />
             </Routes>
           </Router>
+          <UpdateInfo />
         </AppProvider>
       </ThemeProvider>
     </ApolloProvider>

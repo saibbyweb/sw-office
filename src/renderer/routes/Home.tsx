@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from '@apollo/client';
+import { useQuery, useMutation, useApolloClient } from '@apollo/client';
 import { MdTimer, MdTimerOff, MdWork } from 'react-icons/md';
 import { HiLightningBolt, HiPause, HiViewGrid } from 'react-icons/hi';
 import { ME, ACTIVE_SESSION, START_BREAK, END_BREAK } from '../../graphql/queries';
@@ -16,24 +16,26 @@ import {
 } from '../../graphql/types';
 import { useApp } from '../context/AppContext';
 import { Button, Notification, StatsCard } from '../components/common';
-import { StartWorkModal, EndWorkModal, BreakModal, SwitchProjectModal, AddWorkLogModal } from '../components/modals';
+import { StartWorkModal, EndWorkModal, BreakModal, SwitchProjectModal, AddWorkLogModal, LogoutModal } from '../components/modals';
 import { WorkLogList } from '../components/work-logs/WorkLogList';
 import { SegmentsList } from '../components/segments/SegmentsList';
 import { UpdateInfo } from '../components/common/UpdateInfo';
 import { theme } from '../styles/theme';
+import appIcon from '../../assets/icon.png';
 
 const { ipcRenderer } = window.require('electron');
 
 const VersionTag = styled.div`
-  position: absolute;
-  top: 10px;
-  left: 10px;
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
   font-size: 0.75rem;
   color: ${props => props.theme.colors.text}60;
   opacity: 0.7;
   display: flex;
   align-items: center;
   gap: 5px;
+  z-index: 1;
 `;
 
 const NewVersionBadge = styled.span`
@@ -51,15 +53,54 @@ const AppContainer = styled.div`
   background-color: ${props => props.theme.colors.background};
   color: ${props => props.theme.colors.text};
   padding: ${props => props.theme.spacing.xl};
+  position: relative;
+
+  &::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      45deg,
+      ${props => props.theme.colors.background},
+      ${props => `${props.theme.colors.primary}30`},
+      ${props => `${props.theme.colors.info}25`},
+      ${props => props.theme.colors.background}
+    );
+    background-size: 400% 400%;
+    animation: gradient 15s ease infinite;
+    z-index: 0;
+  }
+
+  & > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  @keyframes gradient {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
 `;
 
 const MainContent = styled.main`
+  position: relative;
   max-width: 1200px;
   margin: 0 auto;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: ${props => props.theme.spacing.md};
   padding: ${props => props.theme.spacing.md};
+  z-index: 1;
 `;
 
 const Section = styled.section<{ fullWidth?: boolean }>`
@@ -87,11 +128,13 @@ const SectionTitle = styled.h2`
 `;
 
 const Header = styled.header`
+  position: relative;
   display: flex;
   justify-content: flex-end;
   align-items: center;
   gap: ${props => props.theme.spacing.md};
   margin-bottom: ${props => props.theme.spacing.lg};
+  z-index: 1;
 `;
 
 const UserInfo = styled.div`
@@ -172,6 +215,108 @@ interface IconProps {
 
 const StatsCardWithIcon = styled(StatsCard)<IconProps>``;
 
+const AppLogo = styled.img`
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  margin-right: auto;
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+`;
+
+const WelcomeContainer = styled.div`
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: ${props => props.theme.spacing.xl};
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: ${props => props.theme.spacing.xl} 0;
+  z-index: 1;
+  
+  animation: welcomeAppear 0.6s ease-out;
+  
+  @keyframes welcomeAppear {
+    from {
+      opacity: 0;
+      transform: scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+`;
+
+const Greeting = styled.h1`
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: ${props => props.theme.colors.text};
+  margin: 0;
+  background: linear-gradient(135deg, ${props => props.theme.colors.primary}, ${props => props.theme.colors.info});
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 2s infinite;
+  background-size: 200% auto;
+  
+  @keyframes shimmer {
+    to {
+      background-position: 200% center;
+    }
+  }
+`;
+
+const DateCard = styled.div`
+  background: ${props => props.theme.colors.background}40;
+  border: 1px solid ${props => props.theme.colors.text}15;
+  border-radius: 16px;
+  padding: ${props => props.theme.spacing.lg};
+  text-align: center;
+  box-shadow: 0 4px 12px ${props => props.theme.colors.text}10;
+  backdrop-filter: blur(12px);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px ${props => props.theme.colors.text}15;
+  }
+`;
+
+const DateText = styled.div`
+  font-size: 1.1rem;
+  color: ${props => props.theme.colors.text}90;
+  margin-bottom: ${props => props.theme.spacing.sm};
+`;
+
+const WelcomeMessage = styled.p`
+  font-size: 1.1rem;
+  color: ${props => props.theme.colors.text}80;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 480px;
+`;
+
+const StartButton = styled(Button)`
+  font-size: 1.1rem;
+  padding: 12px 32px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, ${props => props.theme.colors.primary}, ${props => props.theme.colors.info});
+  border: none;
+  box-shadow: 0 4px 12px ${props => props.theme.colors.primary}40;
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px ${props => props.theme.colors.primary}60;
+  }
+`;
+
 export const Home: React.FC = () => {
   const navigate = useNavigate();
   const { state, startSession, switchProject, addWorkLog, startBreak: startBreakAction, endBreak: endBreakAction } = useApp();
@@ -180,8 +325,10 @@ export const Home: React.FC = () => {
   const [showBreakModal, setShowBreakModal] = useState(false);
   const [showSwitchProjectModal, setShowSwitchProjectModal] = useState(false);
   const [showAddWorkLogModal, setShowAddWorkLogModal] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [appVersion, setAppVersion] = useState<string>('1.0.0');
+  const client = useApolloClient();
 
   const { data: userData, loading: userLoading } = useQuery(ME, {
     onError: (error) => {
@@ -237,9 +384,20 @@ export const Home: React.FC = () => {
     },
   });
 
-  const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      // Clear local storage
+      localStorage.removeItem('authToken');
+      
+      // Reset Apollo cache
+      await client.clearStore();
+      
+      // Navigate to login
+      navigate('/login');
+    } catch (err) {
+      console.error('Logout error:', err);
+      showNotification('error', 'Failed to logout properly');
+    }
   };
 
   const handleSwitchProject = async (projectId: string) => {
@@ -329,6 +487,22 @@ export const Home: React.FC = () => {
       }, 0);
   };
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  };
+
+  const formatDate = () => {
+    return new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
   useEffect(() => {
     const getAppVersion = async () => {
       try {
@@ -357,32 +531,41 @@ export const Home: React.FC = () => {
           v{appVersion}
           {appVersion === '1.0.2' && <NewVersionBadge>NEW</NewVersionBadge>}
         </VersionTag>
-        <UpdateInfo />
+
         <Header>
+          <AppLogo src={appIcon} alt="SW Office" />
           <UserInfo>
             {userData?.me.name} ({userData?.me.email})
           </UserInfo>
           <Button 
             variant="secondary" 
-            onClick={() => navigate('/history')}
-          >
-            View History
-          </Button>
-          <Button 
-            variant="secondary" 
-            onClick={handleLogout}
+            onClick={() => setShowLogoutModal(true)}
           >
             Logout
           </Button>
         </Header>
         <MainContent>
-          <Button onClick={() => setShowStartModal(true)}>
-            Start Work
-          </Button>
+          <WelcomeContainer>
+            <Greeting>{getGreeting()}, {userData?.me.name?.split(' ')[0]}!</Greeting>
+            <DateCard>
+              <DateText>{formatDate()}</DateText>
+            </DateCard>
+            <WelcomeMessage>
+              Ready to start your productive day? Track your work sessions, manage breaks, and stay focused with SW Office. Let's make today count!
+            </WelcomeMessage>
+            <StartButton onClick={() => setShowStartModal(true)}>
+              Start Work Session
+            </StartButton>
+          </WelcomeContainer>
         </MainContent>
         <StartWorkModal
           isOpen={showStartModal}
           onClose={() => setShowStartModal(false)}
+        />
+        <LogoutModal
+          isOpen={showLogoutModal}
+          onClose={() => setShowLogoutModal(false)}
+          onConfirm={handleLogout}
         />
         {notification && (
           <Notification
@@ -398,22 +581,15 @@ export const Home: React.FC = () => {
     <AppContainer>
       <VersionTag>
         v{appVersion}
-    
       </VersionTag>
-      <UpdateInfo />
       <Header>
+        <AppLogo src={appIcon} alt="SW Office" />
         <UserInfo>
           {userData?.me.name} ({userData?.me.email})
         </UserInfo>
         <Button 
           variant="secondary" 
-          onClick={() => navigate('/history')}
-        >
-          View History
-        </Button>
-        <Button 
-          variant="secondary" 
-          onClick={handleLogout}
+          onClick={() => setShowLogoutModal(true)}
         >
           Logout
         </Button>
@@ -511,9 +687,8 @@ export const Home: React.FC = () => {
               variant="error"
               onClick={() => setShowEndModal(true)}
             >
-              End Work
+              End Work Session For Today
             </Button>
-         
           </ActionButtons>
         </Section>
       </MainContent>
@@ -536,6 +711,11 @@ export const Home: React.FC = () => {
       <AddWorkLogModal
         isOpen={showAddWorkLogModal}
         onClose={() => setShowAddWorkLogModal(false)}
+      />
+      <LogoutModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleLogout}
       />
 
       {notification && (

@@ -3,6 +3,8 @@ import styled from 'styled-components';
 import { useMutation } from '@apollo/client';
 import { gql } from '@apollo/client';
 import { Button, Input } from '../common';
+import { UpdateInfo } from '../common/UpdateInfo';
+import appIcon from '../../../assets/icon.png';
 const { ipcRenderer } = window.require('electron');
 
 const LOGIN = gql`
@@ -29,48 +31,73 @@ const Container = styled.div`
 
   &::before {
     content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(
-      circle at center,
-      ${props => props.theme.colors.primary}10 0%,
-      transparent 70%
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      45deg,
+      ${props => props.theme.colors.background},
+      ${props => `${props.theme.colors.primary}30`},
+      ${props => `${props.theme.colors.info}25`},
+      ${props => props.theme.colors.background}
     );
-    opacity: 0.4;
+    background-size: 400% 400%;
+    animation: gradient 15s ease infinite;
     z-index: 0;
+  }
+
+  & > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  @keyframes gradient {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
   }
 `;
 
 const LoginCard = styled.div`
   width: 100%;
   max-width: 420px;
-  background: ${props => props.theme.colors.background}90;
+  background: ${props => props.theme.colors.background}10;
   backdrop-filter: blur(12px);
   border-radius: 24px;
-  border: 1px solid ${props => props.theme.colors.background}30;
-  box-shadow: 0 8px 32px -4px ${props => props.theme.colors.primary}15;
+  border: 1px solid ${props => props.theme.colors.text}15;
+  box-shadow: 0 8px 32px ${props => props.theme.colors.primary}40;
   z-index: 1;
+  text-align: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 48px ${props => props.theme.colors.primary}60;
+  }
+`;
+
+const AppLogo = styled.img`
+  width: 80px;
+  height: 80px;
+  margin: ${props => props.theme.spacing.xl} auto ${props => props.theme.spacing.md};
+  border-radius: 16px;
 `;
 
 const CardHeader = styled.div`
-  padding: ${props => props.theme.spacing.xl};
+  padding: ${props => props.theme.spacing.lg} ${props => props.theme.spacing.xl};
   border-bottom: 1px solid ${props => props.theme.colors.background}20;
-  display: flex;
-  align-items: center;
-  gap: ${props => props.theme.spacing.md};
-`;
-
-const AppIcon = styled.img`
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
 `;
 
 const HeaderTitle = styled.div`
-  flex: 1;
+  text-align: center;
 `;
 
 const Title = styled.h1`
@@ -117,7 +144,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [appIcon, setAppIcon] = useState<string>('');
 
   const [login, { loading }] = useMutation(LOGIN, {
     onCompleted: (data) => {
@@ -129,19 +155,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       setError(error.message);
     },
   });
-
-  React.useEffect(() => {
-    const loadAppIcon = async () => {
-      try {
-        const iconPath = await ipcRenderer.invoke('get-app-icon-path');
-        setAppIcon(iconPath);
-      } catch (error) {
-        console.error('Failed to load app icon:', error);
-      }
-    };
-    
-    loadAppIcon();
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,8 +182,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   return (
     <Container>
       <LoginCard>
+        <AppLogo src={appIcon} alt="SW Office" />
         <CardHeader>
-          {appIcon && <AppIcon src={appIcon} alt="SW Office" />}
           <HeaderTitle>
             <Title>Welcome Back</Title>
             <Subtitle>Sign in to continue tracking your work</Subtitle>

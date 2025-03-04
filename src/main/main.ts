@@ -90,18 +90,20 @@ const createWindow = () => {
 
 
   // and load the index.html of the app.
-  if (isDev) {
-    mainWindow.loadURL("http://localhost:5173");
-    // Open the DevTools.
-    mainWindow.webContents.openDevTools();
+
+  // if (isDev) {
+  //   mainWindow.loadURL("http://localhost:5173");
+  //   // Open the DevTools.
+  //   mainWindow.webContents.openDevTools();
     
-    // Force set the window title in dev mode
-    mainWindow.webContents.on('did-finish-load', () => {
-      if (mainWindow) {
-        mainWindow.setTitle('SW Office');
-      }
-    });
-  } else {
+  //   // Force set the window title in dev mode
+  //   mainWindow.webContents.on('did-finish-load', () => {
+  //     if (mainWindow) {
+  //       mainWindow.setTitle('SW Office');
+  //     }
+  //   });
+  // } else 
+{
     mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
   }
 

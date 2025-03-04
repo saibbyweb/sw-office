@@ -37,6 +37,7 @@ type BreakCount {
 enum BreakType {
   LUNCH
   OTHER
+  PRAYER
   SHORT
 }
 

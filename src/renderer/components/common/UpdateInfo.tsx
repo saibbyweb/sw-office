@@ -20,16 +20,59 @@ interface ErrorInfo {
 
 const UpdateInfoContainer = styled.div`
   position: fixed;
-  top: 50px;
-  left: 10px;
-  background: ${props => props.theme.colors.background}90;
-  backdrop-filter: blur(8px);
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid ${props => props.theme.colors.secondary};
+  top: 20px;
+  right: 20px;
+  background: ${props => props.theme.colors.background}95;
+  backdrop-filter: blur(12px);
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid ${props => props.theme.colors.text}15;
   font-size: 0.875rem;
   color: ${props => props.theme.colors.text}90;
-  max-width: 250px;
+  max-width: 300px;
+  z-index: 9999;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  transform: translateY(-20px);
+  animation: slideIn 0.3s ease forwards;
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  &:hover {
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.25);
+  }
+`;
+
+const CloseButton = styled.button`
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: ${props => props.theme.colors.text}60;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: ${props => props.theme.colors.text};
+    background: ${props => props.theme.colors.text}10;
+  }
 `;
 
 const VersionInfo = styled.div`
@@ -141,6 +184,7 @@ export const UpdateInfo: React.FC = () => {
   });
   const [isClearing, setIsClearing] = useState(false);
   const [hasFiles, setHasFiles] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
   const [snackbar, setSnackbar] = useState<SnackbarState>({
     show: false,
     message: '',
@@ -285,13 +329,14 @@ export const UpdateInfo: React.FC = () => {
     }
   };
 
-  if (!updateState.isUpdateAvailable && !updateState.isDownloading && !updateState.isUpdateReady) {
+  if (!isVisible || (!updateState.isUpdateAvailable && !updateState.isDownloading && !updateState.isUpdateReady)) {
     return null;
   }
 
   return (
     <>
       <UpdateInfoContainer>
+        <CloseButton onClick={() => setIsVisible(false)}>&times;</CloseButton>
         <VersionInfo>
           <div>Current: v{updateState.currentVersion}</div>
           {updateState.availableVersion && (
