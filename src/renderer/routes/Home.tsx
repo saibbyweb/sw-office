@@ -1,16 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import styled, { ThemeProvider } from 'styled-components';
-import { AppProvider } from './context/AppContext';
-import { theme } from './styles/theme';
-import { GlobalStyles } from './styles/GlobalStyles';
-import { ApolloProvider, useQuery, useMutation } from '@apollo/client';
-import { client } from '../lib/apollo';
-import { Button, Notification } from './components/common';
-import { StartWorkModal, EndWorkModal, BreakModal, SwitchProjectModal, AddWorkLogModal } from './components/modals';
-import { Timer } from './components/timer/Timer';
-import { useApp } from './context/AppContext';
-import { LoginScreen } from './components/screens/LoginScreen';
-import { ME, ACTIVE_SESSION, START_BREAK, END_BREAK } from '../graphql/queries';
+import styled from 'styled-components';
+import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation } from '@apollo/client';
+import { ME, ACTIVE_SESSION, START_BREAK, END_BREAK } from '../../graphql/queries';
 import { 
   ActiveSessionData, 
   StartBreakData, 
@@ -19,18 +11,15 @@ import {
   EndBreakVariables, 
   BreakType,
   Session 
-} from '../graphql/types';
-import { BreakTimer } from './components/timer/BreakTimer';
-import { WorkLogList } from './components/work-logs/WorkLogList';
-import { SegmentsList } from './components/segments/SegmentsList';
-import { StatsCard } from './components/common/StatsCard';
-import { PastSessionsScreen } from './components/screens/PastSessionsScreen';
-import { UpdateInfo } from './components/common/UpdateInfo';
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
-import { PrivateRoute } from './components/common/PrivateRoute';
-import { Home } from './routes/Home';
-import { History } from './routes/History';
-import { Login } from './routes/Login';
+} from '../../graphql/types';
+import { useApp } from '../context/AppContext';
+import { Button, Notification, StatsCard } from '../components/common';
+import { StartWorkModal, EndWorkModal, BreakModal, SwitchProjectModal, AddWorkLogModal } from '../components/modals';
+import { WorkLogList } from '../components/work-logs/WorkLogList';
+import { SegmentsList } from '../components/segments/SegmentsList';
+import { UpdateInfo } from '../components/common/UpdateInfo';
+import { theme } from '../styles/theme';
+
 const { ipcRenderer } = window.require('electron');
 
 const VersionTag = styled.div`
@@ -95,35 +84,6 @@ const SectionTitle = styled.h2`
   gap: ${props => props.theme.spacing.sm};
 `;
 
-const ProgressBar = styled.div`
-  width: 100%;
-  height: 8px;
-  background: ${props => props.theme.colors.background};
-  border-radius: 4px;
-  overflow: hidden;
-  margin-top: ${props => props.theme.spacing.sm};
-`;
-
-const ProgressFill = styled.div<{ progress: number }>`
-  width: ${props => props.progress}%;
-  height: 100%;
-  background: ${props => props.theme.colors.primary};
-  transition: width 0.3s ease;
-`;
-
-const TimerSection = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: ${props => props.theme.spacing.lg};
-  margin-top: ${props => props.theme.spacing.lg};
-`;
-
-const ActionButtons = styled.div`
-  display: flex;
-  gap: ${props => props.theme.spacing.md};
-  margin-top: ${props => props.theme.spacing.xl};
-`;
-
 const Header = styled.header`
   display: flex;
   justify-content: flex-end;
@@ -146,6 +106,12 @@ const StatsGrid = styled.div`
   gap: ${props => props.theme.spacing.md};
 `;
 
+const ActionButtons = styled.div`
+  display: flex;
+  gap: ${props => props.theme.spacing.md};
+  margin-top: ${props => props.theme.spacing.xl};
+`;
+
 const formatDuration = (ms: number) => {
   const hours = Math.floor(ms / (1000 * 60 * 60));
   const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
@@ -159,20 +125,18 @@ const formatDuration = (ms: number) => {
   return parts.join(' ') || '0s';
 };
 
-const AppContent: React.FC = () => {
-  const { state, startSession, switchProject, addWorkLog, startBreak, endBreak } = useApp();
+export const Home: React.FC = () => {
+  const navigate = useNavigate();
+  const { state, startSession, switchProject, addWorkLog, startBreak: startBreakAction, endBreak: endBreakAction } = useApp();
   const [showStartModal, setShowStartModal] = useState(false);
   const [showEndModal, setShowEndModal] = useState(false);
   const [showBreakModal, setShowBreakModal] = useState(false);
   const [showSwitchProjectModal, setShowSwitchProjectModal] = useState(false);
   const [showAddWorkLogModal, setShowAddWorkLogModal] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
-  const [authToken, setAuthToken] = useState<string | null>(localStorage.getItem('authToken'));
-  const [showPastSessions, setShowPastSessions] = useState(false);
   const [appVersion, setAppVersion] = useState<string>('1.0.0');
 
   const { data: userData, loading: userLoading } = useQuery(ME, {
-    skip: !authToken,
     onError: (error) => {
       console.error('Error fetching user data:', error);
       if (error.message.includes('Unauthorized')) {
@@ -182,21 +146,18 @@ const AppContent: React.FC = () => {
   });
 
   const { data: sessionData, loading: sessionLoading, refetch: refetchSession } = useQuery<ActiveSessionData>(ACTIVE_SESSION, {
-    skip: !authToken,
     onCompleted: (data) => {
       console.log('Active session data:', data);
       if (data?.activeSession) {
         const session = data.activeSession;
         const startTime = new Date(session.startTime).getTime();
         
-        // Initialize session
         startSession(session.projectId || '', startTime);
 
-        // Check for active break
         const activeBreak = session.breaks?.find(b => !b.endTime);
         if (activeBreak) {
           console.log('Found active break:', activeBreak);
-          startBreak(activeBreak.id, activeBreak.type);
+          startBreakAction(activeBreak.id, activeBreak.type);
         }
       }
     },
@@ -209,7 +170,7 @@ const AppContent: React.FC = () => {
   const [startBreakMutation] = useMutation<StartBreakData, StartBreakVariables>(START_BREAK, {
     onCompleted: (data) => {
       const breakData = data.startBreak;
-      startBreak(breakData.id, breakData.type.toLowerCase());
+      startBreakAction(breakData.id, breakData.type.toLowerCase());
       showNotification('success', 'Break started successfully');
     },
     onError: (error) => {
@@ -220,7 +181,7 @@ const AppContent: React.FC = () => {
 
   const [endBreakMutation] = useMutation<EndBreakData, EndBreakVariables>(END_BREAK, {
     onCompleted: () => {
-      endBreak();
+      endBreakAction();
       showNotification('success', 'Break ended successfully');
     },
     onError: (error) => {
@@ -229,15 +190,9 @@ const AppContent: React.FC = () => {
     },
   });
 
-  const handleLoginSuccess = (token: string) => {
-    setAuthToken(token);
-  };
-
   const handleLogout = () => {
     localStorage.removeItem('authToken');
-    setAuthToken(null);
-    client.resetStore();
-    showNotification('success', 'Logged out successfully');
+    navigate('/login');
   };
 
   const handleSwitchProject = async (projectId: string) => {
@@ -305,7 +260,7 @@ const AppContent: React.FC = () => {
           breakId: state.session.currentBreak.id,
         },
       });
-      endBreak();
+      endBreakAction();
       await refetchSession();
     } catch (err) {
       console.error('Handle end break error:', err);
@@ -322,13 +277,11 @@ const AppContent: React.FC = () => {
         if (segment.endTime) {
           return total + segment.duration;
         }
-        // For active segment, calculate up to current time
         const startTime = new Date(segment.startTime).getTime();
         return total + Math.floor((now - startTime) / 1000);
       }, 0);
   };
 
-  // Get app version using IPC
   useEffect(() => {
     const getAppVersion = async () => {
       try {
@@ -342,34 +295,20 @@ const AppContent: React.FC = () => {
     getAppVersion();
   }, []);
 
-  if (!authToken) {
-    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
-  }
-
-  if (showPastSessions) {
-    return <PastSessionsScreen onBack={() => setShowPastSessions(false)} />;
-  }
-
   if (userLoading || sessionLoading) {
     return <div>Loading...</div>;
   }
 
   const hasActiveSession = sessionData?.activeSession || state.session.isActive;
-  console.log('Session state:', {
-    sessionData,
-    stateSession: state.session,
-    hasActiveSession
-  });
+  const activeSession = sessionData?.activeSession;
+  const projectName = activeSession?.project?.name || state.session.project;
 
-  if (hasActiveSession) {
-    const activeSession = sessionData?.activeSession;
-    const projectName = activeSession?.project?.name || state.session.project;
-
+  if (!hasActiveSession) {
     return (
       <AppContainer>
         <VersionTag>
           v{appVersion}
-          <NewVersionBadge>NEW - FROM THE OVEN</NewVersionBadge>
+          {appVersion === '1.0.2' && <NewVersionBadge>NEW</NewVersionBadge>}
         </VersionTag>
         <UpdateInfo />
         <Header>
@@ -378,7 +317,7 @@ const AppContent: React.FC = () => {
           </UserInfo>
           <Button 
             variant="secondary" 
-            onClick={() => setShowPastSessions(true)}
+            onClick={() => navigate('/history')}
           >
             View History
           </Button>
@@ -390,118 +329,14 @@ const AppContent: React.FC = () => {
           </Button>
         </Header>
         <MainContent>
-          <Section fullWidth>
-            <StatsGrid>
-              <StatsCard
-                title="Active Time"
-                value={formatDuration(
-                  calculateTotalDuration(sessionData?.activeSession?.segments || [], 'WORK') * 1000
-                )}
-                color={theme.colors.primary}
-                icon="⚡"
-                subtitle={state.session.isOnBreak ? 'On Break' : 'Currently Working'}
-              />
-              
-              <StatsCard
-                title="Break Time"
-                value={formatDuration(
-                  calculateTotalDuration(sessionData?.activeSession?.segments || [], 'BREAK') * 1000
-                )}
-                color={theme.colors.warning}
-                icon="⏸️"
-              />
-
-              <StatsCard
-                title="Current Project"
-                value={projectName || 'No Project'}
-                color={theme.colors.info}
-                icon="🎯"
-              >
-                <Button 
-                  variant="secondary" 
-                  size="small"
-                  onClick={() => setShowSwitchProjectModal(true)}
-                  disabled={state.session.isOnBreak}
-                  title={state.session.isOnBreak ? "Cannot switch project during a break" : ""}
-                >
-                  Switch Project
-                </Button>
-              </StatsCard>
-            </StatsGrid>
-          </Section>
-
-          <Section fullWidth>
-            <SectionHeader>
-              <SectionTitle>
-                <span role="img" aria-label="logs">📝</span>
-                Work Logs
-              </SectionTitle>
-              <Button 
-                variant="secondary" 
-                size="small"
-                onClick={() => setShowAddWorkLogModal(true)}
-              >
-                Add Work Log
-              </Button>
-            </SectionHeader>
-            {sessionData?.activeSession && (
-              <WorkLogList sessionId={sessionData.activeSession.id} />
-            )}
-          </Section>
-
-          <Section fullWidth>
-            <SectionHeader>
-              <SectionTitle>
-                <span role="img" aria-label="segments">📊</span>
-                Session Segments
-              </SectionTitle>
-            </SectionHeader>
-            {sessionData?.activeSession?.segments && (
-              <SegmentsList segments={sessionData.activeSession.segments} />
-            )}
-          </Section>
-
-          <Section fullWidth>
-            <ActionButtons>
-              <Button
-                variant="warning"
-                onClick={() => setShowBreakModal(true)}
-              >
-                {state.session.isOnBreak ? 'End Break' : 'Take Break'}
-              </Button>
-              <Button
-                variant="error"
-                onClick={() => setShowEndModal(true)}
-              >
-                End Work
-              </Button>
-              <Button variant="secondary">
-                View Stats
-              </Button>
-            </ActionButtons>
-          </Section>
+          <Button onClick={() => setShowStartModal(true)}>
+            Start Work
+          </Button>
         </MainContent>
-
-        <EndWorkModal
-          isOpen={showEndModal}
-          onClose={() => setShowEndModal(false)}
+        <StartWorkModal
+          isOpen={showStartModal}
+          onClose={() => setShowStartModal(false)}
         />
-        <BreakModal
-          isOpen={showBreakModal}
-          onClose={() => setShowBreakModal(false)}
-          onStartBreak={handleStartBreak}
-          onEndBreak={handleEndBreak}
-        />
-        <SwitchProjectModal
-          isOpen={showSwitchProjectModal}
-          onClose={() => setShowSwitchProjectModal(false)}
-          onSwitch={handleSwitchProject}
-        />
-        <AddWorkLogModal
-          isOpen={showAddWorkLogModal}
-          onClose={() => setShowAddWorkLogModal(false)}
-        />
-
         {notification && (
           <Notification
             type={notification.type}
@@ -516,7 +351,7 @@ const AppContent: React.FC = () => {
     <AppContainer>
       <VersionTag>
         v{appVersion}
-        {appVersion === '1.0.2' && <NewVersionBadge>NEW</NewVersionBadge>}
+        <NewVersionBadge>NEW - FROM THE OVEN</NewVersionBadge>
       </VersionTag>
       <UpdateInfo />
       <Header>
@@ -525,7 +360,7 @@ const AppContent: React.FC = () => {
         </UserInfo>
         <Button 
           variant="secondary" 
-          onClick={() => setShowPastSessions(true)}
+          onClick={() => navigate('/history')}
         >
           View History
         </Button>
@@ -537,14 +372,118 @@ const AppContent: React.FC = () => {
         </Button>
       </Header>
       <MainContent>
-        <Button onClick={() => setShowStartModal(true)}>
-          Start Work
-        </Button>
+        <Section fullWidth>
+          <StatsGrid>
+            <StatsCard
+              title="Active Time"
+              value={formatDuration(
+                calculateTotalDuration(sessionData?.activeSession?.segments || [], 'WORK') * 1000
+              )}
+              color={theme.colors.primary}
+              icon="⚡"
+              subtitle={state.session.isOnBreak ? 'On Break' : 'Currently Working'}
+            />
+            
+            <StatsCard
+              title="Break Time"
+              value={formatDuration(
+                calculateTotalDuration(sessionData?.activeSession?.segments || [], 'BREAK') * 1000
+              )}
+              color={theme.colors.warning}
+              icon="⏸️"
+            />
+
+            <StatsCard
+              title="Current Project"
+              value={projectName || 'No Project'}
+              color={theme.colors.info}
+              icon="🎯"
+            >
+              <Button 
+                variant="secondary" 
+                size="small"
+                onClick={() => setShowSwitchProjectModal(true)}
+                disabled={state.session.isOnBreak}
+                title={state.session.isOnBreak ? "Cannot switch project during a break" : ""}
+              >
+                Switch Project
+              </Button>
+            </StatsCard>
+          </StatsGrid>
+        </Section>
+
+        <Section fullWidth>
+          <SectionHeader>
+            <SectionTitle>
+              <span role="img" aria-label="logs">📝</span>
+              Work Logs
+            </SectionTitle>
+            <Button 
+              variant="secondary" 
+              size="small"
+              onClick={() => setShowAddWorkLogModal(true)}
+            >
+              Add Work Log
+            </Button>
+          </SectionHeader>
+          {sessionData?.activeSession && (
+            <WorkLogList sessionId={sessionData.activeSession.id} />
+          )}
+        </Section>
+
+        <Section fullWidth>
+          <SectionHeader>
+            <SectionTitle>
+              <span role="img" aria-label="segments">📊</span>
+              Session Segments
+            </SectionTitle>
+          </SectionHeader>
+          {sessionData?.activeSession?.segments && (
+            <SegmentsList segments={sessionData.activeSession.segments} />
+          )}
+        </Section>
+
+        <Section fullWidth>
+          <ActionButtons>
+            <Button
+              variant="warning"
+              onClick={() => setShowBreakModal(true)}
+            >
+              {state.session.isOnBreak ? 'End Break' : 'Take Break'}
+            </Button>
+            <Button
+              variant="error"
+              onClick={() => setShowEndModal(true)}
+            >
+              End Work
+            </Button>
+            <Button variant="secondary">
+              View Stats
+            </Button>
+          </ActionButtons>
+        </Section>
       </MainContent>
-      <StartWorkModal
-        isOpen={showStartModal}
-        onClose={() => setShowStartModal(false)}
+
+      <EndWorkModal
+        isOpen={showEndModal}
+        onClose={() => setShowEndModal(false)}
       />
+      <BreakModal
+        isOpen={showBreakModal}
+        onClose={() => setShowBreakModal(false)}
+        onStartBreak={handleStartBreak}
+        onEndBreak={handleEndBreak}
+      />
+      <SwitchProjectModal
+        isOpen={showSwitchProjectModal}
+        onClose={() => setShowSwitchProjectModal(false)}
+        onSwitch={handleSwitchProject}
+      />
+      <AddWorkLogModal
+        isOpen={showAddWorkLogModal}
+        onClose={() => setShowAddWorkLogModal(false)}
+      />
+
       {notification && (
         <Notification
           type={notification.type}
@@ -553,33 +492,4 @@ const AppContent: React.FC = () => {
       )}
     </AppContainer>
   );
-};
-
-const App: React.FC = () => {
-  return (
-    <ApolloProvider client={client}>
-      <ThemeProvider theme={theme}>
-        <GlobalStyles />
-        <AppProvider>
-          <Router>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/" element={
-                <PrivateRoute>
-                  <Home />
-                </PrivateRoute>
-              } />
-              <Route path="/history" element={
-                <PrivateRoute>
-                  <History />
-                </PrivateRoute>
-              } />
-            </Routes>
-          </Router>
-        </AppProvider>
-      </ThemeProvider>
-    </ApolloProvider>
-  );
-};
-
-export default App; 
+}; 

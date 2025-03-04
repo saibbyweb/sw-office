@@ -18,6 +18,8 @@ let mainWindow: BrowserWindow | null = null;
 // Set app name
 app.name = 'SW Office';
 
+app.setAsDefaultProtocolClient('swoffice')
+
   // Create the Application's main menu
   const template = [
     {

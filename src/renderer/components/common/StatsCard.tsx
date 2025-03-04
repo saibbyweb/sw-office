@@ -1,16 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
 
-interface StatsCardProps {
-  title: string;
-  value: string | number;
-  subtitle?: string;
-  color?: string;
-  icon?: string;
-  progress?: number;
-  children?: React.ReactNode;
-}
-
 const Card = styled.div<{ bgColor?: string }>`
   background: ${props => props.bgColor || props.theme.colors.background}15;
   border-radius: 16px;
@@ -21,6 +11,15 @@ const Card = styled.div<{ bgColor?: string }>`
   position: relative;
   overflow: hidden;
   border: 1px solid ${props => props.bgColor || props.theme.colors.background}30;
+  box-shadow: 0 4px 6px -1px ${props => props.bgColor || props.theme.colors.background}10,
+              0 2px 4px -1px ${props => props.bgColor || props.theme.colors.background}06;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px ${props => props.bgColor || props.theme.colors.background}10,
+                0 4px 6px -2px ${props => props.bgColor || props.theme.colors.background}05;
+  }
 `;
 
 const Title = styled.div`
@@ -31,10 +30,11 @@ const Title = styled.div`
   gap: ${props => props.theme.spacing.sm};
 `;
 
-const Value = styled.div`
+const Value = styled.div<{ color: string }>`
   font-size: 1.75rem;
   font-weight: 600;
-  color: ${props => props.theme.colors.text};
+  color: ${props => props.color};
+  margin: ${props => props.theme.spacing.xs} 0;
 `;
 
 const Subtitle = styled.div`
@@ -42,23 +42,21 @@ const Subtitle = styled.div`
   color: ${props => props.theme.colors.text}60;
 `;
 
-const ProgressBar = styled.div<{ progress: number; color?: string }>`
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 3px;
-  width: ${props => props.progress}%;
-  background: ${props => props.color || props.theme.colors.primary};
-  transition: width 0.3s ease;
-`;
+interface StatsCardProps {
+  title: string;
+  value: string | number;
+  color: string;
+  icon?: string;
+  subtitle?: string;
+  children?: React.ReactNode;
+}
 
 export const StatsCard: React.FC<StatsCardProps> = ({
   title,
   value,
-  subtitle,
   color,
   icon,
-  progress,
+  subtitle,
   children
 }) => {
   return (
@@ -67,12 +65,9 @@ export const StatsCard: React.FC<StatsCardProps> = ({
         {icon && <span role="img" aria-label={title}>{icon}</span>}
         {title}
       </Title>
-      <Value>{value}</Value>
+      <Value color={color}>{value}</Value>
       {subtitle && <Subtitle>{subtitle}</Subtitle>}
       {children}
-      {progress !== undefined && (
-        <ProgressBar progress={progress} color={color} />
-      )}
     </Card>
   );
 }; 
