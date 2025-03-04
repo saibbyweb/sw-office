@@ -12,7 +12,8 @@
     "server-dev": "cd server && yarn run start:dev",
     "electron:build": "yarn build && electron-builder build --publish never",
     "electron:deploy": "yarn build && electron-builder build --publish always",
-    "generate-icons": "electron-icon-builder --input=./build/icon.png --output=build --flatten"
+    "generate-icons": "electron-icon-builder --input=./build/icon.png --output=build --flatten",
+    "electron:build:win": "yarn electron:build --win --x64"
   },
   "author": {
     "name": "Saibby Web",
