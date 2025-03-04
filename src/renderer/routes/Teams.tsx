@@ -4,6 +4,7 @@ import { gql, useQuery } from '@apollo/client';
 import { Card } from '../components/common/Card';
 import { Loader } from '../components/common/Loader';
 import { useNavigate } from 'react-router-dom';
+import { AnimatedBackground } from '../components/common/AnimatedBackground';
 
 const TEAM_USERS_QUERY = gql`
   query GetTeamUsers {
@@ -20,21 +21,35 @@ const TEAM_USERS_QUERY = gql`
 `;
 
 const TeamsContainer = styled.div`
-  padding: 2rem;
+  padding: 4rem 2rem 2rem;
+  position: relative;
+  min-height: 100vh;
+  z-index: 1;
+  background-color: ${props => props.theme.colors.background};
+`;
+
+const PageHeader = styled.div`
+  margin-left: 3.5rem;
+  margin-bottom: 2rem;
+
+  h1 {
+    margin: 0;
+    font-size: 2rem;
+    color: ${({ theme }) => theme.colors.text};
+  }
 `;
 
 const TeamsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
-  margin-top: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
 `;
 
 const UserCard = styled(Card)`
-  padding: 1.5rem;
+  padding: 1rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.5rem;
 `;
 
 const UserAvatar = styled.div<{ url?: string }>`
@@ -92,16 +107,18 @@ const BackButton = styled.button`
   left: 2rem;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
   background-color: ${({ theme }) => theme.colors.background};
   border: 1px solid ${({ theme }) => theme.colors.textLight};
   border-radius: 8px;
   color: ${({ theme }) => theme.colors.text};
-  font-size: 1rem;
+  font-size: 1.2rem;
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 2;
 
   &:hover {
     background-color: ${({ theme }) => `${theme.colors.primary}10`};
@@ -110,7 +127,6 @@ const BackButton = styled.button`
 
   &::before {
     content: '←';
-    font-size: 1.2rem;
   }
 `;
 
@@ -122,29 +138,28 @@ export const Teams: React.FC = () => {
   if (error) return <div>Error loading team members</div>;
 
   return (
-    <TeamsContainer>
-      <BackButton onClick={() => navigate(-1)}>Back</BackButton>
-      <h1>Team Members</h1>
-      <TeamsGrid>
-        {data?.teamUsers.map((user: any) => (
-          <UserCard key={user.id}>
-            <UserInfo>
-              <UserAvatar url={user.avatarUrl} />
-              <UserDetails>
-                <UserName>{user.name}</UserName>
-                <UserEmail>{user.email}</UserEmail>
-              </UserDetails>
-            </UserInfo>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <>
+      <AnimatedBackground />
+      <TeamsContainer>
+        <BackButton onClick={() => navigate(-1)} aria-label="Go back" />
+        <PageHeader>
+          <h1>Team Members</h1>
+        </PageHeader>
+        <TeamsGrid>
+          {data?.teamUsers.map((user: any) => (
+            <UserCard key={user.id}>
+              <UserInfo>
+                <UserAvatar url={user.avatarUrl} />
+                <UserDetails>
+                  <UserName>{user.name}</UserName>
+                  <UserEmail>{user.email}</UserEmail>
+                </UserDetails>
+              </UserInfo>
               <UserRole>{user.role}</UserRole>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <StatusIndicator isOnline={user.isOnline} />
-                {user.currentStatus || (user.isOnline ? 'Online' : 'Offline')}
-              </div>
-            </div>
-          </UserCard>
-        ))}
-      </TeamsGrid>
-    </TeamsContainer>
+            </UserCard>
+          ))}
+        </TeamsGrid>
+      </TeamsContainer>
+    </>
   );
 }; 
