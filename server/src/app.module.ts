@@ -10,6 +10,7 @@ import { WorkModule } from './modules/work.module';
 import { ProjectsModule } from './projects/projects.module';
 import { DebugModule } from './debug/debug.module';
 import { AdminModule } from './admin/admin.module';
+import { TeamsModule } from './modules/teams.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { AdminModule } from './admin/admin.module';
     ProjectsModule,
     DebugModule,
     AdminModule,
+    TeamsModule,
   ],
 })
 export class AppModule {}

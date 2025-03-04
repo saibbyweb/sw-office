@@ -77,6 +77,7 @@ export interface Theme {
     info: string;
     background: string;
     text: string;
+    textLight: string;
   };
   spacing: {
     xs: string;

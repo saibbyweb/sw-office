@@ -10,6 +10,7 @@ import { PrivateRoute } from './components/common/PrivateRoute';
 import { Home } from './routes/Home';
 import { History } from './routes/History';
 import { Login } from './routes/Login';
+import { Teams } from './routes/Teams';
 import { UpdateInfo } from './components/common/UpdateInfo';
 
 const App: React.FC = () => {
@@ -29,6 +30,11 @@ const App: React.FC = () => {
               <Route path="/history" element={
                 <PrivateRoute>
                   <History />
+                </PrivateRoute>
+              } />
+              <Route path="/teams" element={
+                <PrivateRoute>
+                  <Teams />
                 </PrivateRoute>
               } />
             </Routes>

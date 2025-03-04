@@ -9,7 +9,8 @@ export const theme: Theme = {
     error: '#ef4444',
     info: '#0ea5e9',
     background: '#1e293b',
-    text: '#f8fafc'
+    text: '#f8fafc',
+    textLight: '#94a3b8',
   },
   spacing: {
     xs: '4px',

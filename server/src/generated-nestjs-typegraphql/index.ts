@@ -18,9 +18,12 @@ export enum WorkLogScalarFieldEnum {
 export enum UserScalarFieldEnum {
     id = "id",
     email = "email",
-    password = "password",
     name = "name",
+    password = "password",
     role = "role",
+    avatarUrl = "avatarUrl",
+    isOnline = "isOnline",
+    currentStatus = "currentStatus",
     createdAt = "createdAt",
     updatedAt = "updatedAt"
 }
@@ -281,11 +284,17 @@ export class User {
     @Field(() => String, {nullable:false})
     email!: string;
     @Field(() => String, {nullable:false})
-    password!: string;
-    @Field(() => String, {nullable:false})
     name!: string;
+    @Field(() => String, {nullable:false})
+    password!: string;
     @Field(() => UserRole, {defaultValue:'USER',nullable:false})
     role!: `${UserRole}`;
+    @Field(() => String, {nullable:true})
+    avatarUrl!: string | null;
+    @Field(() => Boolean, {defaultValue:false,nullable:false})
+    isOnline!: boolean;
+    @Field(() => String, {nullable:true})
+    currentStatus!: string | null;
     @Field(() => Date, {nullable:false})
     createdAt!: Date;
     @Field(() => Date, {nullable:false})

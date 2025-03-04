@@ -102,6 +102,7 @@ type Query {
   me: User!
   projects: [Project!]!
   sessionWorkLogs(sessionId: ID!): [WorkLog!]!
+  teamUsers: [User!]!
   userSessions(input: GetSessionsInput!): [Session!]!
 }
 
@@ -186,10 +187,13 @@ input UpdateWorkLogInput {
 
 type User {
   _count: UserCount!
+  avatarUrl: String
   breaks: [Break!]
   createdAt: DateTime!
+  currentStatus: String
   email: String!
   id: ID!
+  isOnline: Boolean!
   name: String!
   password: String!
   role: UserRole!

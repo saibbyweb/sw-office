@@ -1,0 +1,14 @@
+type Query {
+  # ... existing queries ...
+  teamUsers: [User!]!
+}
+
+type User {
+  id: ID!
+  name: String!
+  email: String!
+  role: String!
+  avatarUrl: String
+  isOnline: Boolean
+  currentStatus: String
+} 

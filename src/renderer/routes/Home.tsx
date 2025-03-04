@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useApolloClient } from '@apollo/client';
 import { MdTimer, MdTimerOff, MdWork } from 'react-icons/md';
 import { HiLightningBolt, HiPause, HiViewGrid } from 'react-icons/hi';
+import { Users } from 'react-feather';
 import { ME, ACTIVE_SESSION, START_BREAK, END_BREAK } from '../../graphql/queries';
 import { 
   ActiveSessionData, 
@@ -317,6 +318,29 @@ const StartButton = styled(Button)`
   }
 `;
 
+const HeaderActions = styled.div`
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+`;
+
+const TeamsButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background-color: ${({ theme }) => theme.colors.primary}20;
+  color: ${({ theme }) => theme.colors.primary};
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: ${({ theme }) => theme.colors.primary}30;
+  }
+`;
+
 export const Home: React.FC = () => {
   const navigate = useNavigate();
   const { state, startSession, switchProject, addWorkLog, startBreak: startBreakAction, endBreak: endBreakAction } = useApp();
@@ -534,15 +558,21 @@ export const Home: React.FC = () => {
 
         <Header>
           <AppLogo src={appIcon} alt="SW Office" />
-          <UserInfo>
-            {userData?.me.name} ({userData?.me.email})
-          </UserInfo>
-          <Button 
-            variant="secondary" 
-            onClick={() => setShowLogoutModal(true)}
-          >
-            Logout
-          </Button>
+          <HeaderActions>
+            <TeamsButton onClick={() => navigate('/teams')}>
+              <Users size={18} />
+              Teams
+            </TeamsButton>
+            <UserInfo>
+              {userData?.me.name} ({userData?.me.email})
+            </UserInfo>
+            <Button 
+              variant="secondary" 
+              onClick={() => setShowLogoutModal(true)}
+            >
+              Logout
+            </Button>
+          </HeaderActions>
         </Header>
         <MainContent>
           <WelcomeContainer>
@@ -584,15 +614,21 @@ export const Home: React.FC = () => {
       </VersionTag>
       <Header>
         <AppLogo src={appIcon} alt="SW Office" />
-        <UserInfo>
-          {userData?.me.name} ({userData?.me.email})
-        </UserInfo>
-        <Button 
-          variant="secondary" 
-          onClick={() => setShowLogoutModal(true)}
-        >
-          Logout
-        </Button>
+        <HeaderActions>
+          <TeamsButton onClick={() => navigate('/teams')}>
+            <Users size={18} />
+            Teams
+          </TeamsButton>
+          <UserInfo>
+            {userData?.me.name} ({userData?.me.email})
+          </UserInfo>
+          <Button 
+            variant="secondary" 
+            onClick={() => setShowLogoutModal(true)}
+          >
+            Logout
+          </Button>
+        </HeaderActions>
       </Header>
       <MainContent>
         <Section fullWidth>
