@@ -15,6 +15,7 @@ export class SocketManagerService {
       );
     }
     this.userSocketMap.set(userId, socketId);
+    this.logAllConnectedUsers();
   }
 
   removeUserSocket(userId: string) {
@@ -28,6 +29,7 @@ export class SocketManagerService {
     } else {
       console.log(`[SocketManagerService] No socket found for user ${userId}`);
     }
+    this.logAllConnectedUsers();
   }
 
   getUserSocketId(userId: string): string | undefined {
@@ -37,7 +39,9 @@ export class SocketManagerService {
         `[SocketManagerService] Found socket ${socketId} for user ${userId}`,
       );
     } else {
-      console.log(`[SocketManagerService] No socket found for user ${userId}`);
+      console.log(
+        `[SocketManagerService] ⚠️ No socket found for user ${userId} - this might indicate a disconnected user or GraphQL playground usage`,
+      );
     }
     return socketId;
   }
@@ -47,13 +51,25 @@ export class SocketManagerService {
     console.log(
       `[SocketManagerService] User ${userId} ${hasSocket ? 'has' : 'does not have'} an authenticated socket connection`,
     );
+    if (!hasSocket) {
+      console.log(
+        `[SocketManagerService] ⚠️ No authenticated socket for user ${userId} - if using GraphQL playground, this is expected`,
+      );
+    }
     return hasSocket;
   }
 
   logAllConnectedUsers() {
-    console.log('[SocketManagerService] Currently connected users:');
-    this.userSocketMap.forEach((socketId, userId) => {
-      console.log(`- User ${userId} connected with socket ${socketId}`);
-    });
+    const connectedCount = this.userSocketMap.size;
+    console.log(
+      `[SocketManagerService] Currently connected users (${connectedCount} total):`,
+    );
+    if (connectedCount === 0) {
+      console.log('  No users connected');
+    } else {
+      this.userSocketMap.forEach((socketId, userId) => {
+        console.log(`  - User ${userId} connected with socket ${socketId}`);
+      });
+    }
   }
 }

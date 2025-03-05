@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { User } from 'src/generated-nestjs-typegraphql';
 import { TeamsService } from '../teams/teams.service';
 import { SocketManagerService } from '../notifications/socket-manager.service';
+import { UsersService } from '../users/users.service';
 
 const CALL_TIMEOUT_MS = 30000; // 30 seconds timeout
 
@@ -17,6 +18,7 @@ export class CallsService {
     private readonly notificationsGateway: NotificationsGateway,
     private readonly teamsService: TeamsService,
     private readonly socketManager: SocketManagerService,
+    private readonly usersService: UsersService,
   ) {}
 
   registerUserSocket(userId: string, socketId: string) {
@@ -166,7 +168,7 @@ export class CallsService {
     accept: boolean,
   ): Promise<Call> {
     console.log(
-      `[CallsService] Handling call response for call ${callId} from receiver ${receiverId} (accept: ${accept})`,
+      `[CallsService] 📞 Handling call response for call ${callId} from receiver ${receiverId} (accept: ${accept})`,
     );
 
     // Clear the timeout since we got a response
@@ -179,60 +181,127 @@ export class CallsService {
 
     const call = this.activeCalls.get(callId);
     if (!call || call.receiver.id !== receiverId) {
-      console.log(`[CallsService] Call not found or unauthorized: ${callId}`);
+      console.log(
+        `[CallsService] ❌ Call not found or unauthorized: ${callId}`,
+        console.log(call, call?.receiver.id, receiverId),
+      );
       throw new Error('Call not found or unauthorized');
     }
 
+    console.log(`[CallsService] Current call state:`, {
+      callId: call.id,
+      status: call.status,
+      caller: call.caller.id,
+      receiver: call.receiver.id,
+      createdAt: call.createdAt,
+    });
+
     if (accept) {
       console.log(
-        `[CallsService] Call ${callId} accepted, creating Teams meeting`,
+        `[CallsService] ✅ Call ${callId} accepted, creating Teams meeting`,
       );
-      // Create Teams meeting
-      const startTime = new Date().toISOString();
-      const endTime = new Date(Date.now() + 30 * 60000).toISOString(); // 30 minutes from now
+
       try {
+        // Get the caller's user details to get their email
+        const caller = await this.usersService.findById(call.caller.id);
+        console.log(`[CallsService] Found caller:`, {
+          id: caller.id,
+          email: caller.email,
+        });
+
+        // Get the caller's Microsoft Teams ID using their email
+        const teamsUser = await this.teamsService.getUserByEmail(caller.email);
+        console.log(`[CallsService] Found Teams user:`, {
+          id: teamsUser.id,
+          displayName: teamsUser.displayName,
+          email: teamsUser.mail || teamsUser.userPrincipalName,
+        });
+
+        // Create Teams meeting using the Teams user ID
+        const startTime = new Date().toISOString();
+        const endTime = new Date(Date.now() + 30 * 60000).toISOString(); // 30 minutes from now
+        console.log(
+          `[CallsService] Creating Teams meeting for call ${callId}`,
+          {
+            subject: 'Quick Call',
+            startTime,
+            endTime,
+            teamsUserId: teamsUser.id,
+          },
+        );
+
         const meeting = await this.teamsService.createOnlineMeeting(
           'Quick Call',
           startTime,
           endTime,
-          call.caller.id,
+          teamsUser.id,
         );
         console.log(
-          `[CallsService] Teams meeting created for call ${callId} with join URL: ${meeting.joinUrl}`,
+          `[CallsService] ✅ Teams meeting created for call ${callId}:`,
+          {
+            meetingId: meeting.id,
+            joinUrl: meeting.joinUrl,
+            subject: meeting.subject,
+          },
         );
 
         call.status = CallStatus.ACCEPTED;
         call.meetingLink = meeting.joinUrl;
         call.answeredAt = new Date();
-      } catch (error) {
+
+        // Get caller's socket ID
+        const callerSocketId = this.socketManager.getUserSocketId(
+          call.caller.id,
+        );
+        console.log(`[CallsService] Caller socket status:`, {
+          callerId: call.caller.id,
+          hasSocket: !!callerSocketId,
+          socketId: callerSocketId,
+        });
+
+        if (callerSocketId) {
+          console.log(
+            `[CallsService] 📤 Sending CALL_RESPONSE notification to caller ${call.caller.id}`,
+          );
+          this.notificationsGateway.sendNotificationToClient(callerSocketId, {
+            type: 'CALL_RESPONSE',
+            callId: call.id,
+            accepted: true,
+            meetingLink: meeting.joinUrl,
+          });
+        } else {
+          console.log(
+            `[CallsService] ❌ Could not find socket for caller ${call.caller.id} - notification won't be sent`,
+          );
+        }
+      } catch (error: unknown) {
         console.error(
-          `[CallsService] Error creating Teams meeting for call ${callId}:`,
+          `[CallsService] ❌ Error creating Teams meeting for call ${callId}:`,
           error,
         );
         throw error;
       }
     } else {
-      console.log(`[CallsService] Call ${callId} rejected by receiver`);
+      console.log(`[CallsService] ❌ Call ${callId} rejected by receiver`);
       call.status = CallStatus.REJECTED;
       call.answeredAt = new Date();
-    }
 
-    // Notify caller of the response
-    const callerSocketId = this.socketManager.getUserSocketId(call.caller.id);
-    if (callerSocketId) {
-      console.log(
-        `[CallsService] Notifying caller ${call.caller.id} about call response`,
-      );
-      this.notificationsGateway.sendNotificationToClient(callerSocketId, {
-        type: 'CALL_RESPONSE',
-        callId: call.id,
-        accepted: accept,
-        meetingLink: call.meetingLink,
-      });
-    } else {
-      console.log(
-        `[CallsService] Could not find socket for caller ${call.caller.id}`,
-      );
+      // Notify caller of rejection
+      const callerSocketId = this.socketManager.getUserSocketId(call.caller.id);
+      if (callerSocketId) {
+        console.log(
+          `[CallsService] 📤 Notifying caller ${call.caller.id} about call rejection`,
+        );
+        this.notificationsGateway.sendNotificationToClient(callerSocketId, {
+          type: 'CALL_RESPONSE',
+          callId: call.id,
+          accepted: false,
+        });
+      } else {
+        console.log(
+          `[CallsService] ❌ Could not find socket for caller ${call.caller.id} - rejection notification won't be sent`,
+        );
+      }
     }
 
     this.activeCalls.set(callId, call);

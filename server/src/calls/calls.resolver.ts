@@ -1,10 +1,9 @@
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { Args, Mutation, Resolver, Context } from '@nestjs/graphql';
 import { CallsService } from './calls.service';
 import { Call } from '../schema/call.schema';
 import { UseGuards } from '@nestjs/common';
 import { JwtGuard } from '../auth/guards/jwt.guard';
-import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { User } from 'src/generated-nestjs-typegraphql';
+import { GraphQLContext } from 'src/users/users.resolver';
 
 @Resolver(() => Call)
 @UseGuards(JwtGuard)
@@ -12,15 +11,16 @@ export class CallsResolver {
   constructor(private readonly callsService: CallsService) {}
 
   @Mutation(() => Call)
-  async initiateCall(
-    @CurrentUser() user: User,
+  initiateCall(
+    @Context() context: GraphQLContext,
     @Args('receiverId') receiverId: string,
   ) {
-    return this.callsService.initiateCall(user.id, receiverId);
+    const userId = context.req.user.id;
+    return this.callsService.initiateCall(userId, receiverId);
   }
 
   @Mutation(() => Call)
-  async testInitiateCall(
+  testInitiateCall(
     @Args('callerId') callerId: string,
     @Args('receiverId') receiverId: string,
   ) {
@@ -32,20 +32,26 @@ export class CallsResolver {
 
   @Mutation(() => Call)
   async handleCallResponse(
-    @CurrentUser() user: User,
+    @Context() context: GraphQLContext,
     @Args('callId') callId: string,
     @Args('accept') accept: boolean,
   ) {
-    return this.callsService.handleCallResponse(callId, user.id, accept);
+    const userId = context.req.user.id;
+    return await this.callsService.handleCallResponse(callId, userId, accept);
   }
 
   @Mutation(() => Call)
-  async endCall(@CurrentUser() user: User, @Args('callId') callId: string) {
-    return this.callsService.endCall(callId, user.id);
+  endCall(@Context() context: GraphQLContext, @Args('callId') callId: string) {
+    const userId = context.req.user.id;
+    return this.callsService.endCall(callId, userId);
   }
 
   @Mutation(() => Call)
-  async cancelCall(@CurrentUser() user: User, @Args('callId') callId: string) {
-    return this.callsService.cancelCall(callId, user.id);
+  cancelCall(
+    @Context() context: GraphQLContext,
+    @Args('callId') callId: string,
+  ) {
+    const userId = context.req.user.id;
+    return this.callsService.cancelCall(callId, userId);
   }
 }

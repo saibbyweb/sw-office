@@ -266,4 +266,24 @@ export class TeamsService {
       );
     }
   }
+
+  async getUserByEmail(email: string): Promise<TeamsUser> {
+    try {
+      const response = (await this.graphClient
+        .api('/users')
+        .filter(`mail eq '${email}' or userPrincipalName eq '${email}'`)
+        .select('id,displayName,mail,userPrincipalName')
+        .get()) as GraphApiResponse<TeamsUser>;
+
+      if (!response.value.length) {
+        throw new Error(`No Teams user found with email: ${email}`);
+      }
+
+      return response.value[0];
+    } catch (error: unknown) {
+      throw new Error(
+        `Failed to fetch Teams user by email: ${isGraphError(error) ? error.message : 'Unknown error'}`,
+      );
+    }
+  }
 }

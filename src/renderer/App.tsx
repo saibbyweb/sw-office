@@ -15,6 +15,7 @@ import { UpdateInfo } from './components/common/UpdateInfo';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import { notificationService } from '../services/NotificationService';
 import { CallProvider } from '../components/CallProvider';
+import { Toaster } from 'react-hot-toast';
 
 const App: React.FC = () => {
   useEffect(() => {
@@ -52,6 +53,7 @@ const App: React.FC = () => {
             </Router>
             <UpdateInfo />
             <ConnectionStatus />
+            <Toaster position="top-right" />
           </CallProvider>
         </AppProvider>
       </ThemeProvider>

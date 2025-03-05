@@ -4,9 +4,10 @@ import { CallsResolver } from './calls.resolver';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { TeamsModule } from '../teams/teams.module';
 import { AuthModule } from 'src/auth/auth.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [NotificationsModule, TeamsModule, AuthModule],
+  imports: [NotificationsModule, TeamsModule, AuthModule, UsersModule],
   providers: [CallsService, CallsResolver],
   exports: [CallsService],
 })
