@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { Wifi, WifiOff } from 'react-feather';
 import { notificationService } from '../services/NotificationService';
+import { useSocket } from '../services/socket';
 
 const StatusContainer = styled.div`
   position: fixed;
@@ -31,19 +32,44 @@ const StatusText = styled.span`
   color: ${props => props.theme.colors?.text || '#333333'};
 `;
 
+const SocketId = styled.span`
+  font-size: 10px;
+  color: ${props => props.theme.colors?.secondary || '#666666'};
+  margin-left: 8px;
+`;
+
 export const ConnectionStatus: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
+  const { socket } = useSocket();
+  const [socketId, setSocketId] = useState<string>('');
 
   useEffect(() => {
-    const handleConnect = () => setIsConnected(true);
-    const handleDisconnect = () => setIsConnected(false);
+    const handleConnect = () => {
+      setIsConnected(true);
+      if (socket) {
+        console.log('[ConnectionStatus] Socket connected with ID:', socket.id);
+        setSocketId(socket.id || '');
+      }
+    };
+    
+    const handleDisconnect = () => {
+      console.log('[ConnectionStatus] Socket disconnected');
+      setIsConnected(false);
+      setSocketId('');
+    };
 
     notificationService.onConnectionChange(handleConnect, handleDisconnect);
+
+    // Set initial socket ID if already connected
+    if (socket?.connected) {
+      console.log('[ConnectionStatus] Initial socket ID:', socket.id);
+      setSocketId(socket.id || '');
+    }
 
     return () => {
       notificationService.offConnectionChange(handleConnect, handleDisconnect);
     };
-  }, []);
+  }, [socket]);
 
   return (
     <StatusContainer>
@@ -52,6 +78,7 @@ export const ConnectionStatus: React.FC = () => {
         <>
           <Wifi size={14} color="#4CAF50" />
           <StatusText>Connected</StatusText>
+          {socketId && <SocketId>({socketId})</SocketId>}
         </>
       ) : (
         <>

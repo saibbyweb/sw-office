@@ -20,6 +20,17 @@ export class CallsResolver {
   }
 
   @Mutation(() => Call)
+  async testInitiateCall(
+    @Args('callerId') callerId: string,
+    @Args('receiverId') receiverId: string,
+  ) {
+    console.log(
+      `[CallsResolver] Test initiating call from ${callerId} to ${receiverId}`,
+    );
+    return this.callsService.initiateCall(callerId, receiverId);
+  }
+
+  @Mutation(() => Call)
   async handleCallResponse(
     @CurrentUser() user: User,
     @Args('callId') callId: string,

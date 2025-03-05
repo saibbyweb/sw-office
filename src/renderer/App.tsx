@@ -14,6 +14,7 @@ import { Teams } from './routes/Teams';
 import { UpdateInfo } from './components/common/UpdateInfo';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import { notificationService } from '../services/NotificationService';
+import { CallProvider } from '../components/CallProvider';
 
 const App: React.FC = () => {
   useEffect(() => {
@@ -28,28 +29,30 @@ const App: React.FC = () => {
       <ThemeProvider theme={theme}>
         <GlobalStyles />
         <AppProvider>
-          <Router>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/" element={
-                <PrivateRoute>
-                  <Home />
-                </PrivateRoute>
-              } />
-              <Route path="/history" element={
-                <PrivateRoute>
-                  <History />
-                </PrivateRoute>
-              } />
-              <Route path="/teams" element={
-                <PrivateRoute>
-                  <Teams />
-                </PrivateRoute>
-              } />
-            </Routes>
-          </Router>
-          <UpdateInfo />
-          <ConnectionStatus />
+          <CallProvider>
+            <Router>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/" element={
+                  <PrivateRoute>
+                    <Home />
+                  </PrivateRoute>
+                } />
+                <Route path="/history" element={
+                  <PrivateRoute>
+                    <History />
+                  </PrivateRoute>
+                } />
+                <Route path="/teams" element={
+                  <PrivateRoute>
+                    <Teams />
+                  </PrivateRoute>
+                } />
+              </Routes>
+            </Router>
+            <UpdateInfo />
+            <ConnectionStatus />
+          </CallProvider>
         </AppProvider>
       </ThemeProvider>
     </ApolloProvider>

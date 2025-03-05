@@ -94,7 +94,7 @@ const createWindow = () => {
   // if (isDev) {
   //   mainWindow.loadURL("http://localhost:5173");
   //   // Open the DevTools.
-  //   mainWindow.webContents.openDevTools();
+    mainWindow.webContents.openDevTools();
     
   //   // Force set the window title in dev mode
   //   mainWindow.webContents.on('did-finish-load', () => {

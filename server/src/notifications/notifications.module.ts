@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { NotificationsGateway } from './notifications.gateway';
 import { SocketManagerService } from './socket-manager.service';
-import { JwtModule } from '@nestjs/jwt';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
-  imports: [JwtModule],
+  imports: [AuthModule],
   providers: [NotificationsGateway, SocketManagerService],
   exports: [NotificationsGateway, SocketManagerService],
 })

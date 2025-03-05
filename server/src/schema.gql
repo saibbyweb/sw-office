@@ -116,6 +116,7 @@ type Mutation {
   startBreak(input: StartBreakInput!): Break!
   startSession(input: StartSessionInput!): Session!
   switchProject(input: SwitchProjectInput!): Session!
+  testInitiateCall(callerId: String!, receiverId: String!): Call!
   updateWorkLog(input: UpdateWorkLogInput!): WorkLog!
 }
 
