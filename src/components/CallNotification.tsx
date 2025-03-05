@@ -51,6 +51,35 @@ const SpinningIcon = styled(AiOutlineLoading3Quarters)`
   animation: ${spinAnimation} 1s linear infinite;
 `;
 
+const LoadingContainer = styled(motion.div)`
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: #22c55e;
+`;
+
+const LoadingText = styled(motion.p)`
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+  text-align: center;
+`;
+
+const ProgressDots = styled(motion.div)`
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+`;
+
+const Dot = styled(motion.span)`
+  width: 6px;
+  height: 6px;
+  background-color: #22c55e;
+  border-radius: 50%;
+`;
+
 const CallNotification: React.FC<CallNotificationProps> = ({
   callerId,
   onAccept,
@@ -222,20 +251,30 @@ const CallNotification: React.FC<CallNotificationProps> = ({
             </motion.button>
           </motion.div>
         ) : (
-          <motion.div
+          <LoadingContainer
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            style={{ 
-              marginTop: '20px',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: '8px',
-              color: '#22c55e'
-            }}
           >
             <SpinningIcon size={24} />
-          </motion.div>
+            <div>
+              <LoadingText>Setting up your meeting</LoadingText>
+              <ProgressDots>
+                {[0, 1, 2].map((i) => (
+                  <Dot
+                    key={i}
+                    initial={{ scale: 0.8, opacity: 0.4 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                      duration: 0.8,
+                      delay: i * 0.2,
+                    }}
+                  />
+                ))}
+              </ProgressDots>
+            </div>
+          </LoadingContainer>
         )}
       </motion.div>
     </AnimatePresence>

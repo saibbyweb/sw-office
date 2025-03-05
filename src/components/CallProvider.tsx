@@ -278,17 +278,25 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
           authorization: `Bearer ${token}`
         }
       }
-    }).catch(error => {
+    })
+    .then(() => {
+      // Only clear the incoming call after we get a response
+      setIncomingCall(null);
+    })
+    .catch(error => {
       console.error('[CallProvider] GraphQL mutation failed:', {
         error,
         callId: incomingCall.callId,
         errorMessage: error.message,
         graphQLErrors: error.graphQLErrors
       });
+      // Reset the waiting state on error
+      setIsWaitingForMeetingLink(false);
+      // Show error toast
+      toast.error('Failed to accept call. Please try again.');
     });
 
     console.log('[CallProvider] Called handleCallResponse mutation');
-    setIncomingCall(null);
   }, [incomingCall, handleCallResponse]);
 
   const handleRejectCall = useCallback(() => {
