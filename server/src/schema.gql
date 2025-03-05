@@ -59,6 +59,22 @@ input LoginInput {
   password: String!
 }
 
+type MeetingAttendee {
+  displayName: String!
+  duration: Float!
+  emailAddress: String!
+  joinDateTime: String!
+  leaveDateTime: String
+}
+
+type MeetingHistoryItem {
+  endDateTime: String!
+  isOnlineMeeting: Boolean!
+  joinUrl: String
+  startDateTime: String!
+  subject: String!
+}
+
 type MeetingStatus {
   isInMeeting: Boolean!
 }
@@ -89,6 +105,16 @@ type OnlineMeeting {
   subject: String!
 }
 
+type OrganizationMeeting {
+  endDateTime: String!
+  id: ID!
+  joinUrl: String!
+  organizerEmail: String!
+  organizerName: String!
+  startDateTime: String!
+  subject: String!
+}
+
 type Project {
   _count: ProjectCount!
   createdAt: DateTime!
@@ -114,6 +140,8 @@ type Query {
   debugData: String!
   getAllUsers: [TeamsUser!]!
   getAllUsersWithPresence: [TeamsUserWithPresence!]!
+  getUserMeetingHistory(endDate: String!, startDate: String!, userId: String!): [MeetingHistoryItem!]!
+  getUserMeetings(userId: String!): [OrganizationMeeting!]!
   hello: String!
   me: User!
   projects: [Project!]!

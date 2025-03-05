@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ThemeProvider } from 'styled-components';
 import { AppProvider } from './context/AppContext';
 import { theme } from './styles/theme';
@@ -12,8 +12,17 @@ import { History } from './routes/History';
 import { Login } from './routes/Login';
 import { Teams } from './routes/Teams';
 import { UpdateInfo } from './components/common/UpdateInfo';
+import { ConnectionStatus } from '../components/ConnectionStatus';
+import { notificationService } from '../services/NotificationService';
 
 const App: React.FC = () => {
+  useEffect(() => {
+    notificationService.connect();
+    return () => {
+      notificationService.disconnect();
+    };
+  }, []);
+
   return (
     <ApolloProvider client={client}>
       <ThemeProvider theme={theme}>
@@ -40,6 +49,7 @@ const App: React.FC = () => {
             </Routes>
           </Router>
           <UpdateInfo />
+          <ConnectionStatus />
         </AppProvider>
       </ThemeProvider>
     </ApolloProvider>

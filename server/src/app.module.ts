@@ -11,6 +11,7 @@ import { ProjectsModule } from './projects/projects.module';
 import { DebugModule } from './debug/debug.module';
 import { AdminModule } from './admin/admin.module';
 import { TeamsModule } from './teams/teams.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { TeamsModule } from './teams/teams.module';
     DebugModule,
     AdminModule,
     TeamsModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

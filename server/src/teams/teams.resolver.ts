@@ -5,6 +5,8 @@ import {
   OnlineMeeting,
   MeetingStatus,
   TeamsUserWithPresence,
+  MeetingHistoryItem,
+  OrganizationMeeting,
 } from './teams.types';
 
 @Resolver('Teams')
@@ -42,5 +44,21 @@ export class TeamsResolver {
   ): Promise<MeetingStatus> {
     const isInMeeting = await this.teamsService.checkUserInMeeting(userId);
     return { isInMeeting };
+  }
+
+  @Query(() => [MeetingHistoryItem])
+  async getUserMeetingHistory(
+    @Args('userId') userId: string,
+    @Args('startDate') startDate: string,
+    @Args('endDate') endDate: string,
+  ): Promise<MeetingHistoryItem[]> {
+    return this.teamsService.getUserMeetingHistory(userId, startDate, endDate);
+  }
+
+  @Query(() => [OrganizationMeeting])
+  async getUserMeetings(
+    @Args('userId') userId: string,
+  ): Promise<OrganizationMeeting[]> {
+    return this.teamsService.getUserMeetings(userId);
   }
 }
