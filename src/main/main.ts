@@ -8,7 +8,7 @@ import { ipcMain } from "electron";
 log.transports.file.level = "debug";
 autoUpdater.logger = log;
 
-const isDev = process.env.NODE_ENV === "development";
+const isDev = true || process.env.NODE_ENV === "development";
 
 // Configure proper logging
 log.transports.file.level = "info";
@@ -61,9 +61,8 @@ Menu.setApplicationMenu(menu);
 const registerIpcHandlers = () => {
   // Remove existing handler if it exists
   ipcMain.removeHandler("get-app-version");
-
-  // Remove existing handler if it exists
   ipcMain.removeHandler("open-external-link");
+  ipcMain.removeHandler("get-audio-path");
 
   // Register new handler
   ipcMain.handle("get-app-version", () => {
@@ -72,6 +71,34 @@ const registerIpcHandlers = () => {
 
   ipcMain.on("open-external-link", (event: IpcMainInvokeEvent, url: string) => {
     shell.openExternal(url);
+  });
+
+  // Add window focus handler
+  ipcMain.on("focus-window", () => {
+    if (mainWindow) {
+      // Show the window if it's hidden
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore();
+      }
+      // Bring window to front and focus it
+      mainWindow.show();
+      mainWindow.focus();
+      
+      // On macOS, bounce the dock icon until the app is focused
+      if (process.platform === "darwin") {
+        app.dock.bounce("critical");
+      }
+    }
+  });
+
+  // Add audio path handler
+  ipcMain.handle("get-audio-path", () => {
+    if (isDev) {
+      return "assets/ring.mp3";
+    } else {
+      // In production, use the path relative to the app's resources
+      return path.join(process.resourcesPath, "app", "public", "assets", "ring.mp3");
+    }
   });
 };
 
@@ -86,6 +113,7 @@ const createWindow = () => {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
+      webSecurity: true
     },
     backgroundColor: "#ffffff",
     icon: path.join(__dirname, "../../build/icons", process.platform === "darwin" ? "icon.icns" : process.platform === "win32" ? "icon.ico" : "icon.png"),

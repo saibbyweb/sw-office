@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { gql, useMutation } from '@apollo/client';
 import { Socket } from 'socket.io-client';
 import { toast, Toast } from 'react-hot-toast';
 import { IoVideocam, IoCopy, IoOpen } from 'react-icons/io5';
+import path from 'path';
 
 import CallNotification from './CallNotification';
 import { CallNotification as CallNotificationType, SocketEvents } from '../types/socket';
@@ -46,9 +47,29 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { socket, isConnected, isAuthenticated } = useSocket();
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
   const [isWaitingForMeetingLink, setIsWaitingForMeetingLink] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [audioSrc, setAudioSrc] = useState<string>('');
   
 
- 
+  // Initialize audio path
+  React.useEffect(() => {
+    // Request the audio file path from the main process
+    ipcRenderer.invoke('get-audio-path').then((audioPath: string) => {
+      console.log('[CallProvider] Got audio path:', audioPath);
+      setAudioSrc(audioPath);
+    }).catch((error: Error) => {
+      console.error('[CallProvider] Error getting audio path:', error);
+    });
+  }, []);
+
+  const stopRinging = useCallback(() => {
+    console.log('[CallProvider] Stopping ring tone');
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+  }, []);
+
   const [handleCallResponse] = useMutation(HANDLE_CALL_RESPONSE, {
     onCompleted: (data) => {
       console.log('[CallProvider] Call response mutation completed:', data);
@@ -199,6 +220,25 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         socketId: socket.id,
         currentIncomingCall: incomingCall
       });
+      
+      // Play ring tone
+      if (audioRef.current) {
+        console.log('[CallProvider] Attempting to play ring tone');
+        audioRef.current.play().catch(error => {
+          console.error('[CallProvider] Error playing ring tone:', error);
+          // Try to load and play again
+          audioRef.current?.load();
+          audioRef.current?.play().catch(e => {
+            console.error('[CallProvider] Second attempt to play failed:', e);
+          });
+        });
+      } else {
+        console.error('[CallProvider] Audio element not initialized');
+      }
+
+      // Focus the window
+      ipcRenderer.send('focus-window');
+      
       setIncomingCall(data);
     };
 
@@ -250,6 +290,8 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
+    stopRinging();
+
     // Check authentication before making the mutation
     const token = localStorage.getItem('authToken');
     console.log('[CallProvider] Accepting call with auth state:', {
@@ -297,13 +339,15 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     console.log('[CallProvider] Called handleCallResponse mutation');
-  }, [incomingCall, handleCallResponse]);
+  }, [incomingCall, handleCallResponse, stopRinging]);
 
   const handleRejectCall = useCallback(() => {
     if (!incomingCall) {
       console.log('[CallProvider] Cannot reject call - no incoming call');
       return;
     }
+
+    stopRinging();
 
     console.log('[CallProvider] Rejecting call:', incomingCall);
     
@@ -316,7 +360,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     setIncomingCall(null);
-  }, [incomingCall, handleCallResponse]);
+  }, [incomingCall, handleCallResponse, stopRinging]);
 
   const initiateCall = useCallback((receiverId: string) => {
     if (!socket || !isAuthenticated) {
@@ -349,6 +393,18 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <CallContext.Provider value={{ initiateCall, isConnected, isAuthenticated }}>
+      {audioSrc && (
+        <audio 
+          ref={audioRef}
+          src={audioSrc}
+          loop
+          preload="auto"
+          style={{ display: 'none' }}
+          onError={(e) => console.error('[CallProvider] Audio error:', e)}
+          onPlay={() => console.log('[CallProvider] Audio started playing')}
+          onCanPlayThrough={() => console.log('[CallProvider] Audio loaded and ready to play')}
+        />
+      )}
       {children}
       {/* Debug element */}
       <div style={{
