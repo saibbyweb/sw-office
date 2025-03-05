@@ -15,6 +15,18 @@ class NotificationService {
 
     this.socket.on('connect', () => {
       console.log('Connected to notification server');
+      // Send auth token after connection
+      const token = localStorage.getItem('token'); // Or however you store your JWT
+      if (token) {
+        this.socket.emit('auth', token, (response: { status: string; message?: string }) => {
+          if (response.status === 'authenticated') {
+            console.log('Socket authenticated');
+          } else {
+            console.error('Socket authentication failed:', response.message);
+            this.disconnect();
+          }
+        });
+      }
       this.connectListeners.forEach(listener => listener());
     });
 

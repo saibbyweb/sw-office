@@ -3,8 +3,11 @@ import {
   WebSocketServer,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  SubscribeMessage,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { JwtService } from '@nestjs/jwt';
+import { SocketManagerService } from './socket-manager.service';
 
 @WebSocketGateway({
   cors: {
@@ -17,26 +20,44 @@ export class NotificationsGateway
   @WebSocketServer()
   server: Server;
 
-  private connectedClients: Map<string, Socket> = new Map();
+  constructor(
+    private readonly socketManager: SocketManagerService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   handleConnection(client: Socket) {
     console.log(`Client connected: ${client.id}`);
-    this.connectedClients.set(client.id, client);
   }
 
   handleDisconnect(client: Socket) {
     console.log(`Client disconnected: ${client.id}`);
-    this.connectedClients.delete(client.id);
-  }
-
-  sendNotificationToAll(notification: any) {
-    this.server.emit('notification', notification);
-  }
-
-  sendNotificationToClient(clientId: string, notification: any) {
-    const client = this.connectedClients.get(clientId);
-    if (client) {
-      client.emit('notification', notification);
+    // The userId will be attached to socket in handleAuth
+    const userId = client.data.userId;
+    if (userId) {
+      this.socketManager.removeUserSocket(userId);
     }
+  }
+
+  @SubscribeMessage('auth')
+  handleAuth(client: Socket, token: string) {
+    try {
+      const decoded = this.jwtService.verify(token);
+      const userId = decoded.sub;
+
+      // Store userId in socket data for later use
+      client.data.userId = userId;
+
+      // Register the socket
+      this.socketManager.registerUserSocket(userId, client.id);
+
+      return { status: 'authenticated' };
+    } catch (error) {
+      client.disconnect();
+      return { status: 'error', message: 'Authentication failed' };
+    }
+  }
+
+  sendNotificationToClient(socketId: string, notification: any) {
+    this.server.to(socketId).emit('notification', notification);
   }
 }

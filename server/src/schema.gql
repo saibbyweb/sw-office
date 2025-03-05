@@ -41,6 +41,24 @@ enum BreakType {
   SHORT
 }
 
+type Call {
+  answeredAt: DateTime
+  caller: User!
+  createdAt: DateTime!
+  id: String!
+  meetingLink: String
+  receiver: User!
+  status: CallStatus!
+}
+
+"""Status of a call"""
+enum CallStatus {
+  ACCEPTED
+  ENDED
+  PENDING
+  REJECTED
+}
+
 """
 A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
 """
@@ -81,12 +99,16 @@ type MeetingStatus {
 
 type Mutation {
   addWorkLog(input: AddWorkLogInput!): WorkLog!
+  cancelCall(callId: String!): Call!
   cleanupInconsistentBreaks: String!
   createOnlineMeeting(endTime: String!, startTime: String!, subject: String!, userId: String!): OnlineMeeting!
   deleteWorkLog(id: ID!): Boolean!
   endBreak(breakId: ID!): Break!
+  endCall(callId: String!): Call!
   endSession(id: ID!): Session!
+  handleCallResponse(accept: Boolean!, callId: String!): Call!
   hashPassword(password: String!): String!
+  initiateCall(receiverId: String!): Call!
   login(input: LoginInput!): AuthPayload!
   logout: Boolean!
   register(input: RegisterInput!): AuthPayload!
