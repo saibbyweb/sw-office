@@ -1,12 +1,12 @@
-import { app, BrowserWindow, Menu } from "electron";
+import { app, BrowserWindow, IpcMainInvokeEvent, Menu, shell } from "electron";
 import path from "path";
 import log from "electron-log";
 import { autoUpdater } from "electron-updater";
 import { setupAutoUpdater } from "./autoUpdater";
 import { ipcMain } from "electron";
 
-log.transports.file.level = "debug"
-autoUpdater.logger = log
+log.transports.file.level = "debug";
+autoUpdater.logger = log;
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -16,55 +16,62 @@ log.transports.file.level = "info";
 let mainWindow: BrowserWindow | null = null;
 
 // Set app name
-app.name = 'SW Office';
+app.name = "SW Office";
 
-app.setAsDefaultProtocolClient('swoffice')
+app.setAsDefaultProtocolClient("swoffice");
 
-  // Create the Application's main menu
-  const template = [
-    {
-      label: 'SW Office',
-      submenu: [
-        {
-          label: 'About SW Office',
-          click: () => {
-            app.setAboutPanelOptions({
-              applicationName: 'SW Office',
-              applicationVersion: app.getVersion(),
-              version: app.getVersion(),
-              copyright: 'Copyright © 2024 Saibby Web',
-              website: 'https://saibbyweb.com',
-              iconPath: path.join(__dirname, '../../build/icons/icon.png'),
-            });
-            app.showAboutPanel();
-          },
+// Create the Application's main menu
+const template = [
+  {
+    label: "SW Office",
+    submenu: [
+      {
+        label: "About SW Office",
+        click: () => {
+          app.setAboutPanelOptions({
+            applicationName: "SW Office",
+            applicationVersion: app.getVersion(),
+            version: app.getVersion(),
+            copyright: "Copyright © 2024 Saibby Web",
+            website: "https://saibbyweb.com",
+            iconPath: path.join(__dirname, "../../build/icons/icon.png"),
+          });
+          app.showAboutPanel();
         },
-        { type: 'separator' },
-        { role: 'services' },
-        { type: 'separator' },
-        { role: 'hide' },
-        { role: 'hideOthers' },
-        { role: 'unhide' },
-        { type: 'separator' },
-        { role: 'quit' }
-      ]
-    },
-    { role: 'editMenu' },
-    { role: 'viewMenu' },
-    { role: 'windowMenu' },
-  ];
+      },
+      { type: "separator" },
+      { role: "services" },
+      { type: "separator" },
+      { role: "hide" },
+      { role: "hideOthers" },
+      { role: "unhide" },
+      { type: "separator" },
+      { role: "quit" },
+    ],
+  },
+  { role: "editMenu" },
+  { role: "viewMenu" },
+  { role: "windowMenu" },
+];
 
-  const menu = Menu.buildFromTemplate(template as any);
-  Menu.setApplicationMenu(menu);
+const menu = Menu.buildFromTemplate(template as any);
+Menu.setApplicationMenu(menu);
 
 // Register IPC handlers only once
 const registerIpcHandlers = () => {
   // Remove existing handler if it exists
   ipcMain.removeHandler("get-app-version");
 
+  // Remove existing handler if it exists
+  ipcMain.removeHandler("open-external-link");
+
   // Register new handler
   ipcMain.handle("get-app-version", () => {
     return app.getVersion();
+  });
+
+  ipcMain.on("open-external-link", (event: IpcMainInvokeEvent, url: string) => {
+    shell.openExternal(url);
   });
 };
 
@@ -75,42 +82,36 @@ const createWindow = () => {
     height: 800,
     minWidth: 800,
     minHeight: 600,
-    title: 'SW Office',
+    title: "SW Office",
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
     },
-    backgroundColor: '#ffffff',
-    icon: path.join(__dirname, '../../build/icons', 
-      process.platform === 'darwin' ? 'icon.icns' : 
-      process.platform === 'win32' ? 'icon.ico' : 
-      'icon.png'
-    )
+    backgroundColor: "#ffffff",
+    icon: path.join(__dirname, "../../build/icons", process.platform === "darwin" ? "icon.icns" : process.platform === "win32" ? "icon.ico" : "icon.png"),
   });
-
 
   // and load the index.html of the app.
 
   // if (isDev) {
   //   mainWindow.loadURL("http://localhost:5173");
   //   // Open the DevTools.
-    mainWindow.webContents.openDevTools();
-    
+  mainWindow.webContents.openDevTools();
+
   //   // Force set the window title in dev mode
   //   mainWindow.webContents.on('did-finish-load', () => {
   //     if (mainWindow) {
   //       mainWindow.setTitle('SW Office');
   //     }
   //   });
-  // } else 
-{
+  // } else
+  {
     mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
   }
 
   mainWindow.setTitle("SW Office");
 
-
-  mainWindow.on('closed', () => {
+  mainWindow.on("closed", () => {
     mainWindow = null;
   });
 

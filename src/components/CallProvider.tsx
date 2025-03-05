@@ -2,10 +2,13 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 import { gql, useMutation } from '@apollo/client';
 import { Socket } from 'socket.io-client';
 import { toast, Toast } from 'react-hot-toast';
+import { IoVideocam, IoCopy, IoOpen } from 'react-icons/io5';
 
 import CallNotification from './CallNotification';
 import { CallNotification as CallNotificationType, SocketEvents } from '../types/socket';
 import { useSocket } from '../services/socket';
+// import { ipcRenderer } from 'electron';
+const { ipcRenderer } = window.require('electron');
 
 const HANDLE_CALL_RESPONSE = gql`
   mutation HandleCallResponse($callId: String!, $accept: Boolean!) {
@@ -38,52 +41,114 @@ interface IncomingCall {
   callerId: string;
 }
 
+
 export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { socket, isConnected, isAuthenticated } = useSocket();
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
   const [isWaitingForMeetingLink, setIsWaitingForMeetingLink] = useState(false);
+  
 
+ 
   const [handleCallResponse] = useMutation(HANDLE_CALL_RESPONSE, {
     onCompleted: (data) => {
       console.log('[CallProvider] Call response mutation completed:', data);
       if (data.handleCallResponse.status === 'ACCEPTED' && data.handleCallResponse.meetingLink) {
         console.log('[CallProvider] Meeting link received:', data.handleCallResponse.meetingLink);
+        
         // Show a toast with the meeting link
-        toast((t: Toast) => (
-          <div>
-            <p>Meeting link ready:</p>
-            <div style={{ 
-              marginTop: '8px', 
-              padding: '8px', 
-              background: '#f0f0f0', 
-              borderRadius: '4px',
-              wordBreak: 'break-all'
-            }}>
-              {data.handleCallResponse.meetingLink}
+        toast.custom((t: Toast) => (
+          <div
+            style={{
+              maxWidth: '400px',
+              padding: '16px',
+              background: 'white',
+              borderRadius: '12px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <IoVideocam size={20} color="#22c55e" />
+              <span style={{ fontWeight: 500, color: '#111' }}>Meeting Ready</span>
             </div>
-            <button 
-              onClick={() => {
-                navigator.clipboard.writeText(data.handleCallResponse.meetingLink);
-                toast.success('Meeting link copied to clipboard!');
-              }}
-              style={{
-                marginTop: '8px',
-                padding: '4px 8px',
-                background: '#4CAF50',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              Copy Link
-            </button>
+            
+            <div style={{ 
+              display: 'flex',
+              gap: '8px'
+            }}>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(data.handleCallResponse.meetingLink);
+                  toast.success('Meeting link copied to clipboard!');
+                }}
+                style={{
+                  flex: 1,
+                  padding: '8px',
+                  background: '#f3f4f6',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  color: '#374151',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#e5e7eb';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#f3f4f6';
+                }}
+              >
+                <IoCopy size={16} />
+                <span>Copy Link</span>
+              </button>
+              
+              <button
+                onClick={() => {
+                  // window.open(data.handleCallResponse.meetingLink, '_blank');
+
+                   ipcRenderer.send('open-external-link', data.handleCallResponse.meetingLink);
+            
+                  toast.success('Opening meeting in browser...');
+                }}
+                style={{
+                  flex: 1,
+                  padding: '8px',
+                  background: '#22c55e',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  color: 'white',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#16a34a';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#22c55e';
+                }}
+              >
+                <IoOpen size={16} />
+                <span>Open in Browser</span>
+              </button>
+            </div>
           </div>
         ), {
-          duration: 10000, // Show for 10 seconds
-          style: {
-            minWidth: '300px'
-          }
+          duration: 10000,
+          position: 'top-right'
         });
       }
       setIsWaitingForMeetingLink(false);
@@ -295,6 +360,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
           callerId={incomingCall.callerId}
           onAccept={handleAcceptCall}
           onReject={handleRejectCall}
+          isGeneratingLink={isWaitingForMeetingLink}
         />
       )}
     </CallContext.Provider>

@@ -1,12 +1,14 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IoCall, IoClose } from 'react-icons/io5';
+import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import styled, { keyframes } from 'styled-components';
 
 interface CallNotificationProps {
   callerId: string;
   onAccept: () => void;
   onReject: () => void;
+  isGeneratingLink?: boolean;
 }
 
 const ringAnimation = keyframes`
@@ -24,6 +26,15 @@ const ringAnimation = keyframes`
   }
 `;
 
+const spinAnimation = keyframes`
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+`;
+
 const RingIndicator = styled.div`
   position: absolute;
   top: -4px;
@@ -36,10 +47,15 @@ const RingIndicator = styled.div`
   pointer-events: none;
 `;
 
+const SpinningIcon = styled(AiOutlineLoading3Quarters)`
+  animation: ${spinAnimation} 1s linear infinite;
+`;
+
 const CallNotification: React.FC<CallNotificationProps> = ({
   callerId,
   onAccept,
   onReject,
+  isGeneratingLink = false,
 }) => {
   console.log('[CallNotification] Rendering notification for caller:', callerId);
   
@@ -109,7 +125,7 @@ const CallNotification: React.FC<CallNotificationProps> = ({
                   color: '#22c55e',
                 }} 
               />
-              Incoming Call
+              {isGeneratingLink ? 'Generating Meeting Link...' : 'Incoming Call'}
             </motion.h3>
             <motion.p
               initial={{ opacity: 0 }}
@@ -121,87 +137,106 @@ const CallNotification: React.FC<CallNotificationProps> = ({
                 margin: 0
               }}
             >
-              From: {callerId}
+              {isGeneratingLink ? 'Please wait while we set up your meeting' : `From: ${callerId}`}
             </motion.p>
           </div>
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleReject}
-            style={{ 
-              background: 'none', 
-              border: 'none', 
-              cursor: 'pointer',
-              padding: '4px',
-              position: 'relative',
-              zIndex: 3
-            }}
-          >
-            <IoClose size={24} color="#666" />
-          </motion.button>
+          {!isGeneratingLink && (
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleReject}
+              style={{ 
+                background: 'none', 
+                border: 'none', 
+                cursor: 'pointer',
+                padding: '4px',
+                position: 'relative',
+                zIndex: 3
+              }}
+            >
+              <IoClose size={24} color="#666" />
+            </motion.button>
+          )}
         </div>
         
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          style={{ 
-            marginTop: '20px',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: '12px',
-            position: 'relative',
-            zIndex: 2
-          }}
-        >
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleReject}
-            style={{
-              padding: '10px 20px',
-              borderRadius: '8px',
-              backgroundColor: '#fee2e2',
-              color: '#ef4444',
-              border: 'none',
-              cursor: 'pointer',
+        {!isGeneratingLink ? (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            style={{ 
+              marginTop: '20px',
               display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontWeight: 500,
-              fontSize: '14px',
+              justifyContent: 'flex-end',
+              gap: '12px',
               position: 'relative',
-              zIndex: 3
+              zIndex: 2
             }}
           >
-            <IoClose size={20} />
-            <span>Decline</span>
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleAccept}
-            style={{
-              padding: '10px 20px',
-              borderRadius: '8px',
-              backgroundColor: '#22c55e',
-              color: 'white',
-              border: 'none',
-              cursor: 'pointer',
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleReject}
+              style={{
+                padding: '10px 20px',
+                borderRadius: '8px',
+                backgroundColor: '#fee2e2',
+                color: '#ef4444',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontWeight: 500,
+                fontSize: '14px',
+                position: 'relative',
+                zIndex: 3
+              }}
+            >
+              <IoClose size={20} />
+              <span>Decline</span>
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleAccept}
+              style={{
+                padding: '10px 20px',
+                borderRadius: '8px',
+                backgroundColor: '#22c55e',
+                color: 'white',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontWeight: 500,
+                fontSize: '14px',
+                boxShadow: '0 2px 8px rgba(34, 197, 94, 0.25)',
+                position: 'relative',
+                zIndex: 3
+              }}
+            >
+              <IoCall size={20} />
+              <span>Accept</span>
+            </motion.button>
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={{ 
+              marginTop: '20px',
               display: 'flex',
+              justifyContent: 'center',
               alignItems: 'center',
               gap: '8px',
-              fontWeight: 500,
-              fontSize: '14px',
-              boxShadow: '0 2px 8px rgba(34, 197, 94, 0.25)',
-              position: 'relative',
-              zIndex: 3
+              color: '#22c55e'
             }}
           >
-            <IoCall size={20} />
-            <span>Accept</span>
-          </motion.button>
-        </motion.div>
+            <SpinningIcon size={24} />
+          </motion.div>
+        )}
       </motion.div>
     </AnimatePresence>
   );
