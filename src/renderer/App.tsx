@@ -17,6 +17,36 @@ import { notificationService } from '../services/NotificationService';
 import { CallProvider } from '../components/CallProvider';
 import { Toaster } from 'react-hot-toast';
 
+const AppContent: React.FC = () => {
+  return (
+    <>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={
+            <PrivateRoute>
+              <Home />
+            </PrivateRoute>
+          } />
+          <Route path="/history" element={
+            <PrivateRoute>
+              <History />
+            </PrivateRoute>
+          } />
+          <Route path="/teams" element={
+            <PrivateRoute>
+              <Teams />
+            </PrivateRoute>
+          } />
+        </Routes>
+      </Router>
+      <UpdateInfo />
+      <ConnectionStatus />
+      <Toaster position="top-right" />
+    </>
+  );
+};
+
 const App: React.FC = () => {
   useEffect(() => {
     notificationService.connect();
@@ -31,29 +61,7 @@ const App: React.FC = () => {
         <GlobalStyles />
         <AppProvider>
           <CallProvider>
-            <Router>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/" element={
-                  <PrivateRoute>
-                    <Home />
-                  </PrivateRoute>
-                } />
-                <Route path="/history" element={
-                  <PrivateRoute>
-                    <History />
-                  </PrivateRoute>
-                } />
-                <Route path="/teams" element={
-                  <PrivateRoute>
-                    <Teams />
-                  </PrivateRoute>
-                } />
-              </Routes>
-            </Router>
-            <UpdateInfo />
-            <ConnectionStatus />
-            <Toaster position="top-right" />
+            <AppContent />
           </CallProvider>
         </AppProvider>
       </ThemeProvider>

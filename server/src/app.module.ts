@@ -13,6 +13,8 @@ import { AdminModule } from './admin/admin.module';
 import { TeamsModule } from './teams/teams.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { CallsModule } from './calls/calls.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { UploadModule } from './upload/upload.module';
 
 @Module({
   imports: [
@@ -29,6 +31,10 @@ import { CallsModule } from './calls/calls.module';
         'subscriptions-transport-ws': true,
       },
     }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads',
+    }),
     UsersModule,
     AuthModule,
     DatabaseModule,
@@ -39,6 +45,7 @@ import { CallsModule } from './calls/calls.module';
     TeamsModule,
     NotificationsModule,
     CallsModule,
+    UploadModule,
   ],
 })
 export class AppModule {}

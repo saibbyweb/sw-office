@@ -117,6 +117,7 @@ type Mutation {
   startSession(input: StartSessionInput!): Session!
   switchProject(input: SwitchProjectInput!): Session!
   testInitiateCall(callerId: String!, receiverId: String!): Call!
+  updateProfile(input: UpdateProfileInput!): User!
   updateWorkLog(input: UpdateWorkLogInput!): WorkLog!
 }
 
@@ -258,6 +259,11 @@ type TeamsUserWithPresence {
   isInMeeting: Boolean!
   mail: String!
   userPrincipalName: String!
+}
+
+input UpdateProfileInput {
+  avatarUrl: String
+  name: String!
 }
 
 input UpdateWorkLogInput {

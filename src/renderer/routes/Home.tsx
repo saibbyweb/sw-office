@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useApolloClient } from '@apollo/client';
 import { MdTimer, MdTimerOff, MdWork } from 'react-icons/md';
 import { HiLightningBolt, HiPause, HiViewGrid } from 'react-icons/hi';
-import { Users } from 'react-feather';
+import { Users, Edit2 } from 'react-feather';
 import { ME, ACTIVE_SESSION, START_BREAK, END_BREAK } from '../../graphql/queries';
 import { 
   ActiveSessionData, 
@@ -23,6 +23,8 @@ import { SegmentsList } from '../components/segments/SegmentsList';
 import { UpdateInfo } from '../components/common/UpdateInfo';
 import { theme } from '../styles/theme';
 import appIcon from '../../assets/icon.png';
+import { ProfileEdit } from '../../components/ProfileEdit';
+import { API_HOST } from '../../services/env';
 
 const { ipcRenderer } = window.require('electron');
 
@@ -144,6 +146,14 @@ const UserInfo = styled.div`
   gap: ${props => props.theme.spacing.sm};
   color: ${props => props.theme.colors.text}80;
   font-size: 0.875rem;
+`;
+
+const UserAvatar = styled.img`
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid ${props => props.theme.colors.primary}40;
 `;
 
 const StatsGrid = styled.div`
@@ -341,6 +351,23 @@ const TeamsButton = styled.button`
   }
 `;
 
+const ProfileButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 8px;
+  background-color: ${({ theme }) => theme.colors.primary}20;
+  color: ${({ theme }) => theme.colors.primary};
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: ${({ theme }) => theme.colors.primary}30;
+  }
+`;
+
 export const Home: React.FC = () => {
   const navigate = useNavigate();
   const { state, startSession, switchProject, addWorkLog, startBreak: startBreakAction, endBreak: endBreakAction } = useApp();
@@ -353,6 +380,7 @@ export const Home: React.FC = () => {
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [appVersion, setAppVersion] = useState<string>('1.0.0');
   const client = useApolloClient();
+  const [isProfileEditOpen, setIsProfileEditOpen] = useState(false);
 
   const { data: userData, loading: userLoading } = useQuery(ME, {
     onError: (error) => {
@@ -548,221 +576,230 @@ export const Home: React.FC = () => {
   const activeSession = sessionData?.activeSession;
   const projectName = activeSession?.project?.name || state.session.project;
 
-
-  if (!hasActiveSession) {
-    return (
-      <AppContainer>
-        <VersionTag>
-          v{appVersion}
-          {appVersion === '1.0.2' && <NewVersionBadge>NEW</NewVersionBadge>}
-        </VersionTag>
-
-        <Header>
-          <AppLogo src={appIcon} alt="SW Office" />
-          <HeaderActions>
-            <TeamsButton onClick={() => navigate('/teams')}>
-              <Users size={18} />
-              Teams
-            </TeamsButton>
-            <UserInfo>
-              {userData?.me.name} ({userData?.me.email})
-            </UserInfo>
-            <Button 
-              variant="secondary" 
-              onClick={() => setShowLogoutModal(true)}
-            >
-              Logout
-            </Button>
-          </HeaderActions>
-        </Header>
-        <MainContent>
-          <WelcomeContainer>
-            <Greeting>{getGreeting()}, {userData?.me.name?.split(' ')[0]}!</Greeting>
-            <DateCard>
-              <DateText>{formatDate()}</DateText>
-            </DateCard>
-            <WelcomeMessage>
-              Ready to start your productive day? Track your work sessions, manage breaks, and stay focused with SW Office. Let's make today count!
-            </WelcomeMessage>
-            <StartButton onClick={() => setShowStartModal(true)}>
-              Start Work Session
-            </StartButton>
-     
-          </WelcomeContainer>
-      
-        </MainContent>
-        <StartWorkModal
-          isOpen={showStartModal}
-          onClose={() => setShowStartModal(false)}
-        />
-        <LogoutModal
-          isOpen={showLogoutModal}
-          onClose={() => setShowLogoutModal(false)}
-          onConfirm={handleLogout}
-        />
-        {notification && (
-          <Notification
-            type={notification.type}
-            message={notification.message}
-          />
-        )}
-      </AppContainer>
-    );
-  }
-
   return (
     <AppContainer>
-      <VersionTag>
-        v{appVersion}
-      </VersionTag>
-      <Header>
-        <AppLogo src={appIcon} alt="SW Office" />
-        <HeaderActions>
-          <TeamsButton onClick={() => navigate('/teams')}>
-            <Users size={18} />
-            Teams
-          </TeamsButton>
-          <UserInfo>
-            {userData?.me.name} ({userData?.me.email})
-          </UserInfo>
-          <Button 
-            variant="secondary" 
-            onClick={() => setShowLogoutModal(true)}
-          >
-            Logout
-          </Button>
-        </HeaderActions>
-      </Header>
-      <MainContent>
-        <Section fullWidth>
-          <StatsGrid>
-            <StatsCard
-              title="Active Time"
-              value={formatDuration(
-                calculateTotalDuration(sessionData?.activeSession?.segments || [], 'WORK') * 1000
-              )}
-              color={theme.colors.primary}
-              icon={<IconWrapper><HiLightningBolt /></IconWrapper>}
-              subtitle={state.session.isOnBreak ? 'On Break' : 'Currently Working'}
-            />
-            
-            <StatsCard
-              title="Break Time"
-              value={formatDuration(
-                calculateTotalDuration(sessionData?.activeSession?.segments || [], 'BREAK') * 1000
-              )}
-              color={theme.colors.warning}
-              icon={<IconWrapper><HiPause /></IconWrapper>}
-            >
-              {state.session.isOnBreak && (
-                <EndBreakButton
+      {!hasActiveSession ? (
+        <>
+          <VersionTag>
+            v{appVersion}
+            {appVersion === '1.0.2' && <NewVersionBadge>NEW</NewVersionBadge>}
+          </VersionTag>
+
+          <Header>
+            <AppLogo src={appIcon} alt="SW Office" />
+            <HeaderActions>
+              <TeamsButton onClick={() => navigate('/teams')}>
+                <Users size={18} />
+                Teams
+              </TeamsButton>
+              <UserInfo>
+              {console.log(userData?.me?.avatarUrl ? userData.me.avatarUrl : 'default-avatar.png')}
+                <UserAvatar 
+                  src={userData?.me?.avatarUrl ? userData.me.avatarUrl : 'default-avatar.png'} 
+                  alt={userData?.me?.name || 'Profile'}
+                />
+                {userData?.me.name} ({userData?.me.email})
+              </UserInfo>
+              <ProfileButton onClick={() => setIsProfileEditOpen(true)}>
+                <Edit2 size={18} />
+                Edit Profile
+              </ProfileButton>
+              <Button 
+                variant="secondary" 
+                onClick={() => setShowLogoutModal(true)}
+              >
+                Logout
+              </Button>
+            </HeaderActions>
+          </Header>
+          <MainContent>
+            <WelcomeContainer>
+              <Greeting>{getGreeting()}, {userData?.me.name?.split(' ')[0]}!</Greeting>
+              <DateCard>
+                <DateText>{formatDate()}</DateText>
+              </DateCard>
+              <WelcomeMessage>
+                Ready to start your productive day? Track your work sessions, manage breaks, and stay focused with SW Office. Let's make today count!
+              </WelcomeMessage>
+              <StartButton onClick={() => setShowStartModal(true)}>
+                Start Work Session
+              </StartButton>
+            </WelcomeContainer>
+          </MainContent>
+        </>
+      ) : (
+        <>
+          <VersionTag>
+            v{appVersion}
+          </VersionTag>
+          <Header>
+            <AppLogo src={appIcon} alt="SW Office" />
+            <HeaderActions>
+              <TeamsButton onClick={() => navigate('/teams')}>
+                <Users size={18} />
+                Teams
+              </TeamsButton>
+              <UserInfo>
+                <UserAvatar 
+                  src={userData?.me?.avatarUrl ? API_HOST + userData.me.avatarUrl : 'default-avatar.png'} 
+                  alt={userData?.me?.name || 'Profile'}
+                />
+                {userData?.me.name} ({userData?.me.email})
+              </UserInfo>
+              <ProfileButton onClick={() => setIsProfileEditOpen(true)}>
+                <Edit2 size={18} />
+                Edit Profile
+              </ProfileButton>
+              <Button 
+                variant="secondary" 
+                onClick={() => setShowLogoutModal(true)}
+              >
+                Logout
+              </Button>
+            </HeaderActions>
+          </Header>
+          <MainContent>
+            <Section fullWidth>
+              <StatsGrid>
+                <StatsCard
+                  title="Active Time"
+                  value={formatDuration(
+                    calculateTotalDuration(sessionData?.activeSession?.segments || [], 'WORK') * 1000
+                  )}
+                  color={theme.colors.primary}
+                  icon={<IconWrapper><HiLightningBolt /></IconWrapper>}
+                  subtitle={state.session.isOnBreak ? 'On Break' : 'Currently Working'}
+                />
+                
+                <StatsCard
+                  title="Break Time"
+                  value={formatDuration(
+                    calculateTotalDuration(sessionData?.activeSession?.segments || [], 'BREAK') * 1000
+                  )}
+                  color={theme.colors.warning}
+                  icon={<IconWrapper><HiPause /></IconWrapper>}
+                >
+                  {state.session.isOnBreak && (
+                    <EndBreakButton
+                      size="small"
+                      onClick={() => setShowBreakModal(true)}
+                    >
+                      <MdTimerOff /> End Break
+                    </EndBreakButton>
+                  )}
+                </StatsCard>
+
+                <StatsCard
+                  title="Current Project"
+                  value={projectName || 'No Project'}
+                  color={theme.colors.info}
+                  icon={<IconWrapper><HiViewGrid /></IconWrapper>}
+                >
+                  <ProjectButton 
+                    variant="secondary" 
+                    size="small"
+                    onClick={() => setShowSwitchProjectModal(true)}
+                    disabled={state.session.isOnBreak}
+                    title={state.session.isOnBreak ? "Cannot switch project during a break" : ""}
+                  >
+                    Switch Project
+                  </ProjectButton>
+                </StatsCard>
+              </StatsGrid>
+            </Section>
+
+            <Section fullWidth>
+              <SectionHeader>
+                <SectionTitle>
+                  <span role="img" aria-label="logs">📝</span>
+                  Work Logs
+                </SectionTitle>
+                <Button 
+                  variant="secondary" 
                   size="small"
+                  onClick={() => setShowAddWorkLogModal(true)}
+                >
+                  Add Work Log
+                </Button>
+              </SectionHeader>
+              {sessionData?.activeSession && (
+                <WorkLogList sessionId={sessionData.activeSession.id} />
+              )}
+            </Section>
+
+            <Section fullWidth>
+              <SectionHeader>
+                <SectionTitle>
+                  <span role="img" aria-label="segments">📊</span>
+                  Session Segments
+                </SectionTitle>
+              </SectionHeader>
+              {sessionData?.activeSession?.segments && (
+                <SegmentsList segments={sessionData.activeSession.segments} />
+              )}
+            </Section>
+
+            <Section fullWidth>
+              <ActionButtons>
+                <Button
+                  variant="warning"
                   onClick={() => setShowBreakModal(true)}
                 >
-                  <MdTimerOff /> End Break
-                </EndBreakButton>
-              )}
-            </StatsCard>
+                  {state.session.isOnBreak ? 'End Break' : 'Take Break'}
+                </Button>
+                <Button
+                  variant="error"
+                  onClick={() => setShowEndModal(true)}
+                >
+                  End Work Session For Today
+                </Button>
+              </ActionButtons>
+            </Section>
+          </MainContent>
 
-            <StatsCard
-              title="Current Project"
-              value={projectName || 'No Project'}
-              color={theme.colors.info}
-              icon={<IconWrapper><HiViewGrid /></IconWrapper>}
-            >
-              <ProjectButton 
-                variant="secondary" 
-                size="small"
-                onClick={() => setShowSwitchProjectModal(true)}
-                disabled={state.session.isOnBreak}
-                title={state.session.isOnBreak ? "Cannot switch project during a break" : ""}
-              >
-                Switch Project
-              </ProjectButton>
-            </StatsCard>
-          </StatsGrid>
-        </Section>
+          <EndWorkModal
+            isOpen={showEndModal}
+            onClose={() => setShowEndModal(false)}
+          />
+          <BreakModal
+            isOpen={showBreakModal}
+            onClose={() => setShowBreakModal(false)}
+            onStartBreak={handleStartBreak}
+            onEndBreak={handleEndBreak}
+          />
+          <SwitchProjectModal
+            isOpen={showSwitchProjectModal}
+            onClose={() => setShowSwitchProjectModal(false)}
+            onSwitch={handleSwitchProject}
+          />
+          <AddWorkLogModal
+            isOpen={showAddWorkLogModal}
+            onClose={() => setShowAddWorkLogModal(false)}
+          />
+        </>
+      )}
 
-        <Section fullWidth>
-          <SectionHeader>
-            <SectionTitle>
-              <span role="img" aria-label="logs">📝</span>
-              Work Logs
-            </SectionTitle>
-            <Button 
-              variant="secondary" 
-              size="small"
-              onClick={() => setShowAddWorkLogModal(true)}
-            >
-              Add Work Log
-            </Button>
-          </SectionHeader>
-          {sessionData?.activeSession && (
-            <WorkLogList sessionId={sessionData.activeSession.id} />
-          )}
-        </Section>
-
-        <Section fullWidth>
-          <SectionHeader>
-            <SectionTitle>
-              <span role="img" aria-label="segments">📊</span>
-              Session Segments
-            </SectionTitle>
-          </SectionHeader>
-          {sessionData?.activeSession?.segments && (
-            <SegmentsList segments={sessionData.activeSession.segments} />
-          )}
-        </Section>
-
-        <Section fullWidth>
-          <ActionButtons>
-            <Button
-              variant="warning"
-              onClick={() => setShowBreakModal(true)}
-            >
-              {state.session.isOnBreak ? 'End Break' : 'Take Break'}
-            </Button>
-            <Button
-              variant="error"
-              onClick={() => setShowEndModal(true)}
-            >
-              End Work Session For Today
-            </Button>
-          </ActionButtons>
-        </Section>
-      </MainContent>
-
-      <EndWorkModal
-        isOpen={showEndModal}
-        onClose={() => setShowEndModal(false)}
-      />
-      <BreakModal
-        isOpen={showBreakModal}
-        onClose={() => setShowBreakModal(false)}
-        onStartBreak={handleStartBreak}
-        onEndBreak={handleEndBreak}
-      />
-      <SwitchProjectModal
-        isOpen={showSwitchProjectModal}
-        onClose={() => setShowSwitchProjectModal(false)}
-        onSwitch={handleSwitchProject}
-      />
-      <AddWorkLogModal
-        isOpen={showAddWorkLogModal}
-        onClose={() => setShowAddWorkLogModal(false)}
+      <StartWorkModal
+        isOpen={showStartModal}
+        onClose={() => setShowStartModal(false)}
       />
       <LogoutModal
         isOpen={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
         onConfirm={handleLogout}
       />
-
       {notification && (
         <Notification
           type={notification.type}
           message={notification.message}
         />
       )}
+      <ProfileEdit
+        currentName={userData?.me?.name || ''}
+        currentAvatarUrl={userData?.me?.avatarUrl}
+        onClose={() => setIsProfileEditOpen(false)}
+        isOpen={isProfileEditOpen}
+      />
     </AppContainer>
   );
 }; 

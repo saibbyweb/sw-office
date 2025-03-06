@@ -1,8 +1,9 @@
 import { UseGuards } from '@nestjs/common';
-import { Resolver, Query, Context } from '@nestjs/graphql';
+import { Resolver, Query, Context, Mutation, Args } from '@nestjs/graphql';
 import { JwtGuard } from 'src/auth/guards/jwt.guard';
 import { User } from 'src/generated-nestjs-typegraphql';
 import { UsersService } from './users.service';
+import { UpdateProfileInput } from './dto/update-profile.input';
 
 interface RequestWithUser {
   user: {
@@ -32,5 +33,14 @@ export class UsersResolver {
   @UseGuards(JwtGuard)
   getUsers(): Promise<User[]> {
     return this.usersService.findAll();
+  }
+  @Mutation(() => User)
+  @UseGuards(JwtGuard)
+  async updateProfile(
+    @Context() context: GraphQLContext,
+    @Args('input') input: UpdateProfileInput,
+  ): Promise<User> {
+    const userId = context.req.user.id;
+    return this.usersService.updateProfile(userId, input);
   }
 }
