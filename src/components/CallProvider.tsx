@@ -275,6 +275,16 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         fullNotification: notification,
       });
 
+      if (notification.type === "CALL_ACCEPTED") {
+        console.log("[CallProvider] 📞 Call accepted, waiting for meeting link");
+        // Show loading toast for the caller
+        toast.loading("Call accepted! Generating meeting link...", {
+          id: `call-accepted-${notification.callId}`,
+          duration: 10000, // 10 seconds max
+        });
+        return;
+      }
+
       if (notification.type === "CALL_TIMEOUT") {
         console.log("[CallProvider] ⏰ Detailed timeout debug:", {
           notification: {
@@ -323,6 +333,10 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
           callerId: notification.callerId,
         });
       } else if (notification.type === "CALL_RESPONSE" && notification.accepted && notification.meetingLink) {
+        // Dismiss any loading toasts
+        toast.dismiss(`call-accepted-${notification.callId}`);
+        toast.dismiss(`generating-meeting-${notification.callId}`);
+
         // Show meeting link toast for the caller
         toast.custom(
           (t: Toast) => (
@@ -458,6 +472,12 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     stopRinging();
+
+    // Show loading toast for the receiver
+    toast.loading("Generating meeting link...", {
+      id: `generating-meeting-${incomingCall.callId}`,
+      duration: 10000, // 10 seconds max
+    });
 
     // Check authentication before making the mutation
     const token = localStorage.getItem("authToken");

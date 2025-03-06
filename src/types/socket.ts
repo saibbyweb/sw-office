@@ -4,7 +4,7 @@ export interface AuthResponse {
 }
 
 export interface CallNotification {
-  type: 'INCOMING_CALL' | 'CALL_RESPONSE' | 'CALL_ENDED' | 'CALL_TIMEOUT' | 'CALL_CANCELLED';
+  type: 'INCOMING_CALL' | 'CALL_RESPONSE' | 'CALL_ENDED' | 'CALL_TIMEOUT' | 'CALL_CANCELLED' | 'CALL_ACCEPTED';
   callId: string;
   callerId?: string;
   accepted?: boolean;

@@ -220,6 +220,22 @@ export class CallsService {
       );
 
       try {
+        // Get caller's socket ID for notifications
+        const callerSocketId = this.socketManager.getUserSocketId(
+          call.caller.id,
+        );
+
+        // Send immediate notification to caller about call acceptance
+        if (callerSocketId) {
+          console.log(
+            `[CallsService] 📤 Sending immediate CALL_ACCEPTED notification to caller ${call.caller.id}`,
+          );
+          this.notificationsGateway.sendNotificationToClient(callerSocketId, {
+            type: 'CALL_ACCEPTED',
+            callId: call.id,
+          });
+        }
+
         // Get the caller's user details to get their email
         const caller = await this.usersService.findById(call.caller.id);
         console.log(`[CallsService] Found caller:`, {
@@ -267,19 +283,10 @@ export class CallsService {
         call.meetingLink = meeting.joinUrl;
         call.answeredAt = new Date();
 
-        // Get caller's socket ID
-        const callerSocketId = this.socketManager.getUserSocketId(
-          call.caller.id,
-        );
-        console.log(`[CallsService] Caller socket status:`, {
-          callerId: call.caller.id,
-          hasSocket: !!callerSocketId,
-          socketId: callerSocketId,
-        });
-
+        // Send meeting link to caller
         if (callerSocketId) {
           console.log(
-            `[CallsService] 📤 Sending CALL_RESPONSE notification to caller ${call.caller.id}`,
+            `[CallsService] 📤 Sending meeting link to caller ${call.caller.id}`,
           );
           this.notificationsGateway.sendNotificationToClient(callerSocketId, {
             type: 'CALL_RESPONSE',
