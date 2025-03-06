@@ -11,6 +11,15 @@ import { useSocket } from "../services/socket";
 // import { ipcRenderer } from 'electron';
 const { ipcRenderer } = window.require("electron");
 
+const INITIATE_CALL = gql`
+  mutation InitiateCall($receiverId: String!) {
+    initiateCall(receiverId: $receiverId) {
+      id
+      status
+    }
+  }
+`;
+
 const HANDLE_CALL_RESPONSE = gql`
   mutation HandleCallResponse($callId: String!, $accept: Boolean!) {
     handleCallResponse(callId: $callId, accept: $accept) {
@@ -22,7 +31,7 @@ const HANDLE_CALL_RESPONSE = gql`
 `;
 
 interface CallContextType {
-  initiateCall: (receiverId: string) => void;
+  initiateCall: (receiverId: string) => Promise<void>;
   isConnected: boolean;
   isAuthenticated: boolean;
 }
@@ -185,6 +194,13 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsWaitingForMeetingLink(false);
       toast.error("Failed to get meeting link. Please try again.");
     },
+  });
+
+  const [initiateCallMutation] = useMutation(INITIATE_CALL, {
+    onError: (error) => {
+      console.error("[CallProvider] Failed to initiate call:", error);
+      throw error;
+    }
   });
 
   // Handle incoming call notification
@@ -369,19 +385,26 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [incomingCall, handleCallResponse, stopRinging]);
 
   const initiateCall = useCallback(
-    (receiverId: string) => {
-      if (!socket || !isAuthenticated) {
-        console.log("[CallProvider] Cannot initiate call - socket not available or not authenticated:", { hasSocket: !!socket, isAuthenticated });
-        return;
+    async (receiverId: string) => {
+      if (!isAuthenticated) {
+        console.log("[CallProvider] Cannot initiate call - not authenticated");
+        throw new Error("You must be authenticated to make calls");
       }
 
-      console.log("[CallProvider] Initiating call to:", receiverId);
-      // Emit call initiation
-      socket.emit("call:initiate", {
-        receiverId,
-      });
+      try {
+        console.log("[CallProvider] Initiating call to:", receiverId);
+        const { data } = await initiateCallMutation({
+          variables: { receiverId }
+        });
+
+        console.log("[CallProvider] Call initiated:", data);
+        return data.initiateCall;
+      } catch (error) {
+        console.error("[CallProvider] Call initiation failed:", error);
+        throw error;
+      }
     },
-    [socket, isAuthenticated]
+    [isAuthenticated, initiateCallMutation]
   );
 
   console.log("[CallProvider] Current state:", { isConnected, isAuthenticated, hasSocket: !!socket, incomingCall });

@@ -28,4 +28,9 @@ export class UsersResolver {
     console.log(userId);
     return this.usersService.findById(userId);
   }
+  @Query(() => [User])
+  @UseGuards(JwtGuard)
+  getUsers(): Promise<User[]> {
+    return this.usersService.findAll();
+  }
 }

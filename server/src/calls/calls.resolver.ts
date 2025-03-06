@@ -16,6 +16,7 @@ export class CallsResolver {
     @Args('receiverId') receiverId: string,
   ) {
     const userId = context.req.user.id;
+    console.log(userId, receiverId, '--initiate call');
     return this.callsService.initiateCall(userId, receiverId);
   }
 

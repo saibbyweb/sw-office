@@ -165,6 +165,7 @@ type Query {
   getAllUsersWithPresence: [TeamsUserWithPresence!]!
   getUserMeetingHistory(endDate: String!, startDate: String!, userId: String!): [MeetingHistoryItem!]!
   getUserMeetings(userId: String!): [OrganizationMeeting!]!
+  getUsers: [User!]!
   hello: String!
   me: User!
   projects: [Project!]!
