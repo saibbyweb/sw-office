@@ -8,7 +8,7 @@ import { ipcMain } from "electron";
 log.transports.file.level = "debug";
 autoUpdater.logger = log;
 
-const isDev = true || process.env.NODE_ENV === "development";
+const isDev = process.env.NODE_ENV === "development";
 
 // Configure proper logging
 log.transports.file.level = "info";
@@ -83,7 +83,7 @@ const registerIpcHandlers = () => {
       // Bring window to front and focus it
       mainWindow.show();
       mainWindow.focus();
-      
+
       // On macOS, bounce the dock icon until the app is focused
       if (process.platform === "darwin") {
         app.dock.bounce("critical");
@@ -113,7 +113,7 @@ const createWindow = () => {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      webSecurity: true
+      // webSecurity: true,
     },
     backgroundColor: "#ffffff",
     icon: path.join(__dirname, "../../build/icons", process.platform === "darwin" ? "icon.icns" : process.platform === "win32" ? "icon.ico" : "icon.png"),
@@ -121,19 +121,11 @@ const createWindow = () => {
 
   // and load the index.html of the app.
 
-  // if (isDev) {
-  //   mainWindow.loadURL("http://localhost:5173");
-  //   // Open the DevTools.
-  mainWindow.webContents.openDevTools();
-
-  //   // Force set the window title in dev mode
-  //   mainWindow.webContents.on('did-finish-load', () => {
-  //     if (mainWindow) {
-  //       mainWindow.setTitle('SW Office');
-  //     }
-  //   });
-  // } else
-  {
+  if (isDev) {
+    mainWindow.loadURL("http://localhost:5173");
+    // Open the DevTools.
+    mainWindow.webContents.openDevTools();
+  } else {
     mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
   }
 

@@ -185,7 +185,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         <AppLogo src={appIcon} alt="SW Office" />
         <CardHeader>
           <HeaderTitle>
-            <Title>Welcome Back</Title>
+            <Title>Welcome Back!</Title>
             <Subtitle>Sign in to continue tracking your work</Subtitle>
           </HeaderTitle>
         </CardHeader>

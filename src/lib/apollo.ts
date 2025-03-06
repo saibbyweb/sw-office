@@ -1,7 +1,7 @@
 import { ApolloClient, InMemoryCache, createHttpLink, from } from '@apollo/client';
 import { setContext } from '@apollo/client/link/context';
 
-  const ENDPOINT = process.env.NODE === "production" ? "https://sw-office.onrender.com/graphql" : "http://localhost:3000/graphql"
+  const ENDPOINT = process.env.NODE_ENV === "production" ? "https://sw-office.onrender.com/graphql" : "http://localhost:3000/graphql"
 
 const httpLink = createHttpLink({
   uri: ENDPOINT,

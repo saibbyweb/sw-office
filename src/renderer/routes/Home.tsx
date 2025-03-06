@@ -548,6 +548,7 @@ export const Home: React.FC = () => {
   const activeSession = sessionData?.activeSession;
   const projectName = activeSession?.project?.name || state.session.project;
 
+
   if (!hasActiveSession) {
     return (
       <AppContainer>
@@ -586,7 +587,9 @@ export const Home: React.FC = () => {
             <StartButton onClick={() => setShowStartModal(true)}>
               Start Work Session
             </StartButton>
+     
           </WelcomeContainer>
+      
         </MainContent>
         <StartWorkModal
           isOpen={showStartModal}
