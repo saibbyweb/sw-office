@@ -157,6 +157,24 @@ export class CallsService {
         );
       }
 
+      // Notify receiver that call timed out
+      const receiverSocketId = this.socketManager.getUserSocketId(
+        call.receiver.id,
+      );
+      if (receiverSocketId) {
+        console.log(
+          `[CallsService] Notifying receiver ${call.receiver.id} about call timeout`,
+        );
+        this.notificationsGateway.sendNotificationToClient(receiverSocketId, {
+          type: 'CALL_TIMEOUT',
+          callId: call.id,
+        });
+      } else {
+        console.log(
+          `[CallsService] Could not find socket for receiver ${call.receiver.id}`,
+        );
+      }
+
       this.activeCalls.delete(callId);
       this.callTimeouts.delete(callId);
     }

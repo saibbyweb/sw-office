@@ -265,19 +265,164 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     socket.on("notification", (notification: CallNotificationType) => {
-      console.log("[CallProvider] Received notification:", {
-        ...notification,
-        socketId: socket.id,
+      console.log("[CallProvider] 📩 Received notification:", {
         type: notification.type,
+        callId: notification.callId,
+        hasIncomingCall: !!incomingCall,
+        currentIncomingCallId: incomingCall?.callId,
+        socketId: socket.id,
         isWaitingForMeetingLink,
-        rawData: JSON.stringify(notification),
+        fullNotification: notification,
       });
+
+      if (notification.type === "CALL_TIMEOUT") {
+        console.log("[CallProvider] ⏰ Detailed timeout debug:", {
+          notification: {
+            type: notification.type,
+            callId: notification.callId
+          },
+          currentState: {
+            hasIncomingCall: !!incomingCall,
+            incomingCallId: incomingCall?.callId,
+            doCallIdsMatch: incomingCall?.callId === notification.callId,
+            conditionResult: !!(incomingCall && incomingCall.callId === notification.callId)
+          }
+        });
+        
+        // If there's an incoming call, this is the receiver side
+        if (incomingCall && incomingCall.callId === notification.callId) {
+          console.log("[CallProvider] 🔕 Handling timeout - receiver side");
+          // First stop the ringing
+          stopRinging();
+          // Then clear the incoming call state to remove the notification UI
+          setIncomingCall(null);
+          // Show the timeout toast
+          toast.error("Call timed out - no response", {
+            id: `call-timeout-${notification.callId}`, // Unique ID to prevent duplicate toasts
+          });
+          
+          // Debug log to verify state clearing
+          console.log("[CallProvider] 🧹 Cleared incoming call state:", {
+            audioStopped: true,
+            incomingCallCleared: true,
+            callId: notification.callId
+          });
+        } else {
+          // This is the caller side
+          console.log("[CallProvider] 🔕 Handling timeout - caller side");
+          toast.error("No response from the user - call timed out", {
+            id: `call-timeout-${notification.callId}`, // Unique ID to prevent duplicate toasts
+          });
+        }
+        return; // Prevent processing other conditions
+      }
 
       if (notification.type === "INCOMING_CALL" && notification.callerId) {
         handleIncomingCall({
           callId: notification.callId,
           callerId: notification.callerId,
         });
+      } else if (notification.type === "CALL_RESPONSE" && notification.accepted && notification.meetingLink) {
+        // Show meeting link toast for the caller
+        toast.custom(
+          (t: Toast) => (
+            <div
+              style={{
+                maxWidth: "400px",
+                padding: "16px",
+                background: "white",
+                borderRadius: "12px",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "12px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <IoVideocam size={20} color="#22c55e" />
+                <span style={{ fontWeight: 500, color: "#111" }}>Call Accepted - Meeting Ready</span>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: "8px",
+                }}
+              >
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(notification.meetingLink!);
+                    toast.success("Meeting link copied to clipboard!");
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: "8px",
+                    background: "#f3f4f6",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                    color: "#374151",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#e5e7eb";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "#f3f4f6";
+                  }}
+                >
+                  <IoCopy size={16} />
+                  <span>Copy Link</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    ipcRenderer.send("open-external-link", notification.meetingLink);
+                    toast.success("Opening meeting in browser...");
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: "8px",
+                    background: "#22c55e",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                    color: "white",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#16a34a";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "#22c55e";
+                  }}
+                >
+                  <IoOpen size={16} />
+                  <span>Open in Browser</span>
+                </button>
+              </div>
+            </div>
+          ),
+          {
+            duration: 10000,
+            position: "top-right",
+          }
+        );
+      } else if (notification.type === "CALL_RESPONSE" && !notification.accepted) {
+        // Show rejection toast for the caller
+        toast.error("Call was declined by the user.");
       }
     });
 
@@ -293,7 +438,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       socket.off("connect");
       socket.off("disconnect");
     };
-  }, [socket, isAuthenticated, isWaitingForMeetingLink]);
+  }, [socket, isAuthenticated, isWaitingForMeetingLink, incomingCall, stopRinging]);
 
   // Log state changes
   React.useEffect(() => {
