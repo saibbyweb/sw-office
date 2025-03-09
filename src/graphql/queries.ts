@@ -268,6 +268,10 @@ export const TEAM_USERS_QUERY = gql`
         project {
           name
         }
+        breaks {
+          id
+          endTime
+        }
       }
     }
   }
