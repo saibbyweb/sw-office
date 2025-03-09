@@ -11,4 +11,5 @@ type User {
   avatarUrl: String
   isOnline: Boolean
   currentStatus: String
+  activeSession: Session
 } 

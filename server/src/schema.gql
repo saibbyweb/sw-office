@@ -275,6 +275,7 @@ input UpdateWorkLogInput {
 
 type User {
   _count: UserCount!
+  activeSession: Session
   avatarUrl: String
   breaks: [Break!]
   createdAt: DateTime!

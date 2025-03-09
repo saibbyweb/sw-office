@@ -593,11 +593,11 @@ export const Home: React.FC = () => {
                 Teams
               </TeamsButton>
               <UserInfo>
-              {console.log(userData?.me?.avatarUrl ? userData.me.avatarUrl : 'default-avatar.png')}
-                <UserAvatar 
-                  src={userData?.me?.avatarUrl ? userData.me.avatarUrl : 'default-avatar.png'} 
+           {userData.me.avatarUrl ? <UserAvatar 
+                  src={userData?.me?.avatarUrl} 
                   alt={userData?.me?.name || 'Profile'}
-                />
+                /> : null }
+                
                 {userData?.me.name} ({userData?.me.email})
               </UserInfo>
               <ProfileButton onClick={() => setIsProfileEditOpen(true)}>

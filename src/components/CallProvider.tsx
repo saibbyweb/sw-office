@@ -604,20 +604,6 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         </audio>
       )}
       {children}
-      {/* Debug element */}
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          padding: "8px",
-          background: "red",
-          color: "white",
-          zIndex: 999998,
-        }}
-      >
-        Debug: {incomingCall ? "Incoming Call" : "No Call"}
-      </div>
       {/* Only show notification when there's an incoming call */}
       {incomingCall && <CallNotification callerId={incomingCall.callerId} onAccept={handleAcceptCall} onReject={handleRejectCall} isGeneratingLink={isWaitingForMeetingLink} />}
     </CallContext.Provider>

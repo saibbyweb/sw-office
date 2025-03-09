@@ -20,7 +20,31 @@ export class UsersService {
   }
 
   async findAll(): Promise<User[]> {
-    return this.prisma.user.findMany();
+    const users = await this.prisma.user.findMany({
+      include: {
+        sessions: {
+          where: {
+            status: 'ACTIVE',
+            endTime: { isSet: false },
+          },
+          include: {
+            project: true,
+            breaks: {
+              where: {
+                endTime: { isSet: false }, // Only get active breaks
+              },
+            },
+          },
+          take: 1,
+        },
+      },
+    });
+
+    // Map over users to set isOnline based on active session and break status
+    return users.map((user) => ({
+      ...user,
+      isOnline: user.sessions?.[0] && user.sessions[0].breaks.length === 0,
+    }));
   }
 
   async updateProfile(

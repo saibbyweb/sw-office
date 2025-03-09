@@ -251,4 +251,24 @@ export const GET_USER_SESSIONS = gql`
       }
     }
   }
+`;
+
+export const TEAM_USERS_QUERY = gql`
+  query GetTeamUsers {
+    getUsers {
+      id
+      name
+      email
+      avatarUrl
+      isOnline
+      currentStatus
+      activeSession {
+        id
+        startTime
+        project {
+          name
+        }
+      }
+    }
+  }
 `; 
