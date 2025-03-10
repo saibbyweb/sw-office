@@ -10,9 +10,25 @@ class NotificationService {
   private connectedUsersListeners: Map<string, (users: string[]) => void> = new Map();
 
   connect(serverUrl: string = 'http://localhost:3000') {
-    if (this.socket) {
-      console.log('[NotificationService] Socket already exists, skipping connection');
+    // Check if user is authenticated before connecting
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+      console.log('[NotificationService] No auth token found, skipping connection');
       return;
+    }
+
+    // If socket exists but is not connected, try to connect it
+    if (this.socket) {
+      console.log('[NotificationService] Socket instance exists');
+      
+      if (this.socket.connected) {
+        console.log('[NotificationService] Socket is already connected, skipping connection');
+        return;
+      } else {
+        console.log('[NotificationService] Socket exists but not connected, connecting...');
+        this.socket.connect();
+        return;
+      }
     }
 
     console.log('[NotificationService] Getting shared socket instance');
@@ -45,6 +61,10 @@ class NotificationService {
     this.socket.on('connect_error', (error: Error) => {
       console.error('[NotificationService] Connection error:', error);
     });
+
+    // Connect the socket
+    console.log('[NotificationService] Connecting socket');
+    this.socket.connect();
   }
 
   disconnect() {
@@ -52,6 +72,8 @@ class NotificationService {
       console.log('[NotificationService] Disconnecting socket');
       this.socket.disconnect();
       this.socket = null;
+    } else {
+      console.log('[NotificationService] No socket to disconnect');
     }
   }
 

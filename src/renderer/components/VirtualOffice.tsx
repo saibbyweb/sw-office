@@ -8,17 +8,17 @@ import { useQuery } from '@apollo/client';
 import { TEAM_USERS_QUERY, ME } from '../../graphql/queries';
 import gsap from 'gsap';
 import { useNavigate } from 'react-router-dom';
-import { IoArrowBack, IoVideocam } from 'react-icons/io5';
+import { IoArrowBack, IoVideocam, IoWifi } from 'react-icons/io5';
 import { TextureLoader } from 'three';
 import { Users, Edit2 } from 'react-feather';
-import { Button } from '../components/common';
+import { Button } from './common';
 import { ProfileEdit } from '../../components/ProfileEdit';
 import appIcon from '../../assets/icon.png';
 import { API_HOST } from '../../services/env';
 import { theme } from '../styles/theme';
 import { useCall } from '../../components/CallProvider';
 import { toast } from 'react-hot-toast';
-import { ConnectedUsersList } from '../../components/ConnectedUsersList';
+import { useConnectedUsers } from '../../contexts/ConnectedUsersContext';
 
 const Container = styled.div`
   width: 100%;
@@ -40,11 +40,10 @@ const MainLayout = styled.div`
 `;
 
 const Sidebar = styled.div`
-  width: 260px;
+  width: 280px;
   height: 100%;
-  background: ${props => props.theme.colors.primary}10;
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 20px 0;
+  background-color: #1e2738;
+  padding: 16px 0;
   overflow-y: auto;
   flex-shrink: 0;
   z-index: 10;
@@ -54,49 +53,61 @@ const Sidebar = styled.div`
 
 const SidebarHeader = styled.div`
   padding: 0 16px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
   margin-bottom: 16px;
   color: #fff;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
 `;
 
 const MemberList = styled.div`
-  padding: 0 8px;
+  padding: 0 16px;
 `;
 
-const MemberItem = styled.button<{ isActive: boolean; isSpotlighted: boolean; isOnBreak: boolean }>`
-  width: 100%;
-  padding: 8px 12px;
-  border: none;
-  background: ${props => props.isSpotlighted ? 'rgba(255, 255, 255, 0.1)' : 'transparent'};
-  color: ${props => {
-    if (props.isOnBreak) return '#f97316'; // Orange color for break
-    if (props.isActive) return '#2E7D32';
-    return '#9e9e9e';
-  }};
-  text-align: left;
-  cursor: pointer;
+const MemberItem = styled.div<{
+  isActive: boolean;
+  isOnBreak: boolean;
+}>`
   display: flex;
   align-items: center;
-  gap: 8px;
-  border-radius: 4px;
-  transition: all 0.2s;
-
+  padding: 10px 15px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background-color: ${(props) =>
+    props.isActive
+      ? props.isOnBreak
+        ? 'rgba(255, 193, 7, 0.15)'
+        : 'rgba(40, 167, 69, 0.15)'
+      : 'rgba(255, 255, 255, 0.08)'};
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  color: white;
+  
   &:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background-color: ${(props) =>
+      props.isActive
+        ? props.isOnBreak
+          ? 'rgba(255, 193, 7, 0.25)'
+          : 'rgba(40, 167, 69, 0.25)'
+        : 'rgba(255, 255, 255, 0.15)'};
   }
+  
+  /* Add gap between items */
+  gap: 10px;
 `;
 
 const StatusDot = styled.div<{ isActive: boolean; isOnBreak: boolean }>`
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  background: ${props => {
-    if (props.isOnBreak) return '#f97316'; // Orange for break
-    if (props.isActive) return '#2E7D32';  // Green for active
-    return '#9e9e9e';                      // Gray for inactive
+  background-color: ${(props) => {
+    if (props.isOnBreak) return '#FFC107'; // Yellow for break
+    if (props.isActive) return '#4CAF50'; // Green for active
+    return '#9E9E9E'; // Gray for inactive
   }};
+  margin-right: 5px;
+  flex-shrink: 0;
 `;
 
 const MainContent = styled.div`
@@ -219,23 +230,42 @@ const BackButton = styled.button`
 const CallButton = styled.button`
   background: none;
   border: none;
-  padding: 4px;
-  color: ${props => props.theme.colors.primary};
+  color: #4dabff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  transition: all 0.2s;
-  margin-left: auto;
-
+  padding: 4px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  
   &:hover {
-    background: ${props => props.theme.colors.primary}20;
+    background-color: rgba(77, 171, 255, 0.2);
+    color: #7bc9ff;
   }
+`;
 
-  &:active {
-    transform: scale(0.95);
-  }
+const ConnectedIndicator = styled.span`
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  margin-right: 8px;
+  color: #7AFFB2;
+`;
+
+// Update the ConnectedUsersCount styled component
+const ConnectedUsersCount = styled.div<{ hasConnectedUsers: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 15px;
+  margin-bottom: 15px;
+  background-color: ${props => props.hasConnectedUsers 
+    ? 'rgba(76, 175, 80, 0.2)' 
+    : 'rgba(255, 255, 255, 0.1)'};
+  border-radius: 8px;
+  font-size: 14px;
+  color: ${props => props.hasConnectedUsers ? '#7AFFB2' : '#FFFFFF'};
 `;
 
 interface Break {
@@ -587,85 +617,85 @@ const createTable = () => {
 };
 
 // Create chair function
-  const createChair = async (userName: string) => {
-    const chairGroup = new THREE.Group();
+const createChair = async (userName: string) => {
+  const chairGroup = new THREE.Group();
 
   // Increased dimensions for more substantial look
   // Seat cushion - made thicker and wider
   const seatGeometry = new THREE.BoxGeometry(2.4, 0.4, 2.4);  // Increased width, depth and height
-    const seatCushion = new THREE.Mesh(seatGeometry, chairMaterials.fabric);
-    seatCushion.position.y = 1.4;
-    seatCushion.castShadow = true;
-    chairGroup.add(seatCushion);
+  const seatCushion = new THREE.Mesh(seatGeometry, chairMaterials.fabric);
+  seatCushion.position.y = 1.4;
+  seatCushion.castShadow = true;
+  chairGroup.add(seatCushion);
 
   // Backrest cushion - made thicker and taller
   const backrestGeometry = new THREE.BoxGeometry(2.4, 2.6, 0.45);  // Increased width, height and thickness
-    const backrestCushion = new THREE.Mesh(backrestGeometry, chairMaterials.fabric);
+  const backrestCushion = new THREE.Mesh(backrestGeometry, chairMaterials.fabric);
   backrestCushion.position.set(0, 2.7, -0.95);  // Adjusted position for larger size
-    backrestCushion.castShadow = true;
-    chairGroup.add(backrestCushion);
+  backrestCushion.castShadow = true;
+  chairGroup.add(backrestCushion);
 
   // Chair base (5-star base) - made larger
   const baseRadius = 1.8;  // Increased from 1.5
-    for (let i = 0; i < 5; i++) {
-      const angle = (i * 2 * Math.PI) / 5;
+  for (let i = 0; i < 5; i++) {
+    const angle = (i * 2 * Math.PI) / 5;
     const legGeometry = new THREE.BoxGeometry(0.25, 0.18, baseRadius); // Thicker legs
-      const leg = new THREE.Mesh(legGeometry, chairMaterials.plastic);
-      leg.position.set(
-        Math.sin(angle) * (baseRadius / 2),
-      0.09,
-        Math.cos(angle) * (baseRadius / 2)
-      );
-      leg.rotation.y = angle;
-      leg.castShadow = true;
-      chairGroup.add(leg);
+    const leg = new THREE.Mesh(legGeometry, chairMaterials.plastic);
+    leg.position.set(
+      Math.sin(angle) * (baseRadius / 2),
+    0.09,
+      Math.cos(angle) * (baseRadius / 2)
+    );
+    leg.rotation.y = angle;
+    leg.castShadow = true;
+    chairGroup.add(leg);
 
     // Add larger wheels
     const wheelGeometry = new THREE.CylinderGeometry(0.18, 0.18, 0.18, 12);
-      const wheel = new THREE.Mesh(wheelGeometry, chairMaterials.plastic);
-      wheel.position.set(
-        Math.sin(angle) * baseRadius,
-      0.18,
-        Math.cos(angle) * baseRadius
-      );
-      wheel.rotation.x = Math.PI / 2;
-      wheel.castShadow = true;
-      chairGroup.add(wheel);
-    }
+    const wheel = new THREE.Mesh(wheelGeometry, chairMaterials.plastic);
+    wheel.position.set(
+      Math.sin(angle) * baseRadius,
+    0.18,
+      Math.cos(angle) * baseRadius
+    );
+    wheel.rotation.x = Math.PI / 2;
+    wheel.castShadow = true;
+    chairGroup.add(wheel);
+  }
 
   // Thicker central column
   const columnGeometry = new THREE.CylinderGeometry(0.2, 0.2, 1.3, 12);
-    const column = new THREE.Mesh(columnGeometry, chairMaterials.metal);
-    column.position.y = 0.75;
-    column.castShadow = true;
-    chairGroup.add(column);
+  const column = new THREE.Mesh(columnGeometry, chairMaterials.metal);
+  column.position.y = 0.75;
+  column.castShadow = true;
+  chairGroup.add(column);
 
   // Larger armrests
-    const createArmrest = (x: number) => {
+  const createArmrest = (x: number) => {
     // Vertical part - thicker
     const verticalGeometry = new THREE.BoxGeometry(0.2, 0.5, 0.2);
-      const vertical = new THREE.Mesh(verticalGeometry, chairMaterials.metal);
-      vertical.position.set(x, 1.6, -0.2);
-      vertical.castShadow = true;
-      chairGroup.add(vertical);
+    const vertical = new THREE.Mesh(verticalGeometry, chairMaterials.metal);
+    vertical.position.set(x, 1.6, -0.2);
+    vertical.castShadow = true;
+    chairGroup.add(vertical);
 
     // Horizontal part - wider and thicker
     const horizontalGeometry = new THREE.BoxGeometry(0.45, 0.2, 1.0);
-      const horizontal = new THREE.Mesh(horizontalGeometry, chairMaterials.plastic);
-      horizontal.position.set(x, 1.85, 0);
-      horizontal.castShadow = true;
-      chairGroup.add(horizontal);
-    };
+    const horizontal = new THREE.Mesh(horizontalGeometry, chairMaterials.plastic);
+    horizontal.position.set(x, 1.85, 0);
+    horizontal.castShadow = true;
+    chairGroup.add(horizontal);
+  };
 
   createArmrest(1.0);  // Moved slightly outward
   createArmrest(-1.0); // Moved slightly outward
 
-    // Add subtle tilt to the backrest
+  // Add subtle tilt to the backrest
   backrestCushion.rotation.x = -0.15; // Slightly more recline
 
-    try {
-      // Add name text to the back of the chair
-      const font = await loadFont();
+  try {
+    // Add name text to the back of the chair
+    const font = await loadFont();
     const [firstName, ...lastNameParts] = userName.split(' ');
     const lastName = lastNameParts.join(' ');
 
@@ -698,9 +728,9 @@ const createTable = () => {
     const firstNameMesh = new THREE.Mesh(firstNameGeometry, chairMaterials.text);
     const lastNameMesh = new THREE.Mesh(lastNameGeometry, chairMaterials.text);
       
-      // Create a container group for centering
-      const textContainer = new THREE.Group();
-    
+    // Create a container group for centering
+    const textContainer = new THREE.Group();
+  
     // Position first name
     firstNameMesh.position.x = -firstNameWidth / 2;
     firstNameMesh.position.y = 0.3;
@@ -711,32 +741,32 @@ const createTable = () => {
     lastNameMesh.position.y = -0.1;
     textContainer.add(lastNameMesh);
       
-      // Position the container in the middle of the backrest
+    // Position the container in the middle of the backrest
     // Move it slightly forward and up
     textContainer.position.set(0, 2.4, -1.15);
-      textContainer.rotation.y = Math.PI;
+    textContainer.rotation.y = Math.PI;
     textContainer.rotation.x = -0.15;
       
-      // Add a backing plate for better visibility
+    // Add a backing plate for better visibility
     const backingGeometry = new THREE.BoxGeometry(maxWidth + 0.3, 0.8, 0.02);
-      const backingMaterial = new THREE.MeshPhongMaterial({
+    const backingMaterial = new THREE.MeshPhongMaterial({
       color: 0x222222,
       shininess: 0,
       transparent: true,
       opacity: 0.9
-      });
-      const backingPlate = new THREE.Mesh(backingGeometry, backingMaterial);
+    });
+    const backingPlate = new THREE.Mesh(backingGeometry, backingMaterial);
     backingPlate.position.z = 0.03; // Slightly behind the text
     backingPlate.position.y = 0.1; // Center between both names
-      textContainer.add(backingPlate);
-      
-      chairGroup.add(textContainer);
-    } catch (error) {
-      console.error('Failed to add name text to chair:', error);
-    }
+    textContainer.add(backingPlate);
+    
+    chairGroup.add(textContainer);
+  } catch (error) {
+    console.error('Failed to add name text to chair:', error);
+  }
 
-    return chairGroup;
-  };
+  return chairGroup;
+};
 
 export const VirtualOffice: React.FC = () => {
   const navigate = useNavigate();
@@ -750,6 +780,7 @@ export const VirtualOffice: React.FC = () => {
   const [spotlightedUser, setSpotlightedUser] = useState<string | null>(null);
   const spotlightRef = useRef<THREE.SpotLight | null>(null);
   const { initiateCall } = useCall();
+  const { connectedUsers } = useConnectedUsers();
   
   const { data: teamData, loading } = useQuery(TEAM_USERS_QUERY, {
     pollInterval: 5000,
@@ -1420,14 +1451,21 @@ export const VirtualOffice: React.FC = () => {
       <MainLayout>
         <Sidebar>
           <SidebarHeader>Team Members</SidebarHeader>
+          <ConnectedUsersCount hasConnectedUsers={connectedUsers.length > 0}>
+            <IoWifi size={16} color={connectedUsers.length > 0 ? "#7AFFB2" : "#FFFFFF"} />
+            {connectedUsers.length > 0 
+              ? `${connectedUsers.length} user${connectedUsers.length !== 1 ? 's' : ''} online`
+              : 'No users online'}
+          </ConnectedUsersCount>
           <MemberList>
             {teamData?.getUsers?.map((user: User) => {
               const isOnBreak = user.activeSession?.breaks?.some((breakItem: Break) => !breakItem.endTime);
+              const isConnected = connectedUsers.includes(user.id);
+              
               return (
                 <MemberItem
                   key={user.id}
                   isActive={!!user.activeSession}
-                  isSpotlighted={spotlightedUser === user.id}
                   isOnBreak={!!isOnBreak}
                   onClick={() => handleMemberClick(user.id)}
                 >
@@ -1436,7 +1474,12 @@ export const VirtualOffice: React.FC = () => {
                     isOnBreak={!!isOnBreak}
                   />
                   {user.name}
-                  {user.id !== userData?.me?.id && (
+                  {isConnected && (
+                    <ConnectedIndicator title="User is online">
+                      <IoWifi size={16} color="#7AFFB2" />
+                    </ConnectedIndicator>
+                  )}
+                  {user.id !== userData?.me?.id && isConnected && (
                     <CallButton
                       onClick={(e) => handleCallUser(user.id, e)}
                       title="Start video call"
@@ -1448,7 +1491,6 @@ export const VirtualOffice: React.FC = () => {
               );
             })}
           </MemberList>
-          <ConnectedUsersList />
         </Sidebar>
         <MainContent>
           <SpotlightControls>

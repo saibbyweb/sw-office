@@ -20,6 +20,13 @@ export const initSocket = () => {
   } else {
     console.log('[Socket] Reusing existing socket connection');
   }
+  
+  // Always connect the socket when initSocket is called
+  if (!socket.connected) {
+    console.log('[Socket] Connecting socket');
+    socket.connect();
+  }
+  
   return socket;
 };
 

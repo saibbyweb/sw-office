@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ThemeProvider } from 'styled-components';
 import { AppProvider } from './context/AppContext';
 import { theme } from './styles/theme';
@@ -49,12 +49,56 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+
   useEffect(() => {
-    notificationService.connect();
+    // Check for authentication token
+    const checkAuth = () => {
+      const authToken = localStorage.getItem('authToken');
+      const authenticated = !!authToken;
+      
+      console.log('[App] Authentication check:', { 
+        authenticated, 
+        previousState: isAuthenticated 
+      });
+      
+      setIsAuthenticated(authenticated);
+      
+      if (authenticated) {
+        console.log('[App] User is authenticated, connecting to socket');
+        notificationService.connect();
+      } else {
+        console.log('[App] User is not authenticated, disconnecting socket');
+        notificationService.disconnect();
+      }
+    };
+    
+    // Initial check
+    checkAuth();
+    
+    // Listen for storage events (for when token is added/removed in another tab)
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'authToken') {
+        console.log('[App] Auth token changed in storage, rechecking authentication');
+        checkAuth();
+      }
+    };
+    
+    // Listen for custom auth events (for when token is added/removed in this tab)
+    const handleAuthEvent = () => {
+      console.log('[App] Auth event detected, rechecking authentication');
+      checkAuth();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('auth-changed', handleAuthEvent);
+    
     return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('auth-changed', handleAuthEvent);
       notificationService.disconnect();
     };
-  }, []);
+  }, [isAuthenticated]); // Add isAuthenticated as a dependency
 
   return (
     <ApolloProvider client={client}>

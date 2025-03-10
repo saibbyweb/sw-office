@@ -25,6 +25,7 @@ import { theme } from '../styles/theme';
 import appIcon from '../../assets/icon.png';
 import { ProfileEdit } from '../../components/ProfileEdit';
 import { API_HOST } from '../../services/env';
+import { notificationService } from '../../services/NotificationService';
 
 const { ipcRenderer } = window.require('electron');
 
@@ -154,6 +155,7 @@ const UserAvatar = styled.img`
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid ${props => props.theme.colors.primary}40;
+  display: none; /* Hide the avatar */
 `;
 
 const StatsGrid = styled.div`
@@ -438,8 +440,16 @@ export const Home: React.FC = () => {
 
   const handleLogout = async () => {
     try {
+      console.log('[Home] Logging out, disconnecting socket');
+      // Disconnect socket
+      notificationService.disconnect();
+      
+      console.log('[Home] Removing auth token');
       // Clear local storage
       localStorage.removeItem('authToken');
+      
+      // Dispatch a custom event to notify that authentication has changed
+      window.dispatchEvent(new Event('auth-changed'));
       
       // Reset Apollo cache
       await client.clearStore();
@@ -448,7 +458,6 @@ export const Home: React.FC = () => {
       navigate('/login');
     } catch (err) {
       console.error('Logout error:', err);
-      showNotification('error', 'Failed to logout properly');
     }
   };
 
@@ -593,11 +602,6 @@ export const Home: React.FC = () => {
                 Teams
               </TeamsButton>
               <UserInfo>
-           {userData.me.avatarUrl ? <UserAvatar 
-                  src={userData?.me?.avatarUrl} 
-                  alt={userData?.me?.name || 'Profile'}
-                /> : null }
-                
                 {userData?.me.name} ({userData?.me.email})
               </UserInfo>
               <ProfileButton onClick={() => setIsProfileEditOpen(true)}>
@@ -640,10 +644,6 @@ export const Home: React.FC = () => {
                 Teams
               </TeamsButton>
               <UserInfo>
-                <UserAvatar 
-                  src={userData?.me?.avatarUrl ? API_HOST + userData.me.avatarUrl : 'default-avatar.png'} 
-                  alt={userData?.me?.name || 'Profile'}
-                />
                 {userData?.me.name} ({userData?.me.email})
               </UserInfo>
               <ProfileButton onClick={() => setIsProfileEditOpen(true)}>
