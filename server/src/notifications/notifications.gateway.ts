@@ -16,7 +16,9 @@ interface SocketData {
 @WebSocketGateway({
   cors: {
     origin: '*',
+    credentials: true,
   },
+  path: '/socket.io/',
 })
 export class NotificationsGateway
   implements OnGatewayConnection, OnGatewayDisconnect
