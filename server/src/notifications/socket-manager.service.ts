@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter } from 'events';
 
 @Injectable()
 export class SocketManagerService {
   private userSocketMap: Map<string, string> = new Map(); // userId -> socketId
+  public readonly onUsersChange = new EventEmitter();
 
   registerUserSocket(userId: string, socketId: string) {
     console.log(
@@ -16,6 +18,9 @@ export class SocketManagerService {
     }
     this.userSocketMap.set(userId, socketId);
     this.logAllConnectedUsers();
+
+    // Emit event to notify that the user socket map has changed
+    this.onUsersChange.emit('change');
   }
 
   removeUserSocket(userId: string) {
@@ -26,6 +31,9 @@ export class SocketManagerService {
         `[SocketManagerService] Removed socket ${socketId} for user ${userId}`,
       );
       this.userSocketMap.delete(userId);
+
+      // Emit event to notify that the user socket map has changed
+      this.onUsersChange.emit('change');
     } else {
       console.log(`[SocketManagerService] No socket found for user ${userId}`);
     }
@@ -71,5 +79,10 @@ export class SocketManagerService {
         console.log(`  - User ${userId} connected with socket ${socketId}`);
       });
     }
+  }
+
+  getConnectedUsers(): string[] {
+    console.log('[SocketManagerService] Getting list of connected users');
+    return Array.from(this.userSocketMap.keys());
   }
 }

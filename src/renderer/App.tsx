@@ -16,6 +16,7 @@ import { ConnectionStatus } from '../components/ConnectionStatus';
 import { notificationService } from '../services/NotificationService';
 import { CallProvider } from '../components/CallProvider';
 import { Toaster } from 'react-hot-toast';
+import { ConnectedUsersProvider } from '../contexts/ConnectedUsersContext';
 
 const AppContent: React.FC = () => {
   return (
@@ -60,9 +61,11 @@ const App: React.FC = () => {
       <ThemeProvider theme={theme}>
         <GlobalStyles />
         <AppProvider>
-          <CallProvider>
-            <AppContent />
-          </CallProvider>
+          <ConnectedUsersProvider>
+            <CallProvider>
+              <AppContent />
+            </CallProvider>
+          </ConnectedUsersProvider>
         </AppProvider>
       </ThemeProvider>
     </ApolloProvider>

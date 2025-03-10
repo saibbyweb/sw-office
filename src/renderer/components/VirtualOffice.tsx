@@ -18,6 +18,7 @@ import { API_HOST } from '../../services/env';
 import { theme } from '../styles/theme';
 import { useCall } from '../../components/CallProvider';
 import { toast } from 'react-hot-toast';
+import { ConnectedUsersList } from '../../components/ConnectedUsersList';
 
 const Container = styled.div`
   width: 100%;
@@ -142,6 +143,7 @@ const UserAvatar = styled.img`
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid ${props => props.theme.colors.primary}40;
+  display: none; /* Hide the avatar */
 `;
 
 const AppLogo = styled.img`
@@ -180,7 +182,7 @@ const TeamsButton = styled.button`
 `;
 
 const ProfileButton = styled.button`
-  display: flex;
+  display: none; /* Hide the profile edit button */
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem;
@@ -1446,6 +1448,7 @@ export const VirtualOffice: React.FC = () => {
               );
             })}
           </MemberList>
+          <ConnectedUsersList />
         </Sidebar>
         <MainContent>
           <SpotlightControls>

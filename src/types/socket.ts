@@ -17,4 +17,5 @@ export interface SocketEvents {
   'auth': (token: string, callback: (response: AuthResponse) => void) => void;
   'call:response': (data: { callId: string; accept: boolean }) => void;
   'call:initiate': (data: { receiverId: string }) => void;
+  'connected_users': (data: string[]) => void;
 } 

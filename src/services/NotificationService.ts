@@ -7,6 +7,7 @@ class NotificationService {
   private listeners: Map<string, (data: CallNotification) => void> = new Map();
   private connectListeners: Set<() => void> = new Set();
   private disconnectListeners: Set<() => void> = new Set();
+  private connectedUsersListeners: Map<string, (users: string[]) => void> = new Map();
 
   connect(serverUrl: string = 'http://localhost:3000') {
     if (this.socket) {
@@ -31,6 +32,13 @@ class NotificationService {
       console.log('[NotificationService] Received notification:', data);
       this.listeners.forEach((callback) => {
         callback(data);
+      });
+    });
+
+    this.socket.on('connected_users', (users: string[]) => {
+      console.log('[NotificationService] Received connected users:', users);
+      this.connectedUsersListeners.forEach((callback) => {
+        callback(users);
       });
     });
 
@@ -73,6 +81,16 @@ class NotificationService {
     console.log('[NotificationService] Removing connection change listeners');
     this.connectListeners.delete(onConnect);
     this.disconnectListeners.delete(onDisconnect);
+  }
+
+  addConnectedUsersListener(id: string, callback: (users: string[]) => void) {
+    console.log('[NotificationService] Adding connected users listener:', id);
+    this.connectedUsersListeners.set(id, callback);
+  }
+
+  removeConnectedUsersListener(id: string) {
+    console.log('[NotificationService] Removing connected users listener:', id);
+    this.connectedUsersListeners.delete(id);
   }
 }
 
