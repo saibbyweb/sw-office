@@ -1,7 +1,7 @@
-import { io, Socket } from 'socket.io-client';
-import { AuthResponse, CallNotification, SocketEvents } from '../types/socket';
+import { Socket } from 'socket.io-client';
+import { CallNotification, SocketEvents } from '../types/socket';
 import { initSocket } from './socket';
-
+import { API_HOST } from '../services/env';
 class NotificationService {
   private socket: Socket<SocketEvents> | null = null;
   private listeners: Map<string, (data: CallNotification) => void> = new Map();
@@ -9,7 +9,9 @@ class NotificationService {
   private disconnectListeners: Set<() => void> = new Set();
   private connectedUsersListeners: Map<string, (users: string[]) => void> = new Map();
 
-  connect(serverUrl: string = 'http://localhost:3000') {
+ 
+
+  connect(serverUrl: string = API_HOST) {
     // Check if user is authenticated before connecting
     const authToken = localStorage.getItem('authToken');
     if (!authToken) {

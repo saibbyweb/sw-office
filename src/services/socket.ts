@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import io, { Socket } from 'socket.io-client';
 import { AuthResponse, SocketEvents } from '../types/socket';
+import { API_HOST } from './env';
 
 interface SocketHook {
   socket: Socket<SocketEvents> | null;
@@ -13,7 +14,7 @@ let socket: Socket<SocketEvents> | null = null;
 export const initSocket = () => {
   if (!socket) {
     console.log('[Socket] Initializing new socket connection');
-    socket = io('http://localhost:3000', {
+    socket = io(API_HOST, {
       transports: ['websocket'],
       autoConnect: false, // Don't connect automatically
     });
