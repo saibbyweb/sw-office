@@ -63,4 +63,19 @@ export const ADMIN_SESSION_QUERY = gql`
       }
     }
   }
-`; 
+`;
+
+export const ADMIN_SESSION_WORK_LOGS_QUERY = gql`
+  query AdminSessionWorkLogs($sessionId: ID!) {
+    adminSessionWorkLogs(sessionId: $sessionId) {
+      id
+      content
+      links
+      createdAt
+      project {
+        id
+        name
+      }
+    }
+  }
+`;

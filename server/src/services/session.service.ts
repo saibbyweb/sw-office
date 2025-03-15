@@ -46,12 +46,15 @@ export class SessionService {
       },
       include: {
         project: true,
-        segments: true,
-        breaks: {
-          where: {
-            endTime: {
-              isSet: false,
-            },
+        segments: {
+          include: {
+            project: true,
+          },
+        },
+        breaks: true,
+        workLogs: {
+          include: {
+            project: true,
           },
         },
       },

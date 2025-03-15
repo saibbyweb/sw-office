@@ -161,6 +161,7 @@ type ProjectCount {
 type Query {
   activeSession: Session
   adminSession(sessionId: ID!): Session
+  adminSessionWorkLogs(sessionId: ID!): [WorkLog!]!
   adminUserSessions(input: GetSessionsInput!, userId: ID!): [Session!]!
   adminUsers: [User!]!
   checkUserInMeeting(userId: String!): MeetingStatus!

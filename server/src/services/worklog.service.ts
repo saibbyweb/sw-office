@@ -37,6 +37,23 @@ export class WorkLogService {
     });
   }
 
+  async getSessionWorkLogsForAdmin(sessionId: string): Promise<WorkLog[]> {
+    // Get work logs for the session without user verification
+    return this.prisma.workLog.findMany({
+      where: {
+        sessionId,
+      },
+      include: {
+        user: true,
+        project: true,
+        session: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
   async addWorkLog(userId: string, input: AddWorkLogInput): Promise<WorkLog> {
     // Verify session exists and is active
     const session = await this.prisma.session.findFirst({

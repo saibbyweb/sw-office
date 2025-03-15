@@ -7,6 +7,17 @@ export interface AdminUser {
   currentStatus: string;
 }
 
+export interface WorkLog {
+  id: string;
+  content: string;
+  links: string[];
+  createdAt: string;
+  project?: {
+    id: string;
+    name: string;
+  };
+}
+
 export interface AdminSession {
   id: string;
   startTime: string;
@@ -28,12 +39,6 @@ export interface AdminSession {
       id: string;
       name: string;
     };
-    workLogs?: Array<{
-      id: string;
-      content: string;
-      links: string[];
-      createdAt: string;
-    }>;
   }>;
   breaks: Array<{
     id: string;
