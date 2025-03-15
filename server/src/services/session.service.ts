@@ -39,6 +39,25 @@ export class SessionService {
     });
   }
 
+  async getSessionById(sessionId: string): Promise<Session | null> {
+    return this.prisma.session.findUnique({
+      where: {
+        id: sessionId,
+      },
+      include: {
+        project: true,
+        segments: true,
+        breaks: {
+          where: {
+            endTime: {
+              isSet: false,
+            },
+          },
+        },
+      },
+    });
+  }
+
   async startSession(
     userId: string,
     input: StartSessionInput,
