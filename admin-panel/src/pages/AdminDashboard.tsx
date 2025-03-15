@@ -118,9 +118,8 @@ export default function AdminDashboard() {
                 </div>
               ) : (
                 sessionsData?.adminUserSessions.map((session) => (
-                  <Link
+                  <div
                     key={session.id}
-                    to={`/workflow/${session.id}`}
                     className="bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow"
                   >
                     <div className="flex items-center justify-between">
@@ -145,11 +144,27 @@ export default function AdminDashboard() {
                         </div>
                       )}
                     </div>
-                    <div className="mt-3 flex gap-4 text-sm text-gray-500">
-                      <div>Total Duration: {Math.round(session.totalDuration / 60)}m</div>
-                      <div>Break Time: {Math.round(session.totalBreakTime / 60)}m</div>
+                    <div className="mt-3 flex items-center justify-between">
+                      <div className="flex gap-4 text-sm text-gray-500">
+                        <div>Total Duration: {Math.round(session.totalDuration / 60)}m</div>
+                        <div>Break Time: {Math.round(session.totalBreakTime / 60)}m</div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Link
+                          to={`/workflow/${session.id}`}
+                          className="px-3 py-1.5 text-sm bg-violet-100 text-violet-700 rounded hover:bg-violet-200 transition-colors"
+                        >
+                          View Details
+                        </Link>
+                        <Link
+                          to={`/workflow-v2/${session.id}`}
+                          className="px-3 py-1.5 text-sm bg-fuchsia-100 text-fuchsia-700 rounded hover:bg-fuchsia-200 transition-colors"
+                        >
+                          View Timeline
+                        </Link>
+                      </div>
                     </div>
-                  </Link>
+                  </div>
                 ))
               )}
             </div>

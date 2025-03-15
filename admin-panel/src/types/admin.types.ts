@@ -7,15 +7,35 @@ export interface AdminUser {
   currentStatus: string;
 }
 
+export interface Project {
+  id: string;
+  name: string;
+}
+
+export interface Break {
+  id: string;
+  type: string;
+  startTime: string;
+  endTime: string | null;
+  duration: number;
+}
+
 export interface WorkLog {
   id: string;
   content: string;
   links: string[];
   createdAt: string;
-  project?: {
-    id: string;
-    name: string;
-  };
+  project?: Project;
+}
+
+export interface Segment {
+  id: string;
+  type: 'WORK' | 'BREAK';
+  startTime: string;
+  endTime: string | null;
+  duration: number;
+  project?: Project;
+  break?: Break;
 }
 
 export interface AdminSession {
@@ -25,26 +45,8 @@ export interface AdminSession {
   status: string;
   totalDuration: number;
   totalBreakTime: number;
-  project?: {
-    id: string;
-    name: string;
-  };
-  segments: Array<{
-    id: string;
-    type: 'WORK' | 'BREAK';
-    startTime: string;
-    endTime: string | null;
-    duration: number;
-    project?: {
-      id: string;
-      name: string;
-    };
-  }>;
-  breaks: Array<{
-    id: string;
-    type: string;
-    startTime: string;
-    endTime: string | null;
-    duration: number;
-  }>;
+  user: AdminUser;
+  project?: Project;
+  segments: Segment[];
+  breaks: Break[];
 } 

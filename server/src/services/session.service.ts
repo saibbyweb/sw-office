@@ -45,10 +45,12 @@ export class SessionService {
         id: sessionId,
       },
       include: {
+        user: true,
         project: true,
         segments: {
           include: {
             project: true,
+            break: true,
           },
         },
         breaks: true,

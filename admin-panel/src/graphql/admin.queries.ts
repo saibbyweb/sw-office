@@ -39,6 +39,13 @@ export const ADMIN_SESSION_QUERY = gql`
       status
       totalDuration
       totalBreakTime
+      user {
+        id
+        name
+        avatarUrl
+        currentStatus
+        isOnline
+      }
       project {
         id
         name
@@ -52,6 +59,13 @@ export const ADMIN_SESSION_QUERY = gql`
         project {
           id
           name
+        }
+        break {
+          id
+          type
+          startTime
+          endTime
+          duration
         }
       }
       breaks {

@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Dashboard from './components/Dashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import WorkflowView from './pages/WorkflowView';
+import Workflow from './pages/Workflow';
 
 export default function App() {
   return (
@@ -12,6 +13,7 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/workflow/:sessionId" element={<WorkflowView />} />
+          <Route path="/workflow-v2/:sessionId" element={<Workflow />} />
         </Routes>
       </Router>
     </div>
