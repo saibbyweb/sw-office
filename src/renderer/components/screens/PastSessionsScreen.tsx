@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import styled from 'styled-components';
 import { useQuery } from '@apollo/client';
-import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { startOfMonth, endOfMonth, format, isSameMonth } from 'date-fns';
 import { Calendar } from '../common/Calendar';
 import { Button } from '../common';
 import { Loader } from '../common/Loader';
@@ -54,9 +54,15 @@ const MainContent = styled.div`
 const CalendarWrapper = styled.div`
   position: relative;
   display: flex;
-  justify-content: center;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
+  gap: ${props => props.theme.spacing.md};
   padding: ${props => props.theme.spacing.xl} 0;
+`;
+
+const CalendarContainer = styled.div`
+  position: relative;
+  width: 100%;
 `;
 
 const CalendarOverlay = styled.div`
@@ -71,6 +77,49 @@ const CalendarOverlay = styled.div`
   background: ${props => props.theme.colors.background}80;
   backdrop-filter: blur(4px);
   border-radius: 16px;
+`;
+
+const CurrentMonthButton = styled(Button)`
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  font-size: 0.875rem;
+  background: ${props => props.theme.colors.background};
+  border: 1px solid ${props => props.theme.colors.text}20;
+  backdrop-filter: blur(8px);
+
+  &:hover {
+    background: ${props => props.theme.colors.background}CC;
+    border-color: ${props => props.theme.colors.text}40;
+  }
+`;
+
+const CalendarSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${props => props.theme.spacing.md};
+  width: 100%;
+`;
+
+const CalendarActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+`;
+
+const CalendarStats = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.sm};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  background: ${props => props.theme.colors.background}80;
+  border: 1px solid ${props => props.theme.colors.text}10;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: ${props => props.theme.colors.text}CC;
+  backdrop-filter: blur(8px);
+`;
+
+const StatsCount = styled.span`
+  color: ${props => props.theme.colors.text};
+  font-weight: 600;
 `;
 
 interface PastSessionsScreenProps {
@@ -95,6 +144,7 @@ const GET_SESSION_DATES = gql`
 
 export const PastSessionsScreen: React.FC<PastSessionsScreenProps> = ({ onBack }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const today = new Date(); // Reference to today's date
 
   const { data: sessionDatesData, loading } = useQuery<SessionDatesData>(GET_SESSION_DATES, {
     variables: {
@@ -110,7 +160,12 @@ export const PastSessionsScreen: React.FC<PastSessionsScreenProps> = ({ onBack }
     setCurrentMonth(startDate);
   }, []);
 
+  const handleGoToCurrentMonth = useCallback(() => {
+    setCurrentMonth(today);
+  }, [today]);
+
   const activeDates = sessionDatesData?.userSessionDates || [];
+  const isCurrentMonth = isSameMonth(currentMonth, today);
 
   return (
     <Container>
@@ -126,15 +181,25 @@ export const PastSessionsScreen: React.FC<PastSessionsScreenProps> = ({ onBack }
 
       <MainContent>
         <CalendarWrapper>
-          <Calendar 
-            activeDates={activeDates.map(date => new Date(date.startTime))} 
-            onMonthChange={handleMonthChange}
-            currentDate={currentMonth}
-          />
-          {loading && (
-            <CalendarOverlay>
-              <Loader />
-            </CalendarOverlay>
+          <CalendarStats>
+            <StatsCount>{activeDates.length}</StatsCount> sessions in {format(currentMonth, 'MMMM yyyy')}
+          </CalendarStats>
+          <CalendarContainer>
+            <Calendar 
+              activeDates={activeDates.map(date => new Date(date.startTime))} 
+              onMonthChange={handleMonthChange}
+              currentDate={currentMonth}
+            />
+            {loading && (
+              <CalendarOverlay>
+                <Loader />
+              </CalendarOverlay>
+            )}
+          </CalendarContainer>
+          {!isCurrentMonth && (
+            <CurrentMonthButton variant="secondary" onClick={handleGoToCurrentMonth}>
+              Go to Current Month
+            </CurrentMonthButton>
           )}
         </CalendarWrapper>
       </MainContent>
