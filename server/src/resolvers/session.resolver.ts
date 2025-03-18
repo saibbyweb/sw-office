@@ -24,6 +24,9 @@ import { GraphQLContext } from 'src/users/users.resolver';
 class SessionDate {
   @Field(() => Date)
   startTime: Date;
+
+  @Field(() => ID)
+  id: string;
 }
 
 @Resolver(() => Session)
@@ -88,7 +91,30 @@ export class SessionResolver {
     @Args('input') input: GetSessionDatesInput,
   ): Promise<SessionDate[]> {
     const userId = context.req.user.id;
-    const dates = await this.sessionService.getUserSessionDates(userId, input);
-    return dates.map((date) => ({ startTime: date }));
+    const sessions = await this.sessionService.getUserSessions(userId, {
+      startDate: input.startDate,
+      endDate: input.endDate,
+    });
+    return sessions.map((session) => ({
+      startTime: session.startTime,
+      id: session.id,
+    }));
+  }
+
+  @Query(() => Session, { nullable: true })
+  @UseGuards(JwtGuard)
+  async session(
+    @Context() context: GraphQLContext,
+    @Args('id', { type: () => ID }) id: string,
+  ): Promise<Session | null> {
+    const userId = context.req.user.id;
+    const sessions = await this.sessionService.getUserSessions(userId, {
+      startDate: undefined,
+      endDate: undefined,
+      projectIds: undefined,
+      statuses: undefined,
+      sortDescending: undefined,
+    });
+    return sessions.find((session) => session.id === id) || null;
   }
 }

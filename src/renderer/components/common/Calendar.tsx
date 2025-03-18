@@ -65,7 +65,12 @@ const WeekDay = styled.div`
   font-weight: 500;
 `;
 
-const DayCell = styled.div<{ isCurrentMonth: boolean; isActive?: boolean; isToday?: boolean }>`
+const DayCell = styled.div<{ 
+  isCurrentMonth: boolean; 
+  isActive?: boolean; 
+  isToday?: boolean;
+  isSelected?: boolean;
+}>`
   aspect-ratio: 1;
   display: flex;
   align-items: center;
@@ -73,9 +78,14 @@ const DayCell = styled.div<{ isCurrentMonth: boolean; isActive?: boolean; isToda
   font-size: 0.75rem;
   border-radius: 50%;
   cursor: pointer;
-  background: ${props => props.isActive ? props.theme.colors.primary : 'transparent'};
+  background: ${props => {
+    if (props.isSelected) return props.theme.colors.primary;
+    if (props.isActive) return props.theme.colors.primary + '40';
+    return 'transparent';
+  }};
   color: ${props => {
-    if (props.isActive) return 'white';
+    if (props.isSelected) return 'white';
+    if (props.isActive) return props.theme.colors.primary;
     if (!props.isCurrentMonth) return props.theme.colors.text + '30';
     return props.theme.colors.text;
   }};
@@ -85,7 +95,7 @@ const DayCell = styled.div<{ isCurrentMonth: boolean; isActive?: boolean; isToda
   padding: 4px;
 
   &:hover {
-    background: ${props => props.isActive ? props.theme.colors.primary : props.theme.colors.primary + '20'};
+    background: ${props => props.isSelected ? props.theme.colors.primary : props.theme.colors.primary + '20'};
     transform: translateY(-1px);
   }
 `;
@@ -96,9 +106,17 @@ interface CalendarProps {
   activeDates: Date[];
   currentDate: Date;
   onMonthChange: (startDate: Date, endDate: Date) => void;
+  onDateClick?: (date: Date) => void;
+  selectedDate?: Date | null;
 }
 
-export const Calendar: React.FC<CalendarProps> = React.memo(({ activeDates, currentDate, onMonthChange }) => {
+export const Calendar: React.FC<CalendarProps> = React.memo(({ 
+  activeDates, 
+  currentDate, 
+  onMonthChange,
+  onDateClick,
+  selectedDate 
+}) => {
   const handlePreviousMonth = useCallback(() => {
     const newDate = subMonths(currentDate, 1);
     console.log('Calendar: Previous Month clicked:', format(newDate, 'MMMM yyyy'));
@@ -110,6 +128,10 @@ export const Calendar: React.FC<CalendarProps> = React.memo(({ activeDates, curr
     console.log('Calendar: Next Month clicked:', format(newDate, 'MMMM yyyy'));
     onMonthChange(startOfMonth(newDate), endOfMonth(newDate));
   }, [currentDate, onMonthChange]);
+
+  const handleDateClick = useCallback((day: Date) => {
+    onDateClick?.(day);
+  }, [onDateClick]);
 
   // Get all dates to display (including dates from previous/next month to fill the calendar)
   const { calendarDays, monthTitle } = useMemo(() => {
@@ -153,6 +175,8 @@ export const Calendar: React.FC<CalendarProps> = React.memo(({ activeDates, curr
             isCurrentMonth={isSameMonth(day, currentDate)}
             isActive={activeDates.some(activeDate => isSameDay(activeDate, day))}
             isToday={isSameDay(day, new Date())}
+            isSelected={selectedDate ? isSameDay(day, selectedDate) : false}
+            onClick={() => handleDateClick(day)}
           >
             {format(day, 'd')}
           </DayCell>

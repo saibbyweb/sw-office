@@ -179,6 +179,7 @@ type Query {
   hello: String!
   me: User!
   projects: [Project!]!
+  session(id: ID!): Session
   sessionWorkLogs(sessionId: ID!): [WorkLog!]!
   userSessionDates(input: GetSessionDatesInput!): [SessionDate!]!
   userSessions(input: GetSessionsInput!): [Session!]!
@@ -237,6 +238,7 @@ type SessionCount {
 }
 
 type SessionDate {
+  id: ID!
   startTime: DateTime!
 }
 
