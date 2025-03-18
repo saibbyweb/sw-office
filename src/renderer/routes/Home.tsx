@@ -17,6 +17,7 @@ import {
 } from '../../graphql/types';
 import { useApp } from '../context/AppContext';
 import { Button, Notification, StatsCard } from '../components/common';
+import { Header } from '../components/common/Header';
 import { StartWorkModal, EndWorkModal, BreakModal, SwitchProjectModal, AddWorkLogModal, LogoutModal } from '../components/modals';
 import { WorkLogList } from '../components/work-logs/WorkLogList';
 import { SegmentsList } from '../components/segments/SegmentsList';
@@ -129,16 +130,6 @@ const SectionTitle = styled.h2`
   display: flex;
   align-items: center;
   gap: ${props => props.theme.spacing.sm};
-`;
-
-const Header = styled.header`
-  position: relative;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: ${props => props.theme.spacing.md};
-  margin-bottom: ${props => props.theme.spacing.lg};
-  z-index: 1;
 `;
 
 const UserInfo = styled.div`
@@ -594,28 +585,12 @@ export const Home: React.FC = () => {
             {appVersion === '1.0.2' && <NewVersionBadge>NEW</NewVersionBadge>}
           </VersionTag>
 
-          <Header>
-            <AppLogo src={appIcon} alt="SW Office" />
-            <HeaderActions>
-              <TeamsButton onClick={() => navigate('/teams')}>
-                <Users size={18} />
-                Teams
-              </TeamsButton>
-              <UserInfo>
-                {userData?.me.name} ({userData?.me.email})
-              </UserInfo>
-              <ProfileButton onClick={() => setIsProfileEditOpen(true)}>
-                <Edit2 size={18} />
-                Edit Profile
-              </ProfileButton>
-              <Button 
-                variant="secondary" 
-                onClick={() => setShowLogoutModal(true)}
-              >
-                Logout
-              </Button>
-            </HeaderActions>
-          </Header>
+          <Header 
+            userName={userData?.me.name}
+            userEmail={userData?.me.email}
+            onProfileEdit={() => setIsProfileEditOpen(true)}
+            onLogout={() => setShowLogoutModal(true)}
+          />
           <MainContent>
             <WelcomeContainer>
               <Greeting>{getGreeting()}, {userData?.me.name?.split(' ')[0]}!</Greeting>
@@ -636,28 +611,12 @@ export const Home: React.FC = () => {
           <VersionTag>
             v{appVersion}
           </VersionTag>
-          <Header>
-            <AppLogo src={appIcon} alt="SW Office" />
-            <HeaderActions>
-              <TeamsButton onClick={() => navigate('/teams')}>
-                <Users size={18} />
-                Teams
-              </TeamsButton>
-              <UserInfo>
-                {userData?.me.name} ({userData?.me.email})
-              </UserInfo>
-              <ProfileButton onClick={() => setIsProfileEditOpen(true)}>
-                <Edit2 size={18} />
-                Edit Profile
-              </ProfileButton>
-              <Button 
-                variant="secondary" 
-                onClick={() => setShowLogoutModal(true)}
-              >
-                Logout
-              </Button>
-            </HeaderActions>
-          </Header>
+          <Header 
+            userName={userData?.me.name}
+            userEmail={userData?.me.email}
+            onProfileEdit={() => setIsProfileEditOpen(true)}
+            onLogout={() => setShowLogoutModal(true)}
+          />
           <MainContent>
             <Section fullWidth>
               <StatsGrid>

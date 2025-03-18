@@ -9,6 +9,7 @@ import {
   StartSessionInput,
   SwitchProjectInput,
   GetSessionsInput,
+  GetSessionDatesInput,
 } from '../types/session.types';
 import { Prisma } from '@prisma/client';
 
@@ -283,5 +284,28 @@ export class SessionService {
         },
       },
     });
+  }
+
+  async getUserSessionDates(
+    userId: string,
+    input: GetSessionDatesInput,
+  ): Promise<Date[]> {
+    const sessions = await this.prisma.session.findMany({
+      where: {
+        userId,
+        startTime: {
+          gte: input.startDate,
+          lte: input.endDate,
+        },
+      },
+      select: {
+        startTime: true,
+      },
+      orderBy: {
+        startTime: 'asc',
+      },
+    });
+
+    return sessions.map((session) => session.startTime);
   }
 }

@@ -1,4 +1,13 @@
-import { Resolver, Mutation, Args, ID, Query, Context } from '@nestjs/graphql';
+import {
+  Resolver,
+  Mutation,
+  Args,
+  ID,
+  Query,
+  Context,
+  Field,
+  ObjectType,
+} from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { JwtGuard } from '../auth/guards/jwt.guard';
 import { Session } from '../generated-nestjs-typegraphql';
@@ -6,9 +15,16 @@ import {
   StartSessionInput,
   SwitchProjectInput,
   GetSessionsInput,
+  GetSessionDatesInput,
 } from '../types/session.types';
 import { SessionService } from '../services/session.service';
 import { GraphQLContext } from 'src/users/users.resolver';
+
+@ObjectType()
+class SessionDate {
+  @Field(() => Date)
+  startTime: Date;
+}
 
 @Resolver(() => Session)
 export class SessionResolver {
@@ -63,5 +79,16 @@ export class SessionResolver {
   ): Promise<Session> {
     const userId = context.req.user.id;
     return this.sessionService.switchProject(userId, input.sessionId, input);
+  }
+
+  @Query(() => [SessionDate])
+  @UseGuards(JwtGuard)
+  async userSessionDates(
+    @Context() context: GraphQLContext,
+    @Args('input') input: GetSessionDatesInput,
+  ): Promise<SessionDate[]> {
+    const userId = context.req.user.id;
+    const dates = await this.sessionService.getUserSessionDates(userId, input);
+    return dates.map((date) => ({ startTime: date }));
   }
 }

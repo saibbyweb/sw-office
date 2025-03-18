@@ -64,6 +64,11 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
+input GetSessionDatesInput {
+  endDate: DateTime!
+  startDate: DateTime!
+}
+
 input GetSessionsInput {
   endDate: DateTime
   projectIds: [String!]
@@ -175,6 +180,7 @@ type Query {
   me: User!
   projects: [Project!]!
   sessionWorkLogs(sessionId: ID!): [WorkLog!]!
+  userSessionDates(input: GetSessionDatesInput!): [SessionDate!]!
   userSessions(input: GetSessionsInput!): [Session!]!
 }
 
@@ -228,6 +234,10 @@ type SessionCount {
   breaks: Int!
   segments: Int!
   workLogs: Int!
+}
+
+type SessionDate {
+  startTime: DateTime!
 }
 
 enum SessionStatus {

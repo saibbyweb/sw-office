@@ -47,3 +47,12 @@ export class GetSessionsInput {
   @IsOptional()
   sortDescending?: boolean;
 }
+
+@InputType()
+export class GetSessionDatesInput {
+  @Field(() => Date)
+  startDate: Date;
+
+  @Field(() => Date)
+  endDate: Date;
+}

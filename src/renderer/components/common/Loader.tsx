@@ -6,24 +6,31 @@ const spin = keyframes`
   100% { transform: rotate(360deg); }
 `;
 
-const LoaderContainer = styled.div`
+const LoaderOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: ${props => props.theme.colors.background}90;
+  backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 200px;
+  z-index: 1000;
 `;
 
-const Spinner = styled.div`
+const LoaderSpinner = styled.div`
   width: 40px;
   height: 40px;
-  border: 4px solid ${({ theme }) => theme.colors.background};
-  border-top: 4px solid ${({ theme }) => theme.colors.primary};
+  border: 3px solid ${props => props.theme.colors.primary}20;
+  border-top-color: ${props => props.theme.colors.primary};
   border-radius: 50%;
   animation: ${spin} 1s linear infinite;
 `;
 
 export const Loader: React.FC = () => (
-  <LoaderContainer>
-    <Spinner />
-  </LoaderContainer>
+  <LoaderOverlay>
+    <LoaderSpinner />
+  </LoaderOverlay>
 ); 
