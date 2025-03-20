@@ -19,7 +19,7 @@ export default function AdminDashboard() {
   
   // Memoize the date range to prevent unnecessary re-renders
   const dateRange = useMemo(() => ({
-    startDate: subDays(new Date(), 7),
+    startDate: subDays(new Date(), 27),
     endDate: new Date(),
   }), []); // Empty dependency array as we want this to be stable
 

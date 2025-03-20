@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import { Users, Edit2, Clock } from 'react-feather';
+import { Users, Edit2, Clock, ArrowLeft } from 'react-feather';
 import { Button } from './Button';
 import appIcon from '../../../assets/icon.png';
 
@@ -11,8 +11,19 @@ const HeaderContainer = styled.header`
   justify-content: flex-end;
   align-items: center;
   gap: ${props => props.theme.spacing.md};
-  margin-bottom: ${props => props.theme.spacing.lg};
+  padding: ${props => props.theme.spacing.lg} ${props => props.theme.spacing.xl};
+  background: ${props => props.theme.colors.background}95;
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid ${props => props.theme.colors.text}10;
   z-index: 1;
+`;
+
+const BackButton = styled(Button)`
+  margin-right: auto;
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.sm};
 `;
 
 const AppLogo = styled.img`
@@ -80,19 +91,30 @@ interface HeaderProps {
   userEmail?: string;
   onProfileEdit: () => void;
   onLogout: () => void;
+  showBackButton?: boolean;
+  onBack?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   userName,
   userEmail,
   onProfileEdit,
-  onLogout
+  onLogout,
+  showBackButton,
+  onBack
 }) => {
   const navigate = useNavigate();
 
   return (
     <HeaderContainer>
-      <AppLogo src={appIcon} alt="SW Office" />
+      {showBackButton && onBack ? (
+        <BackButton variant="secondary" onClick={onBack}>
+          <ArrowLeft size={18} />
+          Back
+        </BackButton>
+      ) : (
+        <AppLogo src={appIcon} alt="SW Office" />
+      )}
       <HeaderActions>
         <TeamsButton onClick={() => navigate('/teams')}>
           <Users size={18} />

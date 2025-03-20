@@ -70,9 +70,11 @@ const DayCell = styled.div<{
   isActive?: boolean; 
   isToday?: boolean;
   isSelected?: boolean;
+  hasMultipleSessions?: boolean;
 }>`
   aspect-ratio: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   font-size: 0.75rem;
@@ -93,11 +95,25 @@ const DayCell = styled.div<{
   opacity: ${props => props.isCurrentMonth ? 1 : 0.5};
   transition: all 0.2s ease;
   padding: 4px;
+  position: relative;
 
   &:hover {
     background: ${props => props.isSelected ? props.theme.colors.primary : props.theme.colors.primary + '20'};
     transform: translateY(-1px);
   }
+
+  ${props => props.hasMultipleSessions && `
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 2px;
+      width: 4px;
+      height: 4px;
+      background: ${props.isSelected ? 'white' : props.theme.colors.primary};
+      border-radius: 50%;
+      opacity: 0.8;
+    }
+  `}
 `;
 
 const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -150,6 +166,13 @@ export const Calendar: React.FC<CalendarProps> = React.memo(({
     };
   }, [currentDate]);
 
+  // Function to check if a date has multiple sessions
+  const getSessionsForDate = useCallback((date: Date) => {
+    return activeDates.filter(activeDate => 
+      format(activeDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
+    ).length;
+  }, [activeDates]);
+
   return (
     <CalendarContainer>
       <CalendarHeader>
@@ -169,18 +192,22 @@ export const Calendar: React.FC<CalendarProps> = React.memo(({
         {weekDays.map(day => (
           <WeekDay key={day}>{day}</WeekDay>
         ))}
-        {calendarDays.map((day) => (
-          <DayCell
-            key={`${format(day, 'yyyy-MM-dd')}`}
-            isCurrentMonth={isSameMonth(day, currentDate)}
-            isActive={activeDates.some(activeDate => isSameDay(activeDate, day))}
-            isToday={isSameDay(day, new Date())}
-            isSelected={selectedDate ? isSameDay(day, selectedDate) : false}
-            onClick={() => handleDateClick(day)}
-          >
-            {format(day, 'd')}
-          </DayCell>
-        ))}
+        {calendarDays.map((day) => {
+          const sessionsCount = getSessionsForDate(day);
+          return (
+            <DayCell
+              key={`${format(day, 'yyyy-MM-dd')}`}
+              isCurrentMonth={isSameMonth(day, currentDate)}
+              isActive={sessionsCount > 0}
+              isToday={isSameDay(day, new Date())}
+              isSelected={selectedDate ? isSameDay(day, selectedDate) : false}
+              hasMultipleSessions={sessionsCount > 1}
+              onClick={() => handleDateClick(day)}
+            >
+              {format(day, 'd')}
+            </DayCell>
+          );
+        })}
       </CalendarGrid>
     </CalendarContainer>
   );

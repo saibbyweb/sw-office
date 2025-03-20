@@ -2,9 +2,10 @@ import React, { useState, useCallback, useEffect } from 'react';
 import styled from 'styled-components';
 import { useQuery } from '@apollo/client';
 import { startOfMonth, endOfMonth, format, isSameMonth } from 'date-fns';
-import { Calendar as CalendarIcon } from 'react-feather';
+import { Calendar as CalendarIcon, Clock, Briefcase, Coffee } from 'react-feather';
 import { Calendar } from '../common/Calendar';
 import { Button } from '../common';
+import { Header } from '../common/Header';
 import { Loader } from '../common/Loader';
 import { gql } from '@apollo/client';
 
@@ -12,54 +13,25 @@ const Container = styled.div`
   min-height: 100vh;
   background-color: ${props => props.theme.colors.background};
   color: ${props => props.theme.colors.text};
-  padding: ${props => props.theme.spacing.xl};
-  overflow-y: auto;
-`;
-
-const TopBar = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 1200px;
-  margin: 0 auto ${props => props.theme.spacing.xl};
-  padding: 0 ${props => props.theme.spacing.md};
-`;
-
-const Title = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${props => props.theme.spacing.xs};
-`;
-
-const MainTitle = styled.h1`
-  margin: 0;
-  color: ${props => props.theme.colors.text};
-  font-size: 2rem;
-  font-weight: 600;
-`;
-
-const Subtitle = styled.p`
-  margin: 0;
-  color: ${props => props.theme.colors.text}80;
-  font-size: 0.875rem;
 `;
 
 const MainContent = styled.div`
   display: grid;
-  grid-template-columns: 1fr 400px;
-  gap: ${props => props.theme.spacing.xl};
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 ${props => props.theme.spacing.md};
+  grid-template-columns: 4fr 1fr;
+  gap: ${props => props.theme.spacing.lg};
+  padding: ${props => props.theme.spacing.lg} ${props => props.theme.spacing.xl};
+  flex: 1;
+  overflow: hidden;
 `;
 
 const CalendarWrapper = styled.div`
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: ${props => props.theme.spacing.md};
-  padding: ${props => props.theme.spacing.xl} 0;
+  height: calc(100vh - 140px);
 `;
 
 const CalendarContainer = styled.div`
@@ -130,7 +102,7 @@ const SessionDetailsContainer = styled.div`
   border-radius: 16px;
   padding: ${props => props.theme.spacing.xl};
   backdrop-filter: blur(12px);
-  height: calc(100vh - 200px);
+  height: calc(100vh - 140px);
   overflow-y: auto;
 
   &::-webkit-scrollbar {
@@ -145,7 +117,7 @@ const SessionDetailsContainer = styled.div`
   &::-webkit-scrollbar-thumb {
     background: ${props => props.theme.colors.text}20;
     border-radius: 4px;
-    
+
     &:hover {
       background: ${props => props.theme.colors.text}30;
     }
@@ -209,10 +181,15 @@ const WorkLogList = styled.div`
 `;
 
 const WorkLogItem = styled.div`
-  padding: ${props => props.theme.spacing.md};
+  padding: ${props => props.theme.spacing.sm};
   background: ${props => props.theme.colors.background}80;
   border: 1px solid ${props => props.theme.colors.text}10;
-  border-radius: 8px;
+  border-radius: 6px;
+  margin-bottom: ${props => props.theme.spacing.xs};
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
 `;
 
 const WorkLogContent = styled.div`
@@ -223,6 +200,226 @@ const WorkLogContent = styled.div`
 const WorkLogTime = styled.div`
   color: ${props => props.theme.colors.text}60;
   font-size: 0.75rem;
+`;
+
+const SessionStats = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.xl};
+  padding: ${props => props.theme.spacing.md};
+  background: ${props => props.theme.colors.background}40;
+  border: 1px solid ${props => props.theme.colors.text}10;
+  border-radius: 12px;
+  margin-bottom: ${props => props.theme.spacing.lg};
+`;
+
+const StatItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.sm};
+  color: ${props => props.theme.colors.text}90;
+  font-size: 0.875rem;
+
+  svg {
+    color: ${props => props.theme.colors.primary};
+  }
+`;
+
+const ProjectSegment = styled.div`
+  background: ${props => props.theme.colors.background}40;
+  border: 1px solid ${props => props.theme.colors.text}10;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: ${props => props.theme.spacing.md};
+`;
+
+const ProjectHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: ${props => props.theme.spacing.md};
+  background: ${props => props.theme.colors.primary}10;
+  border-bottom: 1px solid ${props => props.theme.colors.text}10;
+`;
+
+const ProjectTitle = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.sm};
+  color: ${props => props.theme.colors.primary};
+  font-weight: 500;
+`;
+
+const TimeSegment = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: ${props => props.theme.spacing.md};
+  border-bottom: 1px solid ${props => props.theme.colors.text}10;
+  
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const TimeRange = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: ${props => props.theme.colors.text}90;
+  font-size: 0.75rem;
+`;
+
+const Duration = styled.div`
+  color: ${props => props.theme.colors.text}60;
+  font-size: 0.875rem;
+`;
+
+const WorkLogsSection = styled.div`
+  padding: ${props => props.theme.spacing.md};
+  background: ${props => props.theme.colors.background}20;
+`;
+
+// Add new styled components for breaks
+const BreakSegment = styled(ProjectSegment)`
+  background: ${props => props.theme.colors.background}30;
+`;
+
+const BreakHeader = styled(ProjectHeader)`
+  background: ${props => props.theme.colors.warning}10;
+  border-bottom: 1px solid ${props => props.theme.colors.warning}20;
+`;
+
+const BreakTitle = styled(ProjectTitle)`
+  color: ${props => props.theme.colors.warning};
+`;
+
+// Add new timeline styled components
+const TimelineContainer = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${props => props.theme.spacing.md};
+  padding: ${props => props.theme.spacing.md} 0;
+`;
+
+const TimelineItem = styled.div<{ isBreak?: boolean }>`
+  position: relative;
+  flex: ${props => props.isBreak ? '0 0 calc(50% - 8px)' : '0 0 100%'};
+  min-width: 250px;
+  
+  @media (max-width: 768px) {
+    flex: 0 0 100%;
+  }
+`;
+
+const TimelineSegment = styled.div<{ isBreak?: boolean }>`
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  height: 100%;
+  border: 1px solid ${({ isBreak }) => isBreak ? 'rgba(255, 193, 7, 0.2)' : 'rgba(255, 255, 255, 0.1)'};
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+  }
+`;
+
+const SegmentHeader = styled.div<{ isBreak?: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: ${({ isBreak }) => isBreak ? 'rgba(255, 193, 7, 0.1)' : 'rgba(99, 102, 241, 0.1)'};
+  border-bottom: 1px solid ${({ isBreak }) => isBreak ? 'rgba(255, 193, 7, 0.2)' : 'rgba(255, 255, 255, 0.1)'};
+`;
+
+const SegmentTitle = styled.div<{ isBreak?: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: ${({ isBreak }) => isBreak ? '#ffc107' : '#6366f1'};
+  font-weight: 500;
+  font-size: 0.875rem;
+`;
+
+const TimelineBody = styled.div`
+  padding: 6px 12px;
+`;
+
+const TimelineFooter = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  border-top: 1px solid ${props => props.theme.colors.text}10;
+  font-size: 0.75rem;
+  color: ${props => props.theme.colors.text}60;
+`;
+
+const WorkLogsList = styled.div`
+  margin-top: ${props => props.theme.spacing.sm};
+  padding-top: ${props => props.theme.spacing.sm};
+  border-top: 1px solid ${props => props.theme.colors.text}10;
+`;
+
+// Add new styled components for session tabs
+const SessionTabs = styled.div`
+  display: flex;
+  gap: ${props => props.theme.spacing.md};
+  margin-bottom: ${props => props.theme.spacing.lg};
+  padding: ${props => props.theme.spacing.md};
+  background: ${props => props.theme.colors.background}40;
+  border: 1px solid ${props => props.theme.colors.text}10;
+  border-radius: 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+
+  &::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: ${props => props.theme.colors.background}20;
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: ${props => props.theme.colors.text}20;
+    border-radius: 3px;
+
+    &:hover {
+      background: ${props => props.theme.colors.text}30;
+    }
+  }
+`;
+
+const SessionTab = styled.button<{ isActive: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.md};
+  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
+  background: ${props => props.isActive ? `${props.theme.colors.primary}15` : 'transparent'};
+  border: 1px solid ${props => props.isActive ? `${props.theme.colors.primary}40` : `${props.theme.colors.text}10`};
+  border-radius: 8px;
+  color: ${props => props.isActive ? props.theme.colors.primary : `${props.theme.colors.text}90`};
+  font-size: 0.9375rem;
+  font-weight: ${props => props.isActive ? '500' : '400'};
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: ${props => `${props.theme.colors.primary}10`};
+    border-color: ${props => `${props.theme.colors.primary}30`};
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
 `;
 
 interface PastSessionsScreenProps {
@@ -242,10 +439,44 @@ interface Session {
   id: string;
   startTime: string;
   endTime: string | null;
+  totalDuration: number;
+  totalBreakTime: number;
+  status: string;
   project: {
     id: string;
     name: string;
   };
+  segments: Array<{
+    id: string;
+    type: 'WORK' | 'BREAK';
+    startTime: string;
+    endTime: string | null;
+    duration: number;
+    project?: {
+      id: string;
+      name: string;
+    };
+    break?: {
+      id: string;
+      type: string;
+      startTime: string;
+      endTime: string | null;
+      duration: number;
+    };
+    workLogs: Array<{
+      id: string;
+      content: string;
+      createdAt: string;
+      updatedAt: string;
+    }>;
+  }>;
+  breaks: Array<{
+    id: string;
+    type: string;
+    startTime: string;
+    endTime: string | null;
+    duration: number;
+  }>;
 }
 
 interface WorkLog {
@@ -278,9 +509,37 @@ const GET_SESSION = gql`
       id
       startTime
       endTime
+      totalDuration
+      totalBreakTime
+      status
       project {
         id
         name
+      }
+      segments {
+        id
+        type
+        startTime
+        endTime
+        duration
+        project {
+          id
+          name
+        }
+        break {
+          id
+          type
+          startTime
+          endTime
+          duration
+        }
+      }
+      breaks {
+        id
+        type
+        startTime
+        endTime
+        duration
       }
     }
   }
@@ -297,6 +556,18 @@ const GET_SESSION_WORKLOGS = gql`
   }
 `;
 
+// Add ME query
+const ME = gql`
+  query Me {
+    me {
+      id
+      name
+      email
+      avatarUrl
+    }
+  }
+`;
+
 interface CalendarProps {
   activeDates: Date[];
   onMonthChange: (startDate: Date, endDate: Date) => void;
@@ -305,11 +576,20 @@ interface CalendarProps {
   selectedDate?: Date | null;
 }
 
+const formatDuration = (seconds: number) => {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+};
+
 export const PastSessionsScreen: React.FC<PastSessionsScreenProps> = ({ onBack }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const today = new Date();
+
+  // Add ME query
+  const { data: userData } = useQuery(ME);
 
   const { data: sessionDatesData, loading: datesLoading } = useQuery<SessionDatesData>(GET_SESSION_DATES, {
     variables: {
@@ -355,12 +635,14 @@ export const PastSessionsScreen: React.FC<PastSessionsScreenProps> = ({ onBack }
   }, [today]);
 
   const handleDateClick = useCallback((date: Date) => {
-    const sessionDate = sessionDatesData?.userSessionDates.find(
-      sd => format(new Date(sd.startTime), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
-    );
     setSelectedDate(date);
-    if (sessionDate) {
-      setSelectedSessionId(sessionDate.id);
+    const sessionDatesForDay = sessionDatesData?.userSessionDates.filter(
+      sd => format(new Date(sd.startTime), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
+    ).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()) || [];
+    
+    if (sessionDatesForDay.length > 0) {
+      // Select the earliest session of the day
+      setSelectedSessionId(sessionDatesForDay[0].id);
     } else {
       setSelectedSessionId(null);
     }
@@ -404,56 +686,140 @@ export const PastSessionsScreen: React.FC<PastSessionsScreenProps> = ({ onBack }
       );
     }
 
+    const session = sessionData.session;
+    const sessionsForSelectedDate = sessionDatesData?.userSessionDates
+      .filter(sd => format(new Date(sd.startTime), 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd'))
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()) || [];
+    
+    // Combine work segments and breaks into a timeline
+    const timeline = [
+      ...session.segments.map(segment => ({
+        ...segment,
+        isBreak: segment.type === 'BREAK',
+        time: new Date(segment.startTime).getTime()
+      }))
+    ].sort((a, b) => a.time - b.time);
+
     return (
       <>
+        {sessionsForSelectedDate.length > 1 && (
+          <SessionTabs>
+            {sessionsForSelectedDate.map((sessionDate, index) => (
+              <SessionTab
+                key={sessionDate.id}
+                isActive={sessionDate.id === selectedSessionId}
+                onClick={() => setSelectedSessionId(sessionDate.id)}
+              >
+                <Clock size={16} />
+                Session {index + 1} • {format(new Date(sessionDate.startTime), 'h:mm a')}
+              </SessionTab>
+            ))}
+          </SessionTabs>
+        )}
+
         <SessionHeader>
           <h2>Session Details</h2>
           <SessionTime>
-            {format(new Date(sessionData.session.startTime), 'PPpp')}
-            {sessionData.session.endTime && (
-              <>
-                {' '}to{' '}
-                {format(new Date(sessionData.session.endTime), 'PPpp')}
-              </>
-            )}
+            {format(new Date(session.startTime), 'MMMM d, yyyy')}
           </SessionTime>
-          <ProjectName>{sessionData.session.project.name}</ProjectName>
         </SessionHeader>
 
-        <h3>Work Logs</h3>
-        {workLogsLoading ? (
-          <Loader />
-        ) : (
-          <WorkLogList>
-            {workLogsData?.sessionWorkLogs.map(log => (
-              <WorkLogItem key={log.id}>
-                <WorkLogContent>{log.content}</WorkLogContent>
-                <WorkLogTime>
-                  {format(new Date(log.createdAt), 'PPpp')}
-                  {log.updatedAt !== log.createdAt && ' (edited)'}
-                </WorkLogTime>
-              </WorkLogItem>
-            ))}
-            {workLogsData?.sessionWorkLogs.length === 0 && (
-              <div>No work logs for this session</div>
-            )}
-          </WorkLogList>
-        )}
+        <SessionStats>
+          <StatItem>
+            <Clock size={16} />
+            {format(new Date(session.startTime), 'h:mm a')} - {
+              session.endTime 
+                ? format(new Date(session.endTime), 'h:mm a')
+                : 'Ongoing'
+            }
+          </StatItem>
+          <StatItem>
+            <Clock size={16} />
+            Total Work: {formatDuration(session.totalDuration - session.totalBreakTime)}
+          </StatItem>
+          <StatItem>
+            <Coffee size={16} />
+            Total Break: {formatDuration(session.totalBreakTime)}
+          </StatItem>
+        </SessionStats>
+
+        <TimelineContainer>
+          {timeline.map((segment) => {
+            const segmentWorkLogs = !segment.isBreak && workLogsData?.sessionWorkLogs
+              ? workLogsData.sessionWorkLogs.filter(log => {
+                  const logTime = new Date(log.createdAt).getTime();
+                  const segmentStart = new Date(segment.startTime).getTime();
+                  const segmentEnd = segment.endTime ? new Date(segment.endTime).getTime() : Date.now();
+                  return logTime >= segmentStart && logTime <= segmentEnd;
+                })
+              : [];
+            
+            const hasWorkLogs = segmentWorkLogs.length > 0;
+            
+            return (
+              <TimelineItem 
+                key={segment.id} 
+                isBreak={segment.isBreak || !hasWorkLogs}
+              >
+                <TimelineSegment isBreak={segment.isBreak}>
+                  <SegmentHeader isBreak={segment.isBreak}>
+                    <SegmentTitle isBreak={segment.isBreak}>
+                      {segment.isBreak ? (
+                        <>
+                          <Coffee size={14} />
+                          {segment.break?.type || 'Break'}
+                        </>
+                      ) : (
+                        <>
+                          <Briefcase size={14} />
+                          {segment.project?.name || 'No Project'}
+                        </>
+                      )}
+                    </SegmentTitle>
+                    <Duration>{formatDuration(segment.duration)}</Duration>
+                  </SegmentHeader>
+                  <TimelineBody>
+                    <TimeRange>
+                      <Clock size={14} />
+                      {format(new Date(segment.startTime), 'h:mm a')} - {
+                        segment.endTime 
+                          ? format(new Date(segment.endTime), 'h:mm a')
+                          : 'Ongoing'
+                      }
+                    </TimeRange>
+                    {hasWorkLogs && (
+                      <WorkLogsList>
+                        {segmentWorkLogs.map(log => (
+                          <WorkLogItem key={log.id}>
+                            {log.content}
+                          </WorkLogItem>
+                        ))}
+                      </WorkLogsList>
+                    )}
+                  </TimelineBody>
+                  <TimelineFooter>
+                    <div>{format(new Date(segment.startTime), 'h:mm a')}</div>
+                    <div>{formatDuration(segment.duration)}</div>
+                  </TimelineFooter>
+                </TimelineSegment>
+              </TimelineItem>
+            );
+          })}
+        </TimelineContainer>
       </>
     );
   };
 
   return (
     <Container>
-      <TopBar>
-        <Title>
-          <MainTitle>Activity Calendar</MainTitle>
-          <Subtitle>View your work session history</Subtitle>
-        </Title>
-        <Button variant="secondary" onClick={onBack}>
-          Back
-        </Button>
-      </TopBar>
+      <Header 
+        userName={userData?.me?.name}
+        userEmail={userData?.me?.email}
+        onProfileEdit={() => {}}
+        onLogout={onBack}
+        showBackButton
+        onBack={onBack}
+      />
 
       <MainContent>
         <SessionDetailsContainer>
