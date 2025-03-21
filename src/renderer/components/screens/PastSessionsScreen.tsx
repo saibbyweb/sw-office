@@ -819,6 +819,7 @@ export const PastSessionsScreen: React.FC<PastSessionsScreenProps> = ({ onBack }
         onLogout={onBack}
         showBackButton
         onBack={onBack}
+        screenName="Session History"
       />
 
       <MainContent>

@@ -35,8 +35,7 @@ const Container = styled.div`
 
 const MainLayout = styled.div`
   display: flex;
-  height: calc(100vh - 80px);  // Subtract header height
-  margin-top: 80px;  // Height of header
+  height: calc(100vh);  // Subtract header height
 `;
 
 const Sidebar = styled.div`
@@ -1419,35 +1418,6 @@ export const VirtualOffice: React.FC = () => {
 
   return (
     <Container>
-      <Header>
-        <BackButton onClick={() => navigate('/')}>
-          <IoArrowBack /> Back
-        </BackButton>
-        <AppLogo src={appIcon} alt="SW Office" />
-        <HeaderActions>
-          <TeamsButton onClick={() => navigate('/teams')}>
-            <Users size={18} />
-            Teams
-          </TeamsButton>
-          <UserInfo>
-            <UserAvatar 
-              src={userData?.me?.avatarUrl ? API_HOST + userData.me.avatarUrl : 'default-avatar.png'} 
-              alt={userData?.me?.name || 'Profile'}
-            />
-            {userData?.me?.name} ({userData?.me?.email})
-          </UserInfo>
-          <ProfileButton onClick={() => setIsProfileEditOpen(true)}>
-            <Edit2 size={18} />
-            Edit Profile
-          </ProfileButton>
-          <Button 
-            variant="secondary" 
-            onClick={() => navigate('/login')}
-          >
-            Logout
-          </Button>
-        </HeaderActions>
-      </Header>
       <MainLayout>
         <Sidebar>
           <SidebarHeader>Team Members</SidebarHeader>

@@ -18,8 +18,14 @@ const HeaderContainer = styled.header`
   z-index: 1;
 `;
 
-const BackButton = styled(Button)`
+const LogoSection = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.md};
   margin-right: auto;
+`;
+
+const BackButton = styled(Button)`
   padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
   display: flex;
   align-items: center;
@@ -30,12 +36,18 @@ const AppLogo = styled.img`
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  margin-right: auto;
   transition: transform 0.2s ease;
 
   &:hover {
     transform: scale(1.05);
   }
+`;
+
+const ScreenName = styled.h1`
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: ${props => props.theme.colors.text};
 `;
 
 const HeaderActions = styled.div`
@@ -93,6 +105,7 @@ interface HeaderProps {
   onLogout: () => void;
   showBackButton?: boolean;
   onBack?: () => void;
+  screenName?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -101,20 +114,23 @@ export const Header: React.FC<HeaderProps> = ({
   onProfileEdit,
   onLogout,
   showBackButton,
-  onBack
+  onBack,
+  screenName
 }) => {
   const navigate = useNavigate();
 
   return (
     <HeaderContainer>
-      {showBackButton && onBack ? (
-        <BackButton variant="secondary" onClick={onBack}>
-          <ArrowLeft size={18} />
-          Back
-        </BackButton>
-      ) : (
+      <LogoSection>
         <AppLogo src={appIcon} alt="SW Office" />
-      )}
+        {showBackButton && onBack && (
+          <BackButton variant="secondary" onClick={onBack}>
+            <ArrowLeft size={18} />
+            Back
+          </BackButton>
+        )}
+        {screenName && <ScreenName>{screenName}</ScreenName>}
+      </LogoSection>
       <HeaderActions>
         <TeamsButton onClick={() => navigate('/teams')}>
           <Users size={18} />

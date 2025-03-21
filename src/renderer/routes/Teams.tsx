@@ -1,32 +1,42 @@
 import React from 'react';
-import { VirtualOffice } from '../components/VirtualOffice';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@apollo/client';
 import styled from 'styled-components';
+import { VirtualOffice } from '../components/VirtualOffice';
+import { Header } from '../components/common/Header';
+import { ME } from '../../graphql/queries';
 
-const BackButton = styled.button`
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  z-index: 10;
-  padding: 0.5rem 1rem;
-  background: ${props => props.theme.colors.background}CC;
-  border: none;
-  border-radius: 8px;
+const Container = styled.div`
+  min-height: 100vh;
+  background-color: ${props => props.theme.colors.background};
   color: ${props => props.theme.colors.text};
-  backdrop-filter: blur(10px);
-  cursor: pointer;
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  
-  &:hover {
-    background: ${props => props.theme.colors.background};
-  }
+  flex-direction: column;
+`;
+
+const MainContent = styled.div`
+  flex: 1;
+  position: relative;
 `;
 
 export const Teams: React.FC = () => {
+  const navigate = useNavigate();
+  const { data: userData } = useQuery(ME);
+
   return (
-    <>
-      <VirtualOffice />
-    </>
+    <Container>
+      <Header 
+        userName={userData?.me?.name}
+        userEmail={userData?.me?.email}
+        onProfileEdit={() => {}}
+        onLogout={() => navigate('/')}
+        showBackButton
+        onBack={() => navigate('/')}
+        screenName="Teams"
+      />
+      <MainContent>
+        <VirtualOffice />
+      </MainContent>
+    </Container>
   );
 }; 
