@@ -143,10 +143,10 @@ export const Header: React.FC<HeaderProps> = ({
         <UserInfo>
           {userName} ({userEmail})
         </UserInfo>
-        <ProfileButton onClick={onProfileEdit}>
+        {/* <ProfileButton onClick={onProfileEdit}>
           <Edit2 size={18} />
           Edit Profile
-        </ProfileButton>
+        </ProfileButton> */}
         <Button 
           variant="secondary" 
           onClick={onLogout}

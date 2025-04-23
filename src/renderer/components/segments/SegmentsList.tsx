@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Session } from '../../../graphql/types';
+import { localNotificationService } from '../../../services/LocalNotificationService';
 
 interface SegmentsListProps {
   segments: Session['segments'];
@@ -166,13 +167,24 @@ export const SegmentsList: React.FC<SegmentsListProps> = ({ segments }) => {
   const [currentTime, setCurrentTime] = useState(Date.now());
   const workSegments = segments.filter(s => s.type === 'WORK');
   const breakSegments = segments.filter(s => s.type === 'BREAK');
+  const [notifiedSegments] = useState(new Set<string>());
 
   // Update current time every second for active segment
   useEffect(() => {
-    const hasActiveSegment = segments.some(s => !s.endTime);
-    if (!hasActiveSegment) return;
+    const activeSegment = segments.find(s => !s.endTime);
+    
+    if (!activeSegment) return;
 
     const interval = setInterval(() => {
+
+      if (activeSegment.type === "BREAK") {
+        const duration = calculateSegmentDuration(activeSegment, Date.now());
+        if (duration >= 900 && !notifiedSegments.has(activeSegment.id)) { // 10 minutes = 600 seconds
+          localNotificationService.showInfo('Your break has exceeded 15 minutes', 'Break Duration Alert', false);
+          notifiedSegments.add(activeSegment.id);
+        }
+      }
+    
       setCurrentTime(Date.now());
     }, 1000);
 

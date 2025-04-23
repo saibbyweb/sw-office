@@ -114,6 +114,9 @@ const createWindow = () => {
       nodeIntegration: true,
       contextIsolation: false,
       // webSecurity: true,
+      enableWebSQL: false,
+      webgl: true,
+      sandbox: false
     },
     backgroundColor: "#ffffff",
     icon: path.join(__dirname, "../../build/icons", process.platform === "darwin" ? "icon.icns" : process.platform === "win32" ? "icon.ico" : "icon.png"),

@@ -14,6 +14,7 @@ import { Teams } from './routes/Teams';
 import { UpdateInfo } from './components/common/UpdateInfo';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import { notificationService } from '../services/NotificationService';
+import { localNotificationService } from '../services/LocalNotificationService';
 import { CallProvider } from '../components/CallProvider';
 import { Toaster } from 'react-hot-toast';
 import { ConnectedUsersProvider } from '../contexts/ConnectedUsersContext';
@@ -50,6 +51,29 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+
+  useEffect(() => {
+    // Request notification permissions when app starts
+    const requestNotificationPermission = async () => {
+      try {
+        const isGranted = await localNotificationService.requestPermission();
+        if (isGranted) {
+          console.log('[App] Notification permission granted');
+          // Show a welcome notification
+          localNotificationService.showInfo(
+            'You will now receive notifications from SW Office',
+            'Notifications Enabled'
+          );
+        } else {
+          console.log('[App] Notification permission denied');
+        }
+      } catch (error) {
+        console.error('[App] Error requesting notification permission:', error);
+      }
+    };
+
+    requestNotificationPermission();
+  }, []); // Run once when app starts
 
   useEffect(() => {
     // Check for authentication token
