@@ -35,4 +35,10 @@ export class BreakResolver {
   getBreakNotificationDuration(): number {
     return this.breakService.getBreakNotificationDuration();
   }
+
+  @Query(() => Number)
+  @UseGuards(JwtGuard)
+  getWorkLogNotificationDuration(): number {
+    return this.breakService.getWorkLogNotificationDuration();
+  }
 }

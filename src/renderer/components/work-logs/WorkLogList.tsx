@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useQuery, useMutation } from '@apollo/client';
 import { SESSION_WORK_LOGS, DELETE_WORK_LOG } from '../../../graphql/queries';
@@ -6,6 +6,14 @@ import { SessionWorkLogsData, SessionWorkLogsVariables, WorkLog } from '../../..
 import { AddWorkLogModal } from '../modals/AddWorkLogModal';
 import { ConfirmDeleteModal } from '../modals/ConfirmDeleteModal';
 import { Button } from '../common';
+import { localNotificationService } from '../../../services/LocalNotificationService';
+import { gql } from '@apollo/client';
+
+const GET_WORK_LOG_NOTIFICATION_DURATION = gql`
+  query GetWorkLogNotificationDuration {
+    getWorkLogNotificationDuration
+  }
+`;
 
 interface WorkLogListProps {
   sessionId: string;
@@ -142,6 +150,11 @@ export const WorkLogList: React.FC<WorkLogListProps> = ({ sessionId }) => {
   const [editingWorkLog, setEditingWorkLog] = useState<WorkLog | null>(null);
   const [deletingWorkLog, setDeletingWorkLog] = useState<WorkLog | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [lastNotificationTime, setLastNotificationTime] = useState<number>(Date.now());
+  const [sessionStartTime] = useState<number>(Date.now()); // Track when the session component mounted
+
+  const { data: notificationData } = useQuery(GET_WORK_LOG_NOTIFICATION_DURATION);
+  const notificationThreshold = notificationData?.getWorkLogNotificationDuration ?? 1800; // Default to 30 minutes
 
   const { data, loading, error } = useQuery<SessionWorkLogsData, SessionWorkLogsVariables>(
     SESSION_WORK_LOGS,
@@ -150,6 +163,43 @@ export const WorkLogList: React.FC<WorkLogListProps> = ({ sessionId }) => {
       skip: !sessionId
     }
   );
+
+  // Check for work log inactivity
+  useEffect(() => {
+    if (!sessionId) return;
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const lastWorkLog = data?.sessionWorkLogs?.[0]; // Assuming sorted by latest first
+      
+      // If there's a work log, use its timestamp, otherwise use session start time
+      const timeSinceLastActivity = lastWorkLog 
+        ? now - new Date(lastWorkLog.createdAt).getTime() 
+        : now - sessionStartTime;
+
+      // Only show notification if:
+      // 1. Time since last work log exceeds threshold
+      // 2. Time since last notification exceeds threshold (to avoid spam)
+      if (
+        timeSinceLastActivity >= notificationThreshold * 1000 && 
+        now - lastNotificationTime >= notificationThreshold * 1000
+      ) {
+        const minutes = Math.floor(notificationThreshold / 60);
+        const message = lastWorkLog
+          ? `You haven't added a work log in the last ${minutes} minutes`
+          : `You haven't added any work logs in the last ${minutes} minutes`;
+          
+        localNotificationService.showInfo(
+          message,
+          'Work Log Reminder',
+          false
+        );
+        setLastNotificationTime(now);
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, [sessionId, data?.sessionWorkLogs, notificationThreshold, lastNotificationTime, sessionStartTime]);
 
   const [deleteWorkLogMutation] = useMutation(DELETE_WORK_LOG, {
     onCompleted: () => {
@@ -220,59 +270,59 @@ export const WorkLogList: React.FC<WorkLogListProps> = ({ sessionId }) => {
     return <EmptyState>Error loading work logs: {error.message}</EmptyState>;
   }
 
-  if (!data?.sessionWorkLogs?.length) {
-    return <EmptyState>No work logs added yet</EmptyState>;
-  }
-
   return (
     <>
       <Container>
-        {data.sessionWorkLogs.map((log: WorkLog) => (
-          <WorkLogItem key={log.id}>
-            <WorkLogHeader>
-              <ProjectName>{log.project.name}</ProjectName>
-              <WorkLogActions>
-                <ActionButton
-                  variant="secondary"
-                  size="small"
-                  onClick={() => handleEdit(log)}
-                >
-                  Edit
-                </ActionButton>
-                <ActionButton
-                  data-variant="delete"
-                  size="small"
-                  onClick={() => handleDelete(log)}
-                >
-                  🗑️
-                </ActionButton>
-                <Timestamp>{formatDate(log.createdAt)}</Timestamp>
-              </WorkLogActions>
-            </WorkLogHeader>
-            <Content>{log.content}</Content>
-            {log.links.length > 0 && (
-              <LinksList>
-                {log.links.filter(link => link.trim()).map((link, index) => {
-                  const validUrl = isValidUrl(link);
-                  return validUrl ? (
-                    <Link 
-                      key={index} 
-                      href={link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {getDisplayUrl(link)}
-                    </Link>
-                  ) : (
-                    <span key={index} style={{ fontSize: '0.875rem', color: '#666' }}>
-                      {getDisplayUrl(link)}
-                    </span>
-                  );
-                })}
-              </LinksList>
-            )}
-          </WorkLogItem>
-        ))}
+        {data?.sessionWorkLogs?.length ? (
+          data.sessionWorkLogs.map((log: WorkLog) => (
+            <WorkLogItem key={log.id}>
+              <WorkLogHeader>
+                <ProjectName>{log.project.name}</ProjectName>
+                <WorkLogActions>
+                  <ActionButton
+                    variant="secondary"
+                    size="small"
+                    onClick={() => handleEdit(log)}
+                  >
+                    Edit
+                  </ActionButton>
+                  <ActionButton
+                    data-variant="delete"
+                    size="small"
+                    onClick={() => handleDelete(log)}
+                  >
+                    🗑️
+                  </ActionButton>
+                  <Timestamp>{formatDate(log.createdAt)}</Timestamp>
+                </WorkLogActions>
+              </WorkLogHeader>
+              <Content>{log.content}</Content>
+              {log.links.length > 0 && (
+                <LinksList>
+                  {log.links.filter(link => link.trim()).map((link, index) => {
+                    const validUrl = isValidUrl(link);
+                    return validUrl ? (
+                      <Link 
+                        key={index} 
+                        href={link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {getDisplayUrl(link)}
+                      </Link>
+                    ) : (
+                      <span key={index} style={{ fontSize: '0.875rem', color: '#666' }}>
+                        {getDisplayUrl(link)}
+                      </span>
+                    );
+                  })}
+                </LinksList>
+              )}
+            </WorkLogItem>
+          ))
+        ) : (
+          <EmptyState>No work logs added yet</EmptyState>
+        )}
       </Container>
 
       <AddWorkLogModal

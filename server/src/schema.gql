@@ -177,6 +177,7 @@ type Query {
   getUserMeetingHistory(endDate: String!, startDate: String!, userId: String!): [MeetingHistoryItem!]!
   getUserMeetings(userId: String!): [OrganizationMeeting!]!
   getUsers: [User!]!
+  getWorkLogNotificationDuration: Float!
   hello: String!
   me: User!
   projects: [Project!]!

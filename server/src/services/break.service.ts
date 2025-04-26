@@ -12,6 +12,11 @@ export class BreakService {
     return 10;
   }
 
+  getWorkLogNotificationDuration(): number {
+    // Return 1800 seconds (30 minutes) as the default notification threshold for work logs
+    return 10;
+  }
+
   async startBreak(userId: string, input: StartBreakInput): Promise<Break> {
     const now = new Date();
     console.log('Starting break with input:', { userId, input, now });

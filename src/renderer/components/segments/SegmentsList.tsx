@@ -178,7 +178,7 @@ export const SegmentsList: React.FC<SegmentsListProps> = ({ segments }) => {
   const [notifiedSegments] = useState(new Set<string>());
   
   const { data: breakNotificationData } = useQuery(GET_BREAK_NOTIFICATION_DURATION);
-  const notificationThreshold = breakNotificationData?.getBreakNotificationDuration ?? 16; // Default to 15 minutes if query hasn't loaded
+  const notificationThreshold = breakNotificationData?.getBreakNotificationDuration ?? 900; // Default to 15 minutes if query hasn't loaded
 
   // Update current time every second for active segment
   useEffect(() => {
