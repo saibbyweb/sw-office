@@ -185,15 +185,12 @@ export const WorkLogList: React.FC<WorkLogListProps> = ({ sessionId }) => {
         now - lastNotificationTime >= notificationThreshold * 1000
       ) {
         const minutes = Math.floor(notificationThreshold / 60);
-        const message = lastWorkLog
-          ? `You haven't added a work log in the last ${minutes} minutes`
-          : `You haven't added any work logs in the last ${minutes} minutes`;
-          
-        localNotificationService.showInfo(
-          message,
-          'Work Log Reminder',
-          false
-        );
+        localNotificationService.showInfo({
+          message: `You haven't added ${lastWorkLog ? 'a work log' : 'any work logs'} in the last ${minutes} minutes`,
+          title: 'Work Log Reminder',
+          silent: false,
+          bounceDock: true
+        });
         setLastNotificationTime(now);
       }
     }, 60000); // Check every minute

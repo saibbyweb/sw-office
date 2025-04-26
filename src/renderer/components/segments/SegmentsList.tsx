@@ -190,11 +190,12 @@ export const SegmentsList: React.FC<SegmentsListProps> = ({ segments }) => {
       if (activeSegment.type === "BREAK") {
         const duration = calculateSegmentDuration(activeSegment, Date.now());
         if (duration >= notificationThreshold && !notifiedSegments.has(activeSegment.id)) {
-          localNotificationService.showInfo(
-            `Your break has exceeded ${Math.floor(notificationThreshold / 60)} minutes`, 
-            'Break Duration Alert', 
-            false
-          );
+          localNotificationService.showInfo({
+            message: `Your break has exceeded ${Math.floor(notificationThreshold / 60)} minutes`,
+            title: 'Break Duration Alert',
+            silent: false,
+            bounceDock: true
+          });
           notifiedSegments.add(activeSegment.id);
         }
       }

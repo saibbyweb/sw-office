@@ -6,6 +6,14 @@ interface NotificationOptions {
   icon?: string;
   silent?: boolean;
   timeoutType?: 'default' | 'never';
+  bounceDock?: boolean;
+}
+
+interface ShowInfoOptions {
+  message: string;
+  title?: string;
+  silent?: boolean;
+  bounceDock?: boolean;
 }
 
 class LocalNotificationService {
@@ -41,6 +49,11 @@ class LocalNotificationService {
       ipcRenderer.send('focus-window');
     };
 
+    // Bounce dock icon if requested and window is not focused
+    if (options.bounceDock) {
+      ipcRenderer.send('bounce-dock');
+    }
+
     return notification;
   }
 
@@ -75,7 +88,8 @@ class LocalNotificationService {
     return this.show({
       title,
       body: message,
-      silent: false
+      silent: false,
+      bounceDock: true
     });
   }
 
@@ -83,15 +97,24 @@ class LocalNotificationService {
     return this.show({
       title,
       body: message,
-      silent: false
+      silent: false,
+      bounceDock: true
     });
   }
 
-  public showInfo(message: string, title: string = 'Information', silent: boolean = true) {
+  public showInfo(options: ShowInfoOptions) {
+    const {
+      message,
+      title = 'Information',
+      silent = true,
+      bounceDock = true
+    } = options;
+
     return this.show({
       title,
       body: message,
-      silent
+      silent,
+      bounceDock
     });
   }
 }

@@ -83,11 +83,13 @@ const registerIpcHandlers = () => {
       // Bring window to front and focus it
       mainWindow.show();
       mainWindow.focus();
+    }
+  });
 
-      // On macOS, bounce the dock icon until the app is focused
-      if (process.platform === "darwin") {
-        app.dock.bounce("critical");
-      }
+  // Add dock bounce handler
+  ipcMain.on("bounce-dock", () => {
+    if (process.platform === "darwin") {
+      app.dock.bounce("critical");
     }
   });
 
@@ -116,7 +118,7 @@ const createWindow = () => {
       // webSecurity: true,
       enableWebSQL: false,
       webgl: true,
-      sandbox: false
+      sandbox: false,
     },
     backgroundColor: "#ffffff",
     icon: path.join(__dirname, "../../build/icons", process.platform === "darwin" ? "icon.icns" : process.platform === "win32" ? "icon.ico" : "icon.png"),

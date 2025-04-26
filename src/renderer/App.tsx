@@ -60,10 +60,13 @@ const App: React.FC = () => {
         if (isGranted) {
           console.log('[App] Notification permission granted');
           // Show a welcome notification
-          localNotificationService.showInfo(
-            'You will now receive notifications from SW Office',
-            'Notifications Enabled'
-          );
+          localNotificationService.showInfo({
+            message: 'You will now receive notifications from SW Office',
+            title: 'Notifications Enabled',
+            silent: true,
+            bounceDock: false
+          });
+        
         } else {
           console.log('[App] Notification permission denied');
         }
