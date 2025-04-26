@@ -1,4 +1,4 @@
-import { Resolver, Mutation, Args, ID, Context } from '@nestjs/graphql';
+import { Resolver, Mutation, Args, ID, Context, Query } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { JwtGuard } from '../auth/guards/jwt.guard';
 import { Break } from '../generated-nestjs-typegraphql';
@@ -28,5 +28,11 @@ export class BreakResolver {
   ): Promise<Break> {
     const userId = context.req.user.id;
     return this.breakService.endBreak(userId, breakId);
+  }
+
+  @Query(() => Number)
+  @UseGuards(JwtGuard)
+  getBreakNotificationDuration(): number {
+    return this.breakService.getBreakNotificationDuration();
   }
 }

@@ -7,6 +7,11 @@ import { StartBreakInput } from '../types/break.types';
 export class BreakService {
   constructor(private readonly prisma: PrismaService) {}
 
+  getBreakNotificationDuration(): number {
+    // Return 900 seconds (15 minutes) as the default notification threshold
+    return 10;
+  }
+
   async startBreak(userId: string, input: StartBreakInput): Promise<Break> {
     const now = new Date();
     console.log('Starting break with input:', { userId, input, now });

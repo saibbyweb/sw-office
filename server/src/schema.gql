@@ -173,6 +173,7 @@ type Query {
   debugData: String!
   getAllUsers: [TeamsUser!]!
   getAllUsersWithPresence: [TeamsUserWithPresence!]!
+  getBreakNotificationDuration: Float!
   getUserMeetingHistory(endDate: String!, startDate: String!, userId: String!): [MeetingHistoryItem!]!
   getUserMeetings(userId: String!): [OrganizationMeeting!]!
   getUsers: [User!]!

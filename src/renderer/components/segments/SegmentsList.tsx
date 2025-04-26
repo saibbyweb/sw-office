@@ -2,6 +2,14 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Session } from '../../../graphql/types';
 import { localNotificationService } from '../../../services/LocalNotificationService';
+import { useQuery } from '@apollo/client';
+import { gql } from '@apollo/client';
+
+const GET_BREAK_NOTIFICATION_DURATION = gql`
+  query GetBreakNotificationDuration {
+    getBreakNotificationDuration
+  }
+`;
 
 interface SegmentsListProps {
   segments: Session['segments'];
@@ -168,6 +176,9 @@ export const SegmentsList: React.FC<SegmentsListProps> = ({ segments }) => {
   const workSegments = segments.filter(s => s.type === 'WORK');
   const breakSegments = segments.filter(s => s.type === 'BREAK');
   const [notifiedSegments] = useState(new Set<string>());
+  
+  const { data: breakNotificationData } = useQuery(GET_BREAK_NOTIFICATION_DURATION);
+  const notificationThreshold = breakNotificationData?.getBreakNotificationDuration ?? 16; // Default to 15 minutes if query hasn't loaded
 
   // Update current time every second for active segment
   useEffect(() => {
@@ -176,11 +187,14 @@ export const SegmentsList: React.FC<SegmentsListProps> = ({ segments }) => {
     if (!activeSegment) return;
 
     const interval = setInterval(() => {
-
       if (activeSegment.type === "BREAK") {
         const duration = calculateSegmentDuration(activeSegment, Date.now());
-        if (duration >= 900 && !notifiedSegments.has(activeSegment.id)) { // 10 minutes = 600 seconds
-          localNotificationService.showInfo('Your break has exceeded 15 minutes', 'Break Duration Alert', false);
+        if (duration >= notificationThreshold && !notifiedSegments.has(activeSegment.id)) {
+          localNotificationService.showInfo(
+            `Your break has exceeded ${Math.floor(notificationThreshold / 60)} minutes`, 
+            'Break Duration Alert', 
+            false
+          );
           notifiedSegments.add(activeSegment.id);
         }
       }
@@ -189,7 +203,7 @@ export const SegmentsList: React.FC<SegmentsListProps> = ({ segments }) => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [segments]);
+  }, [segments, notificationThreshold]);
 
   const calculateTotalDuration = (segments: Session['segments']) => {
     return segments.reduce((total, segment) => {
