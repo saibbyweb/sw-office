@@ -1,10 +1,31 @@
-import { Resolver, Mutation, Args, ID, Context, Query } from '@nestjs/graphql';
+import {
+  Resolver,
+  Mutation,
+  Args,
+  ID,
+  Context,
+  Query,
+  ObjectType,
+  Field,
+} from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { JwtGuard } from '../auth/guards/jwt.guard';
 import { Break } from '../generated-nestjs-typegraphql';
 import { StartBreakInput } from '../types/break.types';
 import { BreakService } from '../services/break.service';
 import { GraphQLContext } from 'src/users/users.resolver';
+
+@ObjectType()
+export class NotificationConfig {
+  @Field()
+  durationInSeconds: number;
+
+  @Field()
+  title: string;
+
+  @Field()
+  message: string;
+}
 
 @Resolver(() => Break)
 export class BreakResolver {
@@ -30,15 +51,15 @@ export class BreakResolver {
     return this.breakService.endBreak(userId, breakId);
   }
 
-  @Query(() => Number)
+  @Query(() => NotificationConfig)
   @UseGuards(JwtGuard)
-  getBreakNotificationDuration(): number {
-    return this.breakService.getBreakNotificationDuration();
+  getBreakNotificationConfig(): NotificationConfig {
+    return this.breakService.getBreakNotificationConfig();
   }
 
-  @Query(() => Number)
+  @Query(() => NotificationConfig)
   @UseGuards(JwtGuard)
-  getWorkLogNotificationDuration(): number {
-    return this.breakService.getWorkLogNotificationDuration();
+  getWorkLogNotificationConfig(): NotificationConfig {
+    return this.breakService.getWorkLogNotificationConfig();
   }
 }

@@ -2,19 +2,27 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { Break, SegmentType } from '../generated-nestjs-typegraphql';
 import { StartBreakInput } from '../types/break.types';
+import { NotificationConfig } from '../resolvers/break.resolver';
 
 @Injectable()
 export class BreakService {
   constructor(private readonly prisma: PrismaService) {}
 
-  getBreakNotificationDuration(): number {
-    // Return 900 seconds (15 minutes) as the default notification threshold
-    return 10;
+  getBreakNotificationConfig(): NotificationConfig {
+    return {
+      durationInSeconds: 120, // 15 minutes
+      title: 'Break Duration Alert',
+      message: 'Your break has exceeded {duration} minutes',
+    };
   }
 
-  getWorkLogNotificationDuration(): number {
-    // Return 1800 seconds (30 minutes) as the default notification threshold for work logs
-    return 10;
+  getWorkLogNotificationConfig(): NotificationConfig {
+    return {
+      durationInSeconds: 30000, // 30 minutes
+      title: 'Work Log Reminder',
+      message:
+        "You haven't added {hasLogs, select, true {a work log} false {any work logs}} in the last {duration} minutes",
+    };
   }
 
   async startBreak(userId: string, input: StartBreakInput): Promise<Break> {

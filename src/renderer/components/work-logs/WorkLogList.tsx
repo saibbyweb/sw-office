@@ -9,9 +9,13 @@ import { Button } from '../common';
 import { localNotificationService } from '../../../services/LocalNotificationService';
 import { gql } from '@apollo/client';
 
-const GET_WORK_LOG_NOTIFICATION_DURATION = gql`
-  query GetWorkLogNotificationDuration {
-    getWorkLogNotificationDuration
+const GET_WORK_LOG_NOTIFICATION_CONFIG = gql`
+  query GetWorkLogNotificationConfig {
+    getWorkLogNotificationConfig {
+      durationInSeconds
+      title
+      message
+    }
   }
 `;
 
@@ -151,10 +155,14 @@ export const WorkLogList: React.FC<WorkLogListProps> = ({ sessionId }) => {
   const [deletingWorkLog, setDeletingWorkLog] = useState<WorkLog | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [lastNotificationTime, setLastNotificationTime] = useState<number>(Date.now());
-  const [sessionStartTime] = useState<number>(Date.now()); // Track when the session component mounted
+  const [sessionStartTime] = useState<number>(Date.now());
 
-  const { data: notificationData } = useQuery(GET_WORK_LOG_NOTIFICATION_DURATION);
-  const notificationThreshold = notificationData?.getWorkLogNotificationDuration ?? 1800; // Default to 30 minutes
+  const { data: notificationData } = useQuery(GET_WORK_LOG_NOTIFICATION_CONFIG);
+  const notificationConfig = notificationData?.getWorkLogNotificationConfig ?? {
+    durationInSeconds: 1800,
+    title: 'Work Log Reminder',
+    message: 'You haven\'t added {hasLogs, select, true {a work log} false {any work logs}} in the last {duration} minutes'
+  };
 
   const { data, loading, error } = useQuery<SessionWorkLogsData, SessionWorkLogsVariables>(
     SESSION_WORK_LOGS,
@@ -164,11 +172,10 @@ export const WorkLogList: React.FC<WorkLogListProps> = ({ sessionId }) => {
     }
   );
 
-  // Check for work log inactivity
   useEffect(() => {
     if (!sessionId) return;
 
-    const interval = setInterval(() => {
+    const checkWorkLogInactivity = () => {
       const now = Date.now();
       const lastWorkLog = data?.sessionWorkLogs?.[0]; // Assuming sorted by latest first
       
@@ -181,22 +188,33 @@ export const WorkLogList: React.FC<WorkLogListProps> = ({ sessionId }) => {
       // 1. Time since last work log exceeds threshold
       // 2. Time since last notification exceeds threshold (to avoid spam)
       if (
-        timeSinceLastActivity >= notificationThreshold * 1000 && 
-        now - lastNotificationTime >= notificationThreshold * 1000
+        timeSinceLastActivity >= notificationConfig.durationInSeconds * 1000 && 
+        now - lastNotificationTime >= notificationConfig.durationInSeconds * 1000
       ) {
-        const minutes = Math.floor(notificationThreshold / 60);
+        const minutes = Math.floor(timeSinceLastActivity / 1000 / 60);
+        const message = notificationConfig.message
+          .replace('{duration}', String(minutes))
+          .replace('{hasLogs, select, true {a work log} false {any work logs}}', 
+            lastWorkLog ? 'a work log' : 'any work logs');
+          
         localNotificationService.showInfo({
-          message: `You haven't added ${lastWorkLog ? 'a work log' : 'any work logs'} in the last ${minutes} minutes`,
-          title: 'Work Log Reminder',
+          message,
+          title: notificationConfig.title,
           silent: false,
           bounceDock: true
         });
         setLastNotificationTime(now);
       }
-    }, 60000); // Check every minute
+    };
+
+    // Run check immediately
+    checkWorkLogInactivity();
+
+    // Then set up interval 
+    const interval = setInterval(checkWorkLogInactivity, 2 * 60 * 60 * 1000);
 
     return () => clearInterval(interval);
-  }, [sessionId, data?.sessionWorkLogs, notificationThreshold, lastNotificationTime, sessionStartTime]);
+  }, [sessionId, data?.sessionWorkLogs, notificationConfig, lastNotificationTime, sessionStartTime]);
 
   const [deleteWorkLogMutation] = useMutation(DELETE_WORK_LOG, {
     onCompleted: () => {

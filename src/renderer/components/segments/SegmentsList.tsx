@@ -5,9 +5,13 @@ import { localNotificationService } from '../../../services/LocalNotificationSer
 import { useQuery } from '@apollo/client';
 import { gql } from '@apollo/client';
 
-const GET_BREAK_NOTIFICATION_DURATION = gql`
-  query GetBreakNotificationDuration {
-    getBreakNotificationDuration
+const GET_BREAK_NOTIFICATION_CONFIG = gql`
+  query GetBreakNotificationConfig {
+    getBreakNotificationConfig {
+      durationInSeconds
+      title
+      message
+    }
   }
 `;
 
@@ -177,34 +181,44 @@ export const SegmentsList: React.FC<SegmentsListProps> = ({ segments }) => {
   const breakSegments = segments.filter(s => s.type === 'BREAK');
   const [notifiedSegments] = useState(new Set<string>());
   
-  const { data: breakNotificationData } = useQuery(GET_BREAK_NOTIFICATION_DURATION);
-  const notificationThreshold = breakNotificationData?.getBreakNotificationDuration ?? 900; // Default to 15 minutes if query hasn't loaded
+  const { data: notificationData } = useQuery(GET_BREAK_NOTIFICATION_CONFIG);
+  const notificationConfig = notificationData?.getBreakNotificationConfig ?? {
+    durationInSeconds: 900,
+    title: 'Break Duration Alert',
+    message: 'Your break has exceeded {duration} minutes'
+  };
 
-  // Update current time every second for active segment
   useEffect(() => {
     const activeSegment = segments.find(s => !s.endTime);
     
     if (!activeSegment) return;
 
-    const interval = setInterval(() => {
+    const checkBreakDuration = () => {
       if (activeSegment.type === "BREAK") {
         const duration = calculateSegmentDuration(activeSegment, Date.now());
-        if (duration >= notificationThreshold && !notifiedSegments.has(activeSegment.id)) {
+        if (duration >= notificationConfig.durationInSeconds) {
+          const minutes = Math.floor(duration / 60);
+          const message = notificationConfig.message.replace('{duration}', String(minutes));
+          
           localNotificationService.showInfo({
-            message: `Your break has exceeded ${Math.floor(notificationThreshold / 60)} minutes`,
-            title: 'Break Duration Alert',
+            message,
+            title: notificationConfig.title,
             silent: false,
             bounceDock: true
           });
-          notifiedSegments.add(activeSegment.id);
         }
       }
-    
       setCurrentTime(Date.now());
-    }, 1000);
+    };
+
+    // Run check immediately
+    checkBreakDuration();
+    
+    // Then set up interval
+    const interval = setInterval(checkBreakDuration, 15 * 60 * 1000);
 
     return () => clearInterval(interval);
-  }, [segments, notificationThreshold]);
+  }, [segments, notificationConfig]);
 
   const calculateTotalDuration = (segments: Session['segments']) => {
     return segments.reduce((total, segment) => {

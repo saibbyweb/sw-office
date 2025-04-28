@@ -126,6 +126,12 @@ type Mutation {
   updateWorkLog(input: UpdateWorkLogInput!): WorkLog!
 }
 
+type NotificationConfig {
+  durationInSeconds: Float!
+  message: String!
+  title: String!
+}
+
 type OnlineMeeting {
   endDateTime: String!
   id: ID!
@@ -173,11 +179,11 @@ type Query {
   debugData: String!
   getAllUsers: [TeamsUser!]!
   getAllUsersWithPresence: [TeamsUserWithPresence!]!
-  getBreakNotificationDuration: Float!
+  getBreakNotificationConfig: NotificationConfig!
   getUserMeetingHistory(endDate: String!, startDate: String!, userId: String!): [MeetingHistoryItem!]!
   getUserMeetings(userId: String!): [OrganizationMeeting!]!
   getUsers: [User!]!
-  getWorkLogNotificationDuration: Float!
+  getWorkLogNotificationConfig: NotificationConfig!
   hello: String!
   me: User!
   projects: [Project!]!
