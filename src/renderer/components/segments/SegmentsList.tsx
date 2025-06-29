@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import styled from 'styled-components';
 import { Session } from '../../../graphql/types';
 import { localNotificationService } from '../../../services/LocalNotificationService';
@@ -182,11 +182,11 @@ export const SegmentsList: React.FC<SegmentsListProps> = ({ segments }) => {
   const [notifiedSegments] = useState(new Set<string>());
   
   const { data: notificationData } = useQuery(GET_BREAK_NOTIFICATION_CONFIG);
-  const notificationConfig = notificationData?.getBreakNotificationConfig ?? {
+  const notificationConfig = useMemo(() => notificationData?.getBreakNotificationConfig ?? {
     durationInSeconds: 900,
     title: 'Break Duration Alert',
     message: 'Your break has exceeded {duration} minutes'
-  };
+  }, [notificationData]);
 
   useEffect(() => {
     const activeSegment = segments.find(s => !s.endTime);
@@ -196,6 +196,7 @@ export const SegmentsList: React.FC<SegmentsListProps> = ({ segments }) => {
     const checkBreakDuration = () => {
       if (activeSegment.type === "BREAK") {
         const duration = calculateSegmentDuration(activeSegment, Date.now());
+        console.log('duration', duration, notificationConfig.durationInSeconds);
         if (duration >= notificationConfig.durationInSeconds) {
           const minutes = Math.floor(duration / 60);
           const message = notificationConfig.message.replace('{duration}', String(minutes));
@@ -208,16 +209,23 @@ export const SegmentsList: React.FC<SegmentsListProps> = ({ segments }) => {
           });
         }
       }
-      setCurrentTime(Date.now());
     };
 
     // Run check immediately
     checkBreakDuration();
     
-    // Then set up interval
-    const interval = setInterval(checkBreakDuration, 15 * 60 * 1000);
+    // Then set up interval for break duration check
+    const breakCheckInterval = setInterval(checkBreakDuration, 15 * 60 * 1000);
 
-    return () => clearInterval(interval);
+    // Set up interval for updating time display
+    const timeUpdateInterval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+
+    return () => {
+      clearInterval(breakCheckInterval);
+      clearInterval(timeUpdateInterval);
+    };
   }, [segments, notificationConfig]);
 
   const calculateTotalDuration = (segments: Session['segments']) => {

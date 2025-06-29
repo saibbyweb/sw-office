@@ -10,7 +10,7 @@ export class BreakService {
 
   getBreakNotificationConfig(): NotificationConfig {
     return {
-      durationInSeconds: 120, // 15 minutes
+      durationInSeconds: 20, // 15 minutes
       title: 'Break Duration Alert',
       message: 'Your break has exceeded {duration} minutes',
     };

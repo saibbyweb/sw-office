@@ -267,6 +267,30 @@ const ConnectedUsersCount = styled.div<{ hasConnectedUsers: boolean }>`
   color: ${props => props.hasConnectedUsers ? '#7AFFB2' : '#FFFFFF'};
 `;
 
+const ACControlButton = styled.button<{ isOn: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 15px;
+  margin: 20px 15px 15px 15px; // Added top and side margins
+  background-color: ${props => props.isOn 
+    ? 'rgba(59, 130, 246, 0.2)' 
+    : 'rgba(255, 255, 255, 0.1)'};
+  border: 1px solid ${props => props.isOn ? '#3B82F6' : 'rgba(255, 255, 255, 0.2)'};
+  border-radius: 8px;
+  font-size: 14px;
+  color: ${props => props.isOn ? '#60A5FA' : '#FFFFFF'};
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: calc(100% - 30px); // Adjust width to account for margins
+
+  &:hover {
+    background-color: ${props => props.isOn 
+      ? 'rgba(59, 130, 246, 0.3)' 
+      : 'rgba(255, 255, 255, 0.15)'};
+  }
+`;
+
 interface Break {
   id: string;
   endTime: string | null;
@@ -296,7 +320,7 @@ interface Chair {
 // Add texture loader before materials
 const textureLoader = new TextureLoader();
 
-// Materials for the chair
+// Enhanced materials for the chair
 const chairMaterials = {
   metal: new THREE.MeshPhongMaterial({
     color: 0xCCCCCC,
@@ -348,7 +372,7 @@ const chairMaterials = {
   })
 };
 
-// Table materials
+// Enhanced table materials with better textures
 const tableMaterials = {
   wood: new THREE.MeshPhongMaterial({
     map: textureLoader.load('/textures/floor.jpg', (texture) => {
@@ -358,6 +382,11 @@ const tableMaterials = {
     }),
     shininess: 40,
     specular: 0x444444,
+    bumpMap: textureLoader.load('/textures/floor.jpg', (texture) => {
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(0.5, 0.5);
+    }),
+    bumpScale: 0.02,
   }),
   legs: new THREE.MeshPhongMaterial({
     color: 0x1a1a1a,
@@ -366,26 +395,46 @@ const tableMaterials = {
   })
 };
 
-// Room materials
+// Enhanced room materials with better textures
 const roomMaterials = {
   floorLight: new THREE.MeshPhongMaterial({
-    color: 0x64748b,
-    shininess: 30,
-    specular: 0x222222,
+    color: 0xE8E8E8, // Light silverish color
+    shininess: 15,
+    specular: 0x111111,
+    map: textureLoader.load('/textures/floor_silver.jpg', (texture) => {
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(2, 2); // More repeats for carpet pattern
+      texture.colorSpace = THREE.SRGBColorSpace;
+    }),
+    bumpMap: textureLoader.load('/textures/floor_silver.jpg', (texture) => {
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(2, 2);
+    }),
+    bumpScale: 0.02, // Increased for more texture
   }),
   floorDark: new THREE.MeshPhongMaterial({
-    color: 0x475569, // Slightly darker shade for contrast
-    shininess: 30,
-    specular: 0x222222,
+    color: 0xD0D0D0, // Slightly darker silverish
+    shininess: 15,
+    specular: 0x111111,
+    map: textureLoader.load('/textures/dark_floor.jpg', (texture) => {
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(2, 2);
+      texture.colorSpace = THREE.SRGBColorSpace;
+    }),
+    bumpMap: textureLoader.load('/textures/dark_floor.jpg', (texture) => {
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(2, 2);
+    }),
+    bumpScale: 0.02,
   }),
   floorSide: new THREE.MeshPhongMaterial({
-    color: 0x475569, // Matching shade for sides
+    color: 0xC0C0C0, // Medium silver for sides
     shininess: 20,
     specular: 0x111111,
   })
 };
 
-// Laptop materials
+// Enhanced laptop materials
 const decorMaterials = {
   laptop: {
     body: new THREE.MeshPhongMaterial({
@@ -400,9 +449,32 @@ const decorMaterials = {
       emissiveIntensity: 0.15,
     }),
     keyboard: new THREE.MeshPhongMaterial({
-    color: 0x34495e,
+      color: 0x34495e,
       shininess: 60,
       specular: 0x666666,
+    })
+  },
+  // Air conditioner materials
+  airConditioner: {
+    body: new THREE.MeshPhongMaterial({
+      color: 0xffffff,
+      shininess: 80,
+      specular: 0x666666,
+    }),
+    vents: new THREE.MeshPhongMaterial({
+      color: 0x333333,
+      shininess: 20,
+    }),
+    display: new THREE.MeshPhongMaterial({
+      color: 0x1a1a1a,
+      shininess: 100,
+      emissive: 0x00ff00,
+      emissiveIntensity: 0.3,
+    }),
+    trim: new THREE.MeshPhongMaterial({
+      color: 0xcccccc,
+      shininess: 60,
+      specular: 0x444444,
     })
   }
 };
@@ -481,39 +553,117 @@ const createLaptop = (isOpen: boolean) => {
   return laptopGroup;
 };
 
-// Create room function
+// Create air conditioner function
+const createAirConditioner = () => {
+  const acGroup = new THREE.Group();
+
+  // Main body
+  const bodyGeometry = new THREE.BoxGeometry(8, 2, 1.5);
+  const body = new THREE.Mesh(bodyGeometry, decorMaterials.airConditioner.body);
+  body.castShadow = true;
+  acGroup.add(body);
+
+  // Vents (horizontal slats)
+  for (let i = 0; i < 6; i++) {
+    const ventGeometry = new THREE.BoxGeometry(7.8, 0.1, 0.05);
+    const vent = new THREE.Mesh(ventGeometry, decorMaterials.airConditioner.vents);
+    vent.position.set(0, -0.8 + i * 0.3, 0.7);
+    acGroup.add(vent);
+  }
+
+  // Digital display
+  const displayGeometry = new THREE.PlaneGeometry(1.5, 0.4);
+  const display = new THREE.Mesh(displayGeometry, decorMaterials.airConditioner.display);
+  display.position.set(0, 0.5, 0.7);
+  acGroup.add(display);
+
+  // Control panel
+  const panelGeometry = new THREE.PlaneGeometry(2, 0.6);
+  const panel = new THREE.Mesh(panelGeometry, decorMaterials.airConditioner.body);
+  panel.position.set(0, -0.2, 0.7);
+  acGroup.add(panel);
+
+  // Trim pieces
+  const trimGeometry = new THREE.BoxGeometry(8.2, 0.1, 0.1);
+  const topTrim = new THREE.Mesh(trimGeometry, decorMaterials.airConditioner.trim);
+  topTrim.position.set(0, 1.05, 0);
+  acGroup.add(topTrim);
+
+  const bottomTrim = new THREE.Mesh(trimGeometry, decorMaterials.airConditioner.trim);
+  bottomTrim.position.set(0, -1.05, 0);
+  acGroup.add(bottomTrim);
+
+  // Side trims
+  const sideTrimGeometry = new THREE.BoxGeometry(0.1, 2.1, 0.1);
+  const leftTrim = new THREE.Mesh(sideTrimGeometry, decorMaterials.airConditioner.trim);
+  leftTrim.position.set(-4.1, 0, 0);
+  acGroup.add(leftTrim);
+
+  const rightTrim = new THREE.Mesh(sideTrimGeometry, decorMaterials.airConditioner.trim);
+  rightTrim.position.set(4.1, 0, 0);
+  acGroup.add(rightTrim);
+
+  // Add subtle rotation for floating effect
+  acGroup.rotation.x = -0.1;
+
+  return acGroup;
+};
+
+// Create enhanced room function with better lighting and atmosphere
 const createRoom = () => {
   const roomGroup = new THREE.Group();
-  const roomSize = { width: 60, height: 15, depth: 60 }; // Increased from 40x40 to 60x60
-  const tileSize = 2; // Keeping the same tile size
-  const tileHeight = 0.2; // Keeping the same tile height
-  const floorDepth = 0.4; // Keeping the same floor depth
+  const roomSize = { width: 60, height: 15, depth: 60 };
+  const tileSize = 3; // Larger tiles for carpet effect
+  const tileHeight = 0.1; // Thinner tiles for carpet
+  const floorDepth = 0.4;
   
-  // Create floor with chess pattern
+  // Create floor with enhanced carpet pattern
   const floorGroup = new THREE.Group();
   const tilesX = Math.ceil(roomSize.width / tileSize);
   const tilesZ = Math.ceil(roomSize.depth / tileSize);
   
-  // Create base floor
+  // Create base floor with enhanced material
   const baseFloorGeometry = new THREE.BoxGeometry(roomSize.width, floorDepth, roomSize.depth);
   const baseFloor = new THREE.Mesh(baseFloorGeometry, roomMaterials.floorSide);
   baseFloor.position.y = -floorDepth/2;
   baseFloor.receiveShadow = true;
   floorGroup.add(baseFloor);
   
-  // Create individual tiles with depth
+  // Create individual tiles with enhanced carpet pattern
   for (let x = 0; x < tilesX; x++) {
     for (let z = 0; z < tilesZ; z++) {
       const isEven = (x + z) % 2 === 0;
+      const isCenter = Math.abs(x - tilesX/2) < 3 && Math.abs(z - tilesZ/2) < 3;
       
-      // Create tile with depth
       const tileGeometry = new THREE.BoxGeometry(tileSize * 0.95, tileHeight, tileSize * 0.95);
-      const tile = new THREE.Mesh(
-        tileGeometry,
-        isEven ? roomMaterials.floorLight : roomMaterials.floorDark
-      );
       
-      // Position each tile
+      // Create different materials for carpet pattern
+      let tileMaterial;
+      if (isCenter) {
+        // Center area - lighter silver
+        tileMaterial = new THREE.MeshPhongMaterial({
+          color: 0xF5F5F5,
+          shininess: 10,
+          specular: 0x222222,
+        });
+      } else if (isEven) {
+        // Even tiles - medium silver
+        tileMaterial = new THREE.MeshPhongMaterial({
+          color: 0xE0E0E0,
+          shininess: 12,
+          specular: 0x222222,
+        });
+      } else {
+        // Odd tiles - darker silver with subtle pattern
+        tileMaterial = new THREE.MeshPhongMaterial({
+          color: 0xD0D0D0,
+          shininess: 12,
+          specular: 0x222222,
+        });
+      }
+      
+      const tile = new THREE.Mesh(tileGeometry, tileMaterial);
+      
       tile.position.set(
         (x - tilesX/2) * tileSize + tileSize/2,
         0,
@@ -767,6 +917,139 @@ const createChair = async (userName: string) => {
   return chairGroup;
 };
 
+// Create particle system for atmosphere
+const createParticleSystem = () => {
+  const particleCount = 200;
+  const particles = new THREE.BufferGeometry();
+  const positions = new Float32Array(particleCount * 3);
+  const colors = new Float32Array(particleCount * 3);
+
+  for (let i = 0; i < particleCount; i++) {
+    const i3 = i * 3;
+    
+    // Random positions in a large sphere
+    const radius = 50 + Math.random() * 30;
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.random() * Math.PI;
+    
+    positions[i3] = radius * Math.sin(phi) * Math.cos(theta);
+    positions[i3 + 1] = radius * Math.cos(phi);
+    positions[i3 + 2] = radius * Math.sin(phi) * Math.sin(theta);
+    
+    // Subtle blue-white colors
+    colors[i3] = 0.8 + Math.random() * 0.2;
+    colors[i3 + 1] = 0.9 + Math.random() * 0.1;
+    colors[i3 + 2] = 1.0;
+  }
+
+  particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  particles.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+  const particleMaterial = new THREE.PointsMaterial({
+    size: 0.5,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.3,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+
+  const particleSystem = new THREE.Points(particles, particleMaterial);
+  return particleSystem;
+};
+
+// Create breeze effect from AC
+const createBreezeEffect = () => {
+  const breezeCount = 150;
+  const breeze = new THREE.BufferGeometry();
+  const positions = new Float32Array(breezeCount * 3);
+  const velocities = new Float32Array(breezeCount * 3);
+  const colors = new Float32Array(breezeCount * 3);
+  const sizes = new Float32Array(breezeCount);
+
+  for (let i = 0; i < breezeCount; i++) {
+    const i3 = i * 3;
+    
+    // Start particles from AC vents area
+    positions[i3] = (Math.random() - 0.5) * 6; // Spread across AC width
+    positions[i3 + 1] = 11 + Math.random() * 1; // AC height
+    positions[i3 + 2] = -24 + Math.random() * 2; // AC depth
+    
+    // Velocity - particles move toward table and chairs
+    velocities[i3] = (Math.random() - 0.5) * 0.02; // Slight horizontal spread
+    velocities[i3 + 1] = -0.01 - Math.random() * 0.02; // Downward movement
+    velocities[i3 + 2] = 0.03 + Math.random() * 0.02; // Forward movement
+    
+    // Cool blue-white colors for AC breeze
+    colors[i3] = 0.7 + Math.random() * 0.3; // Blue
+    colors[i3 + 1] = 0.8 + Math.random() * 0.2; // Light blue
+    colors[i3 + 2] = 0.9 + Math.random() * 0.1; // Almost white
+    
+    // Varying sizes for more realistic effect
+    sizes[i] = 0.3 + Math.random() * 0.4;
+  }
+
+  breeze.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  breeze.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  breeze.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+  const breezeMaterial = new THREE.PointsMaterial({
+    size: 1,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.4,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    sizeAttenuation: true
+  });
+
+  const breezeSystem = new THREE.Points(breeze, breezeMaterial);
+  
+  // Store velocities for animation
+  (breezeSystem as any).velocities = velocities;
+  (breezeSystem as any).originalPositions = new Float32Array(positions);
+  
+  return breezeSystem;
+};
+
+// Create decorative plant function
+const createPlant = () => {
+  const plantGroup = new THREE.Group();
+
+  // Pot
+  const potGeometry = new THREE.CylinderGeometry(0.8, 0.6, 1.2, 8);
+  const potMaterial = new THREE.MeshPhongMaterial({
+    color: 0x8B4513,
+    shininess: 20,
+  });
+  const pot = new THREE.Mesh(potGeometry, potMaterial);
+  pot.position.y = 0.6;
+  pot.castShadow = true;
+  plantGroup.add(pot);
+
+  // Leaves (simple spheres for now)
+  for (let i = 0; i < 8; i++) {
+    const leafGeometry = new THREE.SphereGeometry(0.3 + Math.random() * 0.2, 8, 8);
+    const leafMaterial = new THREE.MeshPhongMaterial({
+      color: 0x228B22,
+      shininess: 10,
+    });
+    const leaf = new THREE.Mesh(leafGeometry, leafMaterial);
+    
+    const angle = (i / 8) * Math.PI * 2;
+    const radius = 0.8 + Math.random() * 0.3;
+    leaf.position.set(
+      Math.cos(angle) * radius,
+      1.5 + Math.random() * 0.5,
+      Math.sin(angle) * radius
+    );
+    leaf.castShadow = true;
+    plantGroup.add(leaf);
+  }
+
+  return plantGroup;
+};
+
 export const VirtualOffice: React.FC = () => {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -780,6 +1063,10 @@ export const VirtualOffice: React.FC = () => {
   const spotlightRef = useRef<THREE.SpotLight | null>(null);
   const { initiateCall } = useCall();
   const { connectedUsers } = useConnectedUsers();
+  
+  // AC control state
+  const [isACOn, setIsACOn] = useState(false);
+  const [breezeEffect, setBreezeEffect] = useState<THREE.Points | null>(null);
   
   const { data: teamData, loading } = useQuery(TEAM_USERS_QUERY, {
     pollInterval: 5000,
@@ -820,7 +1107,7 @@ export const VirtualOffice: React.FC = () => {
     console.log('Updating chair positions for users:', teamData.getUsers);
     
     const users = teamData.getUsers;
-    const spacing = 5;
+    const spacing = 6; // Increased spacing for better visual separation
     const tableWidth = 30;
     
     // Clear existing laptops, labels and project names
@@ -861,13 +1148,15 @@ export const VirtualOffice: React.FC = () => {
         // Center the chairs by starting from half the total width
         const startX = -totalWidth / 2;
         const xPosition = startX + (sideIndex * spacing);
-        const zPosition = isFirstSide ? -4.5 : 4.5;
+        const zPosition = isFirstSide ? -6 : 6; // Increased distance from table
         
         // Rotate chairs to face the table
         chair.mesh.rotation.y = isFirstSide ? 0 : Math.PI;
         
         // Position chair
         chair.mesh.position.set(xPosition, 0, zPosition);
+
+        // Glow effect removed - no longer needed
 
         // Add laptop and project name if user is active
         if (user.activeSession) {
@@ -877,7 +1166,7 @@ export const VirtualOffice: React.FC = () => {
         laptop.position.set(
           xPosition,
             2,
-            isFirstSide ? -2.2 : 2.2
+            isFirstSide ? -3.5 : 3.5 // Adjusted for new chair positions
         );
         
         laptop.rotation.y = isFirstSide ? Math.PI : 0;
@@ -911,7 +1200,7 @@ export const VirtualOffice: React.FC = () => {
               breakMesh.position.set(
                 xPosition,
                 3.8, // Higher than "Working on" text
-                isFirstSide ? -2.2 : 2.2
+                isFirstSide ? -3.5 : 3.5
               );
               breakMesh.rotation.y = isFirstSide ? Math.PI : 0;
               
@@ -948,7 +1237,7 @@ export const VirtualOffice: React.FC = () => {
               workingOnMesh.position.set(
                 xPosition,
                 3.4, // Slightly higher than project name
-                isFirstSide ? -2.2 : 2.2
+                isFirstSide ? -3.5 : 3.5
               );
               workingOnMesh.rotation.y = isFirstSide ? Math.PI : 0;
               
@@ -982,7 +1271,7 @@ export const VirtualOffice: React.FC = () => {
               projectMesh.position.set(
                 xPosition,
                 3.0, // Below "Working on" text
-                isFirstSide ? -2.2 : 2.2
+                isFirstSide ? -3.5 : 3.5
               );
               projectMesh.rotation.y = isFirstSide ? Math.PI : 0;
               
@@ -1000,8 +1289,12 @@ export const VirtualOffice: React.FC = () => {
               child.material = child.material.clone();
               if (user.activeSession) {
                 child.material.color.setHex(isOnBreak ? 0xf97316 : 0x2E7D32);
+                child.material.emissive = new THREE.Color(0x000000);
+                child.material.emissiveIntensity = 0;
               } else {
                 child.material.color.setHex(0x333333);
+                child.material.emissive = new THREE.Color(0x000000);
+                child.material.emissiveIntensity = 0;
               }
             }
           }
@@ -1014,11 +1307,26 @@ export const VirtualOffice: React.FC = () => {
     console.log('Setting up scene with data:', teamData);
     if (!containerRef.current) return;
 
-    // Initialize scene
+    // Initialize scene with enhanced background
     const mainScene = new THREE.Scene();
     
-    // Set solid background color
-    mainScene.background = new THREE.Color('#1e293b');
+    // Set gradient background for more atmosphere
+    const canvas = document.createElement('canvas');
+    canvas.width = 2;
+    canvas.height = 2;
+    const context = canvas.getContext('2d');
+    if (context) {
+      const gradient = context.createLinearGradient(0, 0, 0, 2);
+      gradient.addColorStop(0, '#1e293b');
+      gradient.addColorStop(1, '#0f172a');
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, 2, 2);
+    }
+    const backgroundTexture = new THREE.CanvasTexture(canvas);
+    mainScene.background = backgroundTexture;
+    
+    // Add fog for depth and atmosphere
+    mainScene.fog = new THREE.Fog(0x1e293b, 30, 100);
     
     const camera = new THREE.PerspectiveCamera(
       50,
@@ -1029,42 +1337,69 @@ export const VirtualOffice: React.FC = () => {
     
     const renderer = new THREE.WebGLRenderer({ 
       antialias: true,
+      alpha: true,
     });
     
     sceneRef.current = mainScene;
     cameraRef.current = camera;
     rendererRef.current = renderer;
 
-    // Setup renderer
+    // Enhanced renderer settings
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     containerRef.current.appendChild(renderer.domElement);
 
-    // Add lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    // Enhanced lighting setup
+    const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
     mainScene.add(ambientLight);
 
-    // Main directional light (sunlight)
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(10, 20, 15);
+    // Main directional light (sunlight) with enhanced settings
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    directionalLight.position.set(15, 25, 15);
     directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.width = 2048;
-    directionalLight.shadow.mapSize.height = 2048;
+    directionalLight.shadow.mapSize.width = 4096;
+    directionalLight.shadow.mapSize.height = 4096;
     directionalLight.shadow.camera.near = 0.5;
     directionalLight.shadow.camera.far = 50;
-    directionalLight.shadow.camera.left = -20;
-    directionalLight.shadow.camera.right = 20;
-    directionalLight.shadow.camera.top = 20;
-    directionalLight.shadow.camera.bottom = -20;
-    directionalLight.shadow.bias = -0.001;
+    directionalLight.shadow.camera.left = -25;
+    directionalLight.shadow.camera.right = 25;
+    directionalLight.shadow.camera.top = 25;
+    directionalLight.shadow.camera.bottom = -25;
+    directionalLight.shadow.bias = -0.0005;
+    directionalLight.shadow.normalBias = 0.02;
     mainScene.add(directionalLight);
 
-    // Add fill light
+    // Add fill light for better illumination
     const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
-    fillLight.position.set(-10, 10, -10);
+    fillLight.position.set(-15, 15, -15);
     mainScene.add(fillLight);
+
+    // Add rim light for depth
+    const rimLight = new THREE.DirectionalLight(0xffffff, 0.3);
+    rimLight.position.set(0, 10, -20);
+    mainScene.add(rimLight);
+
+    // Add subtle point lights for atmosphere
+    const pointLight1 = new THREE.PointLight(0x4a90e2, 0.5, 30);
+    pointLight1.position.set(-20, 8, -20);
+    mainScene.add(pointLight1);
+
+    const pointLight2 = new THREE.PointLight(0xe24a90, 0.3, 25);
+    pointLight2.position.set(20, 6, 20);
+    mainScene.add(pointLight2);
+
+    // Add decorative lighting from air conditioner
+    const acLight = new THREE.SpotLight(0x87CEEB, 0.3, 20, Math.PI / 6, 0.3);
+    acLight.position.set(0, 11, -24);
+    acLight.target.position.set(0, 0, 0);
+    acLight.castShadow = true;
+    mainScene.add(acLight);
+    mainScene.add(acLight.target);
 
     // Add room
     const room = createRoom();
@@ -1077,15 +1412,64 @@ export const VirtualOffice: React.FC = () => {
       mainScene.add(table);
     }
 
-    // Set camera for isometric-like view
-    camera.position.set(30, 20, 30);
+    // Add floating air conditioner
+    const airConditioner = createAirConditioner();
+    airConditioner.position.set(0, 12, -25); // Positioned above and behind the table
+    mainScene.add(airConditioner);
+
+    // Add subtle floating animation to air conditioner
+    gsap.to(airConditioner.position, {
+      y: 12.5,
+      duration: 3,
+      ease: "power1.inOut",
+      yoyo: true,
+      repeat: -1
+    });
+
+    // Add decorative plants in corners
+    const plant1 = createPlant();
+    plant1.position.set(-25, 0, -25);
+    mainScene.add(plant1);
+
+    const plant2 = createPlant();
+    plant2.position.set(25, 0, -25);
+    mainScene.add(plant2);
+
+    const plant3 = createPlant();
+    plant3.position.set(-25, 0, 25);
+    mainScene.add(plant3);
+
+    const plant4 = createPlant();
+    plant4.position.set(25, 0, 25);
+    mainScene.add(plant4);
+
+    // Add particle system for atmosphere
+    const particleSystem = createParticleSystem();
+    mainScene.add(particleSystem);
+
+    // Add subtle rotation to particle system
+    gsap.to(particleSystem.rotation, {
+      y: Math.PI * 2,
+      duration: 60,
+      ease: "none",
+      repeat: -1
+    });
+
+    // Add breeze effect from AC
+    const breezeEffect = createBreezeEffect();
+    breezeEffect.visible = false; // Hidden by default
+    setBreezeEffect(breezeEffect);
+    mainScene.add(breezeEffect);
+
+    // Set camera for enhanced isometric-like view
+    camera.position.set(45, 30, 45); // Zoomed out more to show AC and breeze
     camera.lookAt(0, 0, 0);
 
-    // Add controls
+    // Enhanced controls
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.minDistance = 5;
+    controls.minDistance = 8;
     controls.maxDistance = 200;
     controls.target.set(0, 5, 0);
     controls.enableRotate = true;
@@ -1093,15 +1477,52 @@ export const VirtualOffice: React.FC = () => {
     controls.enablePan = true;
     controls.rotateSpeed = 0.5;
     controls.zoomSpeed = 1.0;
+    controls.maxPolarAngle = Math.PI / 2.2; // Prevent going below ground
     controlsRef.current = controls;
 
     // Update user blocks
     await updateChairPositions();
 
-    // Animation loop
+    // Enhanced animation loop with post-processing effects
     const animate = () => {
       requestAnimationFrame(animate);
       controls.update();
+      
+      // Animate particle system
+      if (particleSystem) {
+        particleSystem.rotation.y += 0.001;
+      }
+      
+      // Animate breeze effect
+      if (breezeEffect && breezeEffect.visible) {
+        const positions = breezeEffect.geometry.attributes.position.array as Float32Array;
+        const velocities = (breezeEffect as any).velocities as Float32Array;
+        const originalPositions = (breezeEffect as any).originalPositions as Float32Array;
+        const breezeCount = 150; // Match the count from createBreezeEffect
+        
+        for (let i = 0; i < breezeCount; i++) {
+          const i3 = i * 3;
+          
+          // Update positions based on velocities
+          positions[i3] += velocities[i3];
+          positions[i3 + 1] += velocities[i3 + 1];
+          positions[i3 + 2] += velocities[i3 + 2];
+          
+          // Add some turbulence
+          positions[i3] += Math.sin(Date.now() * 0.001 + i) * 0.001;
+          positions[i3 + 1] += Math.cos(Date.now() * 0.002 + i) * 0.001;
+          
+          // Reset particles that have moved too far or too low
+          if (positions[i3 + 1] < 0.5 || positions[i3 + 2] > 10) {
+            positions[i3] = originalPositions[i3];
+            positions[i3 + 1] = originalPositions[i3 + 1];
+            positions[i3 + 2] = originalPositions[i3 + 2];
+          }
+        }
+        
+        breezeEffect.geometry.attributes.position.needsUpdate = true;
+      }
+      
       renderer.render(mainScene, camera);
     };
     animate();
@@ -1129,9 +1550,9 @@ export const VirtualOffice: React.FC = () => {
       // Reset camera to original position when removing spotlight
       if (cameraRef.current && controlsRef.current) {
         gsap.to(cameraRef.current.position, {
-          x: 30,
-          y: 20,
-          z: 30,
+          x: 45,
+          y: 30,
+          z: 45,
           duration: 1,
           ease: "power2.inOut"
         });
@@ -1193,13 +1614,13 @@ export const VirtualOffice: React.FC = () => {
           const finalCameraPos = isFirstSide ? 
             { 
               x: chair.mesh.position.x,
-              y: 6.5,
-              z: chair.mesh.position.z - 6
+              y: 20, // Higher up to show AC
+              z: chair.mesh.position.z - 20 // Further back to show more of the scene
             } : 
             { 
               x: chair.mesh.position.x,
-              y: 6.5,
-              z: chair.mesh.position.z + 6
+              y: 20, // Higher up to show AC
+              z: chair.mesh.position.z + 20 // Further back to show more of the scene
             };
 
           if (isChangingSides && cameraRef.current) {
@@ -1296,13 +1717,13 @@ export const VirtualOffice: React.FC = () => {
             const finalCameraPos = isFirstSide ? 
               { 
                 x: currentUserChair.mesh.position.x,
-                y: 15, // Higher up
-                z: currentUserChair.mesh.position.z - 15 // Further back
+                y: 20, // Higher up to show AC
+                z: currentUserChair.mesh.position.z - 20 // Further back to show more of the scene
               } : 
               { 
                 x: currentUserChair.mesh.position.x,
-                y: 15, // Higher up
-                z: currentUserChair.mesh.position.z + 15 // Further back
+                y: 20, // Higher up to show AC
+                z: currentUserChair.mesh.position.z + 20 // Further back to show more of the scene
               };
 
             // Animate camera to focus on user's chair
@@ -1412,6 +1833,63 @@ export const VirtualOffice: React.FC = () => {
     };
   }, [loading, teamData, userData?.me?.id]);
 
+  const toggleAC = () => {
+    const newACState = !isACOn;
+    setIsACOn(newACState);
+    
+    if (newACState) {
+      // Turn on AC - start breeze and set specific camera position
+      if (breezeEffect) {
+        breezeEffect.visible = true;
+      }
+      
+      // Set camera to specific position showing AC and table
+      if (cameraRef.current && controlsRef.current) {
+        // Position camera to show both AC and table - more centered and zoomed in
+        gsap.to(cameraRef.current.position, {
+          x: 0, // Center horizontally
+          y: 28, // Slightly lower for better centering
+          z: 28, // Closer for more zoomed in view
+          duration: 2,
+          ease: "power2.inOut"
+        });
+        
+        // Look at the center of the scene
+        gsap.to(controlsRef.current.target, {
+          x: 0,
+          y: 6, // Look at middle height for better centering
+          z: 0,
+          duration: 2,
+          ease: "power2.inOut"
+        });
+      }
+    } else {
+      // Turn off AC - stop breeze and return to default camera position
+      if (breezeEffect) {
+        breezeEffect.visible = false;
+      }
+      
+      // Return to default camera position
+      if (cameraRef.current && controlsRef.current) {
+        gsap.to(cameraRef.current.position, {
+          x: 45,
+          y: 30,
+          z: 45,
+          duration: 2,
+          ease: "power2.inOut"
+        });
+        
+        gsap.to(controlsRef.current.target, {
+          x: 0,
+          y: 5,
+          z: 0,
+          duration: 2,
+          ease: "power2.inOut"
+        });
+      }
+    }
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -1427,6 +1905,9 @@ export const VirtualOffice: React.FC = () => {
               ? `${connectedUsers.length} user${connectedUsers.length !== 1 ? 's' : ''} online`
               : 'No users online'}
           </ConnectedUsersCount>
+          <ACControlButton isOn={isACOn} onClick={toggleAC}>
+            {isACOn ? 'Turn off AC' : 'Turn on AC'}
+          </ACControlButton>
           <MemberList>
             {teamData?.getUsers?.map((user: User) => {
               const isOnBreak = user.activeSession?.breaks?.some((breakItem: Break) => !breakItem.endTime);
