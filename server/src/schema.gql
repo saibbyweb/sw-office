@@ -178,6 +178,7 @@ type Query {
   adminSession(sessionId: ID!): Session
   adminSessionWorkLogs(sessionId: ID!): [WorkLog!]!
   adminUserSessions(input: GetSessionsInput!, userId: ID!): [Session!]!
+  adminUserWorkLogs(input: GetSessionsInput!, userId: ID!): [WorkLog!]!
   adminUsers: [User!]!
   checkUserInMeeting(userId: String!): MeetingStatus!
   debugData: String!

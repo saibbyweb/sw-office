@@ -43,6 +43,21 @@ export class AdminResolver {
     return this.workLogService.getSessionWorkLogsForAdmin(sessionId);
   }
 
+  @Query(() => [WorkLog])
+  async adminUserWorkLogs(
+    @Args('userId', { type: () => ID }) userId: string,
+    @Args('input') input: GetSessionsInput,
+  ): Promise<WorkLog[]> {
+    if (!input.startDate || !input.endDate) {
+      throw new Error('Start date and end date are required');
+    }
+    return this.workLogService.getUserWorkLogsByDateRange(
+      userId,
+      input.startDate,
+      input.endDate,
+    );
+  }
+
   @Mutation(() => User)
   async adminUpdateUserPassword(
     @Args('userId', { type: () => ID }) userId: string,

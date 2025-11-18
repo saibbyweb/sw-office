@@ -54,6 +54,30 @@ export class WorkLogService {
     });
   }
 
+  async getUserWorkLogsByDateRange(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<WorkLog[]> {
+    return this.prisma.workLog.findMany({
+      where: {
+        userId,
+        createdAt: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      include: {
+        user: true,
+        project: true,
+        session: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
   async addWorkLog(userId: string, input: AddWorkLogInput): Promise<WorkLog> {
     // Verify session exists and is active
     const session = await this.prisma.session.findFirst({

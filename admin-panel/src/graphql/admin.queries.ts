@@ -94,3 +94,18 @@ export const ADMIN_SESSION_WORK_LOGS_QUERY = gql`
     }
   }
 `;
+
+export const ADMIN_USER_WORK_LOGS_QUERY = gql`
+  query AdminUserWorkLogs($userId: ID!, $input: GetSessionsInput!) {
+    adminUserWorkLogs(userId: $userId, input: $input) {
+      id
+      content
+      links
+      createdAt
+      project {
+        id
+        name
+      }
+    }
+  }
+`;
