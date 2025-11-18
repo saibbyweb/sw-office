@@ -1,0 +1,724 @@
+import { useQuery } from '@apollo/client';
+import { format, subDays } from 'date-fns';
+import { useState, useMemo } from 'react';
+import { FiClock, FiUser, FiArrowLeft, FiCalendar, FiX, FiFileText, FiLink, FiBriefcase, FiCoffee } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
+import { ADMIN_USERS_QUERY, ADMIN_USER_SESSIONS_QUERY, ADMIN_SESSION_QUERY, ADMIN_SESSION_WORK_LOGS_QUERY } from '../graphql/admin.queries';
+import { AdminUser, AdminSession, WorkLog } from '../types/admin.types';
+
+interface AdminUsersData {
+  adminUsers: AdminUser[];
+}
+
+interface AdminUserSessionsData {
+  adminUserSessions: AdminSession[];
+}
+
+interface AdminSessionData {
+  adminSession: AdminSession;
+}
+
+interface AdminSessionWorkLogsData {
+  adminSessionWorkLogs: WorkLog[];
+}
+
+type ViewType = 'details' | 'timeline' | null;
+
+export default function UserSessions() {
+  const navigate = useNavigate();
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [viewType, setViewType] = useState<ViewType>(null);
+  const [daysRange, setDaysRange] = useState<number>(28);
+
+  // Memoize the date range to prevent unnecessary re-renders
+  const dateRange = useMemo(() => ({
+    startDate: subDays(new Date(), daysRange - 1),
+    endDate: new Date(),
+  }), [daysRange]);
+
+  const { data: usersData, loading: usersLoading } = useQuery<AdminUsersData>(ADMIN_USERS_QUERY);
+
+  const { data: sessionsData, loading: sessionsLoading } = useQuery<AdminUserSessionsData>(
+    ADMIN_USER_SESSIONS_QUERY,
+    {
+      variables: {
+        userId: selectedUserId,
+        input: dateRange
+      },
+      skip: !selectedUserId,
+      // Add fetchPolicy to prevent unnecessary refetches
+      fetchPolicy: 'cache-and-network',
+    }
+  );
+
+  const { data: sessionData, loading: sessionLoading } = useQuery<AdminSessionData>(
+    ADMIN_SESSION_QUERY,
+    {
+      variables: { sessionId: selectedSessionId },
+      skip: !selectedSessionId,
+    }
+  );
+
+  const { data: workLogsData } = useQuery<AdminSessionWorkLogsData>(
+    ADMIN_SESSION_WORK_LOGS_QUERY,
+    {
+      variables: { sessionId: selectedSessionId },
+      skip: !selectedSessionId,
+    }
+  );
+
+  const selectedUser = usersData?.adminUsers.find(user => user.id === selectedUserId);
+  const session = sessionData?.adminSession;
+  const workLogs = workLogsData?.adminSessionWorkLogs || [];
+
+  const handleViewDetails = (sessionId: string) => {
+    setSelectedSessionId(sessionId);
+    setViewType('details');
+  };
+
+  const handleViewTimeline = (sessionId: string) => {
+    setSelectedSessionId(sessionId);
+    setViewType('timeline');
+  };
+
+  const handleCloseDetails = () => {
+    setSelectedSessionId(null);
+    setViewType(null);
+  };
+
+  const formatDuration = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+  };
+
+  const renderWorkLog = (log: WorkLog) => (
+    <div key={log.id} className="bg-white/60 backdrop-blur-sm rounded-md p-2 border border-white/20">
+      <div className="flex items-start gap-2">
+        <FiFileText className="w-3 h-3 text-gray-500 mt-0.5" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="text-xs text-gray-700">{log.content}</div>
+            {log.project && (
+              <div className="text-[10px] px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded-full whitespace-nowrap">
+                {log.project.name}
+              </div>
+            )}
+          </div>
+          {log.links.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {log.links.map((link, i) => (
+                <a
+                  key={i}
+                  href={link.startsWith('http') ? link : `https://${link}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-0.5 text-[10px] text-purple-600 hover:text-purple-700"
+                >
+                  <FiLink className="w-2.5 h-2.5" />
+                  {link.replace(/^https?:\/\//, '')}
+                </a>
+              ))}
+            </div>
+          )}
+          <div className="mt-0.5 text-[10px] text-gray-400">
+            {format(new Date(log.createdAt), 'h:mm a')}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      {/* Header */}
+      <div className="bg-white/40 backdrop-blur-md border-b border-white/20 sticky top-0 z-10">
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate('/')}
+                className="p-2 hover:bg-white/60 rounded-lg transition-colors"
+                title="Back to Home"
+              >
+                <FiArrowLeft className="w-5 h-5 text-gray-700" />
+              </button>
+              <div>
+                <h1 className="text-xl font-bold font-outfit text-transparent bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text">
+                  User Sessions
+                </h1>
+                <p className="text-xs text-gray-600">
+                  View and manage user work sessions
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <select
+                value={daysRange}
+                onChange={(e) => setDaysRange(Number(e.target.value))}
+                className="text-xs text-gray-700 bg-white/40 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/20 hover:bg-white/60 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-violet-500"
+              >
+                <option value={7}>Last 7 days</option>
+                <option value={14}>Last 14 days</option>
+                <option value={28}>Last 28 days</option>
+                <option value={90}>Last 90 days</option>
+                <option value={180}>Last 6 months</option>
+                <option value={365}>Last year</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-1 gap-3 p-3">
+        {/* User Sidebar */}
+        <div className={`shrink-0 transition-all duration-300 ${viewType ? 'w-56' : 'w-72'}`}>
+          <div className="bg-white/40 backdrop-blur-md rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/20 overflow-hidden h-[calc(100vh-88px)]">
+            <div className="p-3 border-b border-white/20 bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10">
+              <h2 className="text-base font-semibold flex items-center gap-2 text-gray-800">
+                <FiUser className="w-4 h-4 text-violet-600" />
+                Users {usersData && `(${usersData.adminUsers.length})`}
+              </h2>
+            </div>
+            <div className="divide-y divide-white/20 overflow-y-auto h-[calc(100%-53px)]">
+              {usersLoading ? (
+                // Loading skeleton for users
+                Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="p-3 flex items-center gap-2">
+                    <div className="w-10 h-10 rounded-full bg-gray-200 animate-pulse" />
+                    <div className="flex-1">
+                      <div className="h-3 bg-gray-200 rounded w-20 mb-1.5 animate-pulse" />
+                      <div className="h-2.5 bg-gray-200 rounded w-28 animate-pulse" />
+                    </div>
+                  </div>
+                ))
+              ) : (
+                usersData?.adminUsers.map((user) => (
+                  <button
+                    key={user.id}
+                    onClick={() => setSelectedUserId(user.id)}
+                    className={`w-full p-3 flex items-center gap-2 transition-all duration-200 ${
+                      selectedUserId === user.id
+                        ? 'bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20 border-l-4 border-violet-600'
+                        : 'hover:bg-white/60'
+                    }`}
+                  >
+                    {user.avatarUrl ? (
+                      <img
+                        src={user.avatarUrl}
+                        alt=""
+                        className={`w-10 h-10 rounded-full ring-2 transition-all ${
+                          selectedUserId === user.id ? 'ring-violet-500' : 'ring-white/50'
+                        }`}
+                      />
+                    ) : (
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ring-2 transition-all ${
+                        selectedUserId === user.id
+                          ? 'bg-violet-100 ring-violet-500'
+                          : 'bg-gray-200 ring-white/50'
+                      }`}>
+                        <FiUser className={`w-5 h-5 ${selectedUserId === user.id ? 'text-violet-600' : 'text-gray-500'}`} />
+                      </div>
+                    )}
+                    <div className="flex-1 text-left min-w-0">
+                      <div className="text-sm font-medium text-gray-800 truncate">{user.name}</div>
+                      <div className="text-xs text-gray-500 truncate">{user.email}</div>
+                    </div>
+                    <div className={`w-2.5 h-2.5 rounded-full ${
+                      user.isOnline ? 'bg-emerald-500 shadow-lg shadow-emerald-500/50' : 'bg-gray-300'
+                    }`} />
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Sessions List */}
+        <div className={`min-w-0 transition-all duration-300 ${viewType ? 'w-96' : 'flex-1'}`}>
+          {selectedUserId ? (
+            <>
+              {/* Selected User Header */}
+              {selectedUser && (
+                <div className="bg-white/40 backdrop-blur-md rounded-lg p-4 mb-3 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/20">
+                  <div className="flex items-center gap-3">
+                    {selectedUser.avatarUrl ? (
+                      <img
+                        src={selectedUser.avatarUrl}
+                        alt=""
+                        className="w-12 h-12 rounded-full ring-2 ring-violet-500/30"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-violet-100 flex items-center justify-center ring-2 ring-violet-500/30">
+                        <FiUser className="w-6 h-6 text-violet-600" />
+                      </div>
+                    )}
+                    <div>
+                      <h3 className="text-base font-semibold text-gray-800">{selectedUser.name}</h3>
+                      <p className="text-xs text-gray-600">{selectedUser.email}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <div className={`w-1.5 h-1.5 rounded-full ${selectedUser.isOnline ? 'bg-emerald-500' : 'bg-gray-300'}`} />
+                        <span className="text-xs text-gray-600">
+                          {selectedUser.isOnline ? 'Online' : 'Offline'} · {selectedUser.currentStatus}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-3 overflow-y-auto h-[calc(100vh-220px)]">
+                {sessionsLoading ? (
+                  // Loading skeleton for sessions
+                  Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="bg-white/40 backdrop-blur-md rounded-lg shadow-sm p-4 border border-white/20">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 rounded bg-gray-200 animate-pulse" />
+                          <div>
+                            <div className="h-3 bg-gray-200 rounded w-28 mb-1.5 animate-pulse" />
+                            <div className="h-2.5 bg-gray-200 rounded w-20 animate-pulse" />
+                          </div>
+                        </div>
+                        <div className="h-5 bg-gray-200 rounded w-16 animate-pulse" />
+                      </div>
+                      <div className="h-3 bg-gray-200 rounded w-40 animate-pulse" />
+                    </div>
+                  ))
+                ) : sessionsData?.adminUserSessions.length === 0 ? (
+                  <div className="bg-white/40 backdrop-blur-md rounded-lg p-8 text-center border border-white/20">
+                    <FiClock className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-500 text-sm">No sessions found in the last 28 days</p>
+                  </div>
+                ) : (
+                  sessionsData?.adminUserSessions.map((session) => (
+                    <div
+                      key={session.id}
+                      className="bg-white/40 backdrop-blur-md rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-4 hover:shadow-[0_8px_30px_rgb(0,0,0,0.1)] transition-all duration-300 border border-white/20 hover:border-white/40"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-lg">
+                            <FiClock className="w-4 h-4 text-white" />
+                          </div>
+                          <div>
+                            <div className="font-semibold text-gray-800 text-sm">
+                              {format(new Date(session.startTime), 'MMM d, yyyy')}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              {format(new Date(session.startTime), 'h:mm a')} - {
+                                session.endTime
+                                  ? format(new Date(session.endTime), 'h:mm a')
+                                  : 'Ongoing'
+                              }
+                            </div>
+                          </div>
+                        </div>
+                        {session.project && (
+                          <div className="px-2 py-1 bg-gradient-to-r from-violet-100 to-fuchsia-100 text-violet-700 rounded-full text-xs font-medium">
+                            {session.project.name}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex gap-4 text-xs">
+                          <div className="flex items-center gap-1">
+                            <span className="text-gray-500">Total:</span>
+                            <span className="font-medium text-gray-800">{Math.round(session.totalDuration / 60)}m</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-gray-500">Break:</span>
+                            <span className="font-medium text-gray-800">{Math.round(session.totalBreakTime / 60)}m</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={() => handleViewDetails(session.id)}
+                            className={`px-3 py-1.5 text-xs rounded-lg transition-all duration-200 font-medium ${
+                              selectedSessionId === session.id && viewType === 'details'
+                                ? 'bg-gradient-to-r from-violet-600 to-violet-700 text-white shadow-md'
+                                : 'bg-gradient-to-r from-violet-100 to-violet-200 text-violet-700 hover:from-violet-200 hover:to-violet-300'
+                            }`}
+                          >
+                            Details
+                          </button>
+                          <button
+                            onClick={() => handleViewTimeline(session.id)}
+                            className={`px-3 py-1.5 text-xs rounded-lg transition-all duration-200 font-medium ${
+                              selectedSessionId === session.id && viewType === 'timeline'
+                                ? 'bg-gradient-to-r from-fuchsia-600 to-fuchsia-700 text-white shadow-md'
+                                : 'bg-gradient-to-r from-fuchsia-100 to-fuchsia-200 text-fuchsia-700 hover:from-fuchsia-200 hover:to-fuchsia-300'
+                            }`}
+                          >
+                            Timeline
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="h-[calc(100vh-88px)] flex items-center justify-center">
+              <div className="text-center">
+                <FiUser className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500 text-sm">Select a user to view their sessions</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Details Panel */}
+        {viewType && (
+          <div className="flex-1 min-w-0 animate-in slide-in-from-right duration-300">
+            <div className="bg-white/40 backdrop-blur-md rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/20 overflow-hidden h-[calc(100vh-88px)]">
+              {/* Header */}
+              <div className="p-3 border-b border-white/20 bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 flex items-center justify-between">
+                <h2 className="text-base font-semibold text-gray-800">
+                  {viewType === 'details' ? 'Session Details' : 'Timeline View'}
+                </h2>
+                <button
+                  onClick={handleCloseDetails}
+                  className="p-1.5 hover:bg-white/60 rounded-lg transition-colors"
+                  title="Close"
+                >
+                  <FiX className="w-4 h-4 text-gray-700" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="overflow-y-auto h-[calc(100%-53px)] p-4">
+                {sessionLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-gray-500">Loading session data...</div>
+                  </div>
+                ) : !session ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-gray-500">Session not found</div>
+                  </div>
+                ) : viewType === 'details' ? (
+                  <>
+                    {/* Session Header */}
+                    <div className="bg-white/60 backdrop-blur-sm rounded-lg shadow-sm p-3 mb-4 border border-white/20">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-2">
+                          <FiCalendar className="w-4 h-4 text-gray-500" />
+                          <div>
+                            <div className="text-sm font-medium">
+                              {format(new Date(session.startTime), 'MMM d, yyyy')}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {format(new Date(session.startTime), 'h:mm a')} - {
+                                session.endTime
+                                  ? format(new Date(session.endTime), 'h:mm a')
+                                  : 'Ongoing'
+                              }
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-1.5">
+                            <FiClock className="text-violet-500 w-3.5 h-3.5" />
+                            <span className="text-xs font-medium">
+                              {formatDuration(session.totalDuration)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <FiCoffee className="text-amber-500 w-3.5 h-3.5" />
+                            <span className="text-xs font-medium">
+                              {formatDuration(session.totalBreakTime)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Project Groups */}
+                    <div className="space-y-3">
+                      {(() => {
+                        // Group segments by project
+                        const projectGroups = session.segments
+                          .filter(segment => segment.type === 'WORK' && segment.project)
+                          .reduce((groups: Record<string, typeof session.segments>, segment) => {
+                            if (segment.project) {
+                              const projectId = segment.project.id;
+                              if (!groups[projectId]) {
+                                groups[projectId] = [];
+                              }
+                              groups[projectId].push(segment);
+                            }
+                            return groups;
+                          }, {});
+
+                        // Group work logs by project
+                        const workLogsByProject = workLogs.reduce((groups: Record<string, WorkLog[]>, log) => {
+                          const projectId = log.project?.id || 'unassigned';
+                          if (!groups[projectId]) {
+                            groups[projectId] = [];
+                          }
+                          groups[projectId].push(log);
+                          return groups;
+                        }, {});
+
+                        return Object.entries(projectGroups).map(([projectId, segments]) => {
+                          const project = segments[0].project!;
+                          const projectWorkLogs = workLogsByProject[projectId] || [];
+
+                          return (
+                            <div key={projectId} className="bg-white/60 backdrop-blur-md rounded-lg shadow-sm overflow-hidden border border-white/20">
+                              <div className="p-2.5 border-b border-white/10 bg-purple-50/50">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <FiBriefcase className="w-3.5 h-3.5 text-purple-600" />
+                                    <div className="text-sm font-medium text-purple-900">{project.name}</div>
+                                  </div>
+                                  <div className="text-xs text-purple-700 font-medium">
+                                    {formatDuration(segments.reduce((total, s) => total + s.duration, 0))}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="divide-y divide-gray-100/20">
+                                {segments.map((segment) => (
+                                  <div key={segment.id} className="p-2.5">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-2">
+                                        <FiClock className="w-3.5 h-3.5 text-gray-500" />
+                                        <div>
+                                          <div className="text-xs text-gray-600">
+                                            {format(new Date(segment.startTime), 'h:mm a')} - {
+                                              segment.endTime
+                                                ? format(new Date(segment.endTime), 'h:mm a')
+                                                : 'Ongoing'
+                                            }
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="text-xs text-gray-600 font-medium">
+                                        {formatDuration(segment.duration)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {projectWorkLogs.length > 0 && (
+                                <div className="border-t border-white/10 p-2.5">
+                                  <div className="space-y-2">
+                                    {projectWorkLogs.map(renderWorkLog)}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+
+                    {/* Unassigned Work Logs */}
+                    {(() => {
+                      const workLogsByProject = workLogs.reduce((groups: Record<string, WorkLog[]>, log) => {
+                        const projectId = log.project?.id || 'unassigned';
+                        if (!groups[projectId]) {
+                          groups[projectId] = [];
+                        }
+                        groups[projectId].push(log);
+                        return groups;
+                      }, {});
+
+                      return workLogsByProject['unassigned']?.length > 0 && (
+                        <div className="mt-4">
+                          <h3 className="text-sm font-medium mb-2">Additional Work Logs</h3>
+                          <div className="space-y-2">
+                            {workLogsByProject['unassigned'].map(renderWorkLog)}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Break Indicators */}
+                    {session.breaks && session.breaks.length > 0 && (
+                      <div className="mt-4">
+                        <h3 className="text-sm font-medium mb-2">Breaks</h3>
+                        <div className="bg-white/60 backdrop-blur-md rounded-lg shadow-sm divide-y divide-amber-50/20 border border-white/20">
+                          {session.breaks.map((breakSegment) => (
+                            <div key={breakSegment.id} className="p-2.5">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <FiCoffee className="w-3.5 h-3.5 text-amber-500" />
+                                  <div>
+                                    <div className="text-sm font-medium text-gray-900">
+                                      {breakSegment.type}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      {format(new Date(breakSegment.startTime), 'h:mm a')} - {
+                                        breakSegment.endTime
+                                          ? format(new Date(breakSegment.endTime), 'h:mm a')
+                                          : 'Ongoing'
+                                      }
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-xs text-gray-600 font-medium">
+                                  {formatDuration(breakSegment.duration)}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {/* Timeline View */}
+                    <div className="space-y-4">
+                      {(() => {
+                        // Group segments by project
+                        const groupSegmentsByProject = () => {
+                          const workSegments = session.segments.filter(s => s.type === 'WORK' && s.project);
+                          const projects = [...new Set(workSegments.map(s => s.project!.id))];
+
+                          return projects.map(projectId => {
+                            const projectSegments = workSegments.filter(s => s.project!.id === projectId);
+                            return {
+                              project: projectSegments[0].project!,
+                              segments: projectSegments,
+                              totalDuration: projectSegments.reduce((acc, s) => acc + s.duration, 0)
+                            };
+                          });
+                        };
+
+                        const renderSegment = (segment: typeof session.segments[0]) => {
+                          const isWork = segment.type === 'WORK';
+                          const segmentWorkLogs = workLogs.filter(log => {
+                            const logTime = new Date(log.createdAt).getTime();
+                            const segmentStart = new Date(segment.startTime).getTime();
+                            const segmentEnd = segment.endTime ? new Date(segment.endTime).getTime() : Date.now();
+                            return logTime >= segmentStart && logTime <= segmentEnd &&
+                                   (!segment.project || !log.project || segment.project.id === log.project.id);
+                          });
+
+                          return (
+                            <div key={segment.id} className={`rounded-md border transition-all duration-200 ${
+                              isWork
+                                ? 'bg-white/10 border-white/20 shadow-sm hover:shadow-md backdrop-blur-sm hover:bg-white/20'
+                                : 'bg-amber-50/80 border-amber-100'
+                            }`}>
+                              {/* Segment Header */}
+                              <div className={`p-2 ${isWork ? 'border-b border-white/10' : 'border-b border-amber-100/50'}`}>
+                                <div className="flex items-center justify-between gap-2">
+                                  {isWork ? (
+                                    <>
+                                      <div className="flex items-center gap-2">
+                                        <FiClock className="text-violet-500 shrink-0 w-3 h-3" />
+                                        <span className="text-xs text-gray-600 whitespace-nowrap">
+                                          {format(new Date(segment.startTime), 'h:mm a')} - {
+                                            segment.endTime ? format(new Date(segment.endTime), 'h:mm a') : 'Ongoing'
+                                          }
+                                        </span>
+                                      </div>
+                                      <span className="text-xs text-violet-600 font-medium whitespace-nowrap">
+                                        {formatDuration(segment.duration)}
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <div className="w-full">
+                                      <div className="flex items-center gap-1.5">
+                                        <FiCoffee className="text-amber-500 shrink-0 w-3 h-3" />
+                                        <span className="text-xs font-medium">{segment.break?.type} Break</span>
+                                      </div>
+                                      <div className="mt-0.5 flex items-center gap-1 text-[10px] text-gray-500">
+                                        <span className="whitespace-nowrap">
+                                          {format(new Date(segment.startTime), 'h:mm a')} - {
+                                            segment.endTime ? format(new Date(segment.endTime), 'h:mm a') : 'Ongoing'
+                                          }
+                                        </span>
+                                        <span>·</span>
+                                        <span>{formatDuration(segment.duration)}</span>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Work Logs */}
+                              {isWork && segmentWorkLogs.length > 0 && (
+                                <div className="p-2 space-y-1.5">
+                                  {segmentWorkLogs.map((log) => (
+                                    <div key={log.id} className="bg-white/40 backdrop-blur-sm rounded-md p-2 border border-white/20 hover:bg-white/60 transition-all duration-200">
+                                      <div className="flex items-start gap-1.5">
+                                        <FiFileText className="text-gray-500 mt-0.5 shrink-0 w-3 h-3" />
+                                        <div className="min-w-0 flex-1">
+                                          <div className="flex items-start justify-between gap-2">
+                                            <p className="text-xs text-gray-700">{log.content}</p>
+                                            <span className="text-[10px] text-gray-500 shrink-0 font-medium">
+                                              {format(new Date(log.createdAt), 'h:mm a')}
+                                            </span>
+                                          </div>
+                                          {log.links.map((link, idx) => (
+                                            <a
+                                              key={idx}
+                                              href={link.startsWith('http') ? link : `https://${link}`}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="flex items-center gap-1 text-violet-600 hover:text-violet-700 hover:underline text-[10px] mt-1 transition-colors duration-200"
+                                            >
+                                              <FiLink className="w-2.5 h-2.5" />
+                                              {link}
+                                            </a>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        };
+
+                        const renderProjectSegments = (projectGroup: any, allSegments: typeof session.segments) => {
+                          // Get all segments that occurred between the first and last segments of this project
+                          const projectStart = Math.min(...projectGroup.segments.map((s: any) => new Date(s.startTime).getTime()));
+                          const projectEnd = Math.max(...projectGroup.segments.map((s: any) => s.endTime ? new Date(s.endTime).getTime() : Date.now()));
+
+                          const relevantSegments = allSegments.filter(segment => {
+                            const segmentTime = new Date(segment.startTime).getTime();
+                            return segmentTime >= projectStart && segmentTime <= projectEnd;
+                          });
+
+                          return (
+                            <div key={projectGroup.project.id} className="mb-4">
+                              <div className="flex items-center gap-2 mb-3 bg-white/40 backdrop-blur-md rounded-lg px-3 py-2 shadow-sm border border-white/20">
+                                <FiBriefcase className="text-violet-500 w-4 h-4" />
+                                <div>
+                                  <span className="text-sm font-semibold text-gray-700 block">{projectGroup.project.name}</span>
+                                  <span className="text-xs text-gray-500">{formatDuration(projectGroup.totalDuration)}</span>
+                                </div>
+                              </div>
+
+                              <div className="space-y-2 pl-6">
+                                {relevantSegments.map((segment) => renderSegment(segment))}
+                              </div>
+                            </div>
+                          );
+                        };
+
+                        return groupSegmentsByProject().map((projectGroup) =>
+                          renderProjectSegments(projectGroup, session.segments)
+                        );
+                      })()}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+} 

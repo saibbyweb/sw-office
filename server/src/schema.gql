@@ -159,6 +159,7 @@ type Project {
   segments: [Segment!]
   sessions: [Session!]
   slug: String!
+  tasks: [Task!]
   updatedAt: DateTime!
   workLogs: [WorkLog!]
 }
@@ -166,6 +167,7 @@ type Project {
 type ProjectCount {
   segments: Int!
   sessions: Int!
+  tasks: Int!
   workLogs: Int!
 }
 
@@ -270,6 +272,76 @@ input SwitchProjectInput {
   sessionId: String!
 }
 
+type Task {
+  actualHours: Float
+  adminNotes: String
+  approvedBy: User
+  approvedById: String
+  approvedDate: DateTime
+  assignedTo: User
+  assignedToId: String
+  category: TaskCategory!
+  causedProductionBug: Boolean!
+  commitLinks: [String!]
+  completedDate: DateTime
+  createdAt: DateTime!
+  description: String!
+  dueDate: DateTime
+  estimatedHours: Float!
+  id: ID!
+  points: Int!
+  prLinks: [String!]
+  priority: TaskPriority!
+  productionBugPenalty: Int!
+  project: Project
+  projectId: String
+  rejectionReason: String
+  relatedBugTaskId: String
+  screenshots: [String!]
+  startedDate: DateTime
+  status: TaskStatus!
+  suggestedBy: User
+  suggestedById: String
+  suggestedDate: DateTime!
+  suggestedPoints: Int
+  title: String!
+  updatedAt: DateTime!
+}
+
+enum TaskCategory {
+  BACKEND_API
+  BUG_FIX
+  CLIENT_COMMUNICATION
+  CODE_REVIEW
+  DEBUGGING
+  DEVOPS
+  DOCUMENTATION
+  FULL_STACK
+  MENTORING
+  MISCELLANEOUS
+  MOBILE_APP
+  OFFICE_TASKS
+  RESEARCH
+  TESTING_QA
+  WEB_FRONTEND
+}
+
+enum TaskPriority {
+  CRITICAL
+  HIGH
+  LOW
+  MEDIUM
+}
+
+enum TaskStatus {
+  APPROVED
+  BLOCKED
+  COMPLETED
+  IN_PROGRESS
+  REJECTED
+  SUGGESTED
+}
+
 type TeamsUser {
   displayName: String!
   id: ID!
@@ -311,6 +383,9 @@ type User {
   password: String!
   role: UserRole!
   sessions: [Session!]
+  taskApprovals: [Task!]
+  taskAssignments: [Task!]
+  taskSuggestions: [Task!]
   updatedAt: DateTime!
   workLogs: [WorkLog!]
 }
@@ -318,6 +393,9 @@ type User {
 type UserCount {
   breaks: Int!
   sessions: Int!
+  taskApprovals: Int!
+  taskAssignments: Int!
+  taskSuggestions: Int!
   workLogs: Int!
 }
 

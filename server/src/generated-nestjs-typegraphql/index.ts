@@ -3,6 +3,7 @@ import { ObjectType } from '@nestjs/graphql';
 import { Int } from '@nestjs/graphql';
 import { registerEnumType } from '@nestjs/graphql';
 import { ID } from '@nestjs/graphql';
+import { Float } from '@nestjs/graphql';
 
 export enum WorkLogScalarFieldEnum {
     id = "id",
@@ -24,6 +25,38 @@ export enum UserScalarFieldEnum {
     avatarUrl = "avatarUrl",
     isOnline = "isOnline",
     currentStatus = "currentStatus",
+    createdAt = "createdAt",
+    updatedAt = "updatedAt"
+}
+
+export enum TaskScalarFieldEnum {
+    id = "id",
+    title = "title",
+    description = "description",
+    category = "category",
+    priority = "priority",
+    status = "status",
+    points = "points",
+    suggestedPoints = "suggestedPoints",
+    estimatedHours = "estimatedHours",
+    actualHours = "actualHours",
+    suggestedById = "suggestedById",
+    assignedToId = "assignedToId",
+    approvedById = "approvedById",
+    suggestedDate = "suggestedDate",
+    approvedDate = "approvedDate",
+    startedDate = "startedDate",
+    completedDate = "completedDate",
+    dueDate = "dueDate",
+    prLinks = "prLinks",
+    commitLinks = "commitLinks",
+    screenshots = "screenshots",
+    causedProductionBug = "causedProductionBug",
+    productionBugPenalty = "productionBugPenalty",
+    relatedBugTaskId = "relatedBugTaskId",
+    rejectionReason = "rejectionReason",
+    adminNotes = "adminNotes",
+    projectId = "projectId",
     createdAt = "createdAt",
     updatedAt = "updatedAt"
 }
@@ -66,6 +99,40 @@ export enum ProjectScalarFieldEnum {
 export enum UserRole {
     USER = "USER",
     ADMIN = "ADMIN"
+}
+
+export enum TaskStatus {
+    SUGGESTED = "SUGGESTED",
+    APPROVED = "APPROVED",
+    IN_PROGRESS = "IN_PROGRESS",
+    COMPLETED = "COMPLETED",
+    REJECTED = "REJECTED",
+    BLOCKED = "BLOCKED"
+}
+
+export enum TaskPriority {
+    LOW = "LOW",
+    MEDIUM = "MEDIUM",
+    HIGH = "HIGH",
+    CRITICAL = "CRITICAL"
+}
+
+export enum TaskCategory {
+    MOBILE_APP = "MOBILE_APP",
+    WEB_FRONTEND = "WEB_FRONTEND",
+    BACKEND_API = "BACKEND_API",
+    FULL_STACK = "FULL_STACK",
+    BUG_FIX = "BUG_FIX",
+    DEBUGGING = "DEBUGGING",
+    CODE_REVIEW = "CODE_REVIEW",
+    TESTING_QA = "TESTING_QA",
+    DEVOPS = "DEVOPS",
+    DOCUMENTATION = "DOCUMENTATION",
+    CLIENT_COMMUNICATION = "CLIENT_COMMUNICATION",
+    MENTORING = "MENTORING",
+    RESEARCH = "RESEARCH",
+    OFFICE_TASKS = "OFFICE_TASKS",
+    MISCELLANEOUS = "MISCELLANEOUS"
 }
 
 export enum SortOrder {
@@ -114,10 +181,14 @@ registerEnumType(QueryMode, { name: 'QueryMode', description: undefined })
 registerEnumType(SegmentType, { name: 'SegmentType', description: undefined })
 registerEnumType(SessionStatus, { name: 'SessionStatus', description: undefined })
 registerEnumType(SortOrder, { name: 'SortOrder', description: undefined })
+registerEnumType(TaskCategory, { name: 'TaskCategory', description: undefined })
+registerEnumType(TaskPriority, { name: 'TaskPriority', description: undefined })
+registerEnumType(TaskStatus, { name: 'TaskStatus', description: undefined })
 registerEnumType(UserRole, { name: 'UserRole', description: undefined })
 registerEnumType(ProjectScalarFieldEnum, { name: 'ProjectScalarFieldEnum', description: undefined })
 registerEnumType(SegmentScalarFieldEnum, { name: 'SegmentScalarFieldEnum', description: undefined })
 registerEnumType(SessionScalarFieldEnum, { name: 'SessionScalarFieldEnum', description: undefined })
+registerEnumType(TaskScalarFieldEnum, { name: 'TaskScalarFieldEnum', description: undefined })
 registerEnumType(UserScalarFieldEnum, { name: 'UserScalarFieldEnum', description: undefined })
 registerEnumType(WorkLogScalarFieldEnum, { name: 'WorkLogScalarFieldEnum', description: undefined })
 
@@ -165,6 +236,8 @@ export class ProjectCount {
     sessions?: number;
     @Field(() => Int, {nullable:false})
     workLogs?: number;
+    @Field(() => Int, {nullable:false})
+    tasks?: number;
 }
 
 @ObjectType()
@@ -187,6 +260,8 @@ export class Project {
     sessions?: Array<Session>;
     @Field(() => [WorkLog], {nullable:true})
     workLogs?: Array<WorkLog>;
+    @Field(() => [Task], {nullable:true})
+    tasks?: Array<Task>;
     @Field(() => ProjectCount, {nullable:false})
     _count?: InstanceType<typeof ProjectCount>;
 }
@@ -268,6 +343,76 @@ export class Session {
 }
 
 @ObjectType()
+export class Task {
+    @Field(() => ID, {nullable:false})
+    id!: string;
+    @Field(() => String, {nullable:false})
+    title!: string;
+    @Field(() => String, {nullable:false})
+    description!: string;
+    @Field(() => TaskCategory, {nullable:false})
+    category!: `${TaskCategory}`;
+    @Field(() => TaskPriority, {defaultValue:'MEDIUM',nullable:false})
+    priority!: `${TaskPriority}`;
+    @Field(() => TaskStatus, {defaultValue:'SUGGESTED',nullable:false})
+    status!: `${TaskStatus}`;
+    @Field(() => Int, {nullable:false})
+    points!: number;
+    @Field(() => Int, {nullable:true})
+    suggestedPoints!: number | null;
+    @Field(() => Float, {nullable:false})
+    estimatedHours!: number;
+    @Field(() => Float, {nullable:true})
+    actualHours!: number | null;
+    @Field(() => String, {nullable:true})
+    suggestedById!: string | null;
+    @Field(() => String, {nullable:true})
+    assignedToId!: string | null;
+    @Field(() => String, {nullable:true})
+    approvedById!: string | null;
+    @Field(() => Date, {nullable:false})
+    suggestedDate!: Date;
+    @Field(() => Date, {nullable:true})
+    approvedDate!: Date | null;
+    @Field(() => Date, {nullable:true})
+    startedDate!: Date | null;
+    @Field(() => Date, {nullable:true})
+    completedDate!: Date | null;
+    @Field(() => Date, {nullable:true})
+    dueDate!: Date | null;
+    @Field(() => [String], {nullable:true})
+    prLinks!: Array<string>;
+    @Field(() => [String], {nullable:true})
+    commitLinks!: Array<string>;
+    @Field(() => [String], {nullable:true})
+    screenshots!: Array<string>;
+    @Field(() => Boolean, {defaultValue:false,nullable:false})
+    causedProductionBug!: boolean;
+    @Field(() => Int, {defaultValue:0,nullable:false})
+    productionBugPenalty!: number;
+    @Field(() => String, {nullable:true})
+    relatedBugTaskId!: string | null;
+    @Field(() => String, {nullable:true})
+    rejectionReason!: string | null;
+    @Field(() => String, {nullable:true})
+    adminNotes!: string | null;
+    @Field(() => String, {nullable:true})
+    projectId!: string | null;
+    @Field(() => Date, {nullable:false})
+    createdAt!: Date;
+    @Field(() => Date, {nullable:false})
+    updatedAt!: Date;
+    @Field(() => User, {nullable:true})
+    suggestedBy?: InstanceType<typeof User> | null;
+    @Field(() => User, {nullable:true})
+    assignedTo?: InstanceType<typeof User> | null;
+    @Field(() => User, {nullable:true})
+    approvedBy?: InstanceType<typeof User> | null;
+    @Field(() => Project, {nullable:true})
+    project?: InstanceType<typeof Project> | null;
+}
+
+@ObjectType()
 export class UserCount {
     @Field(() => Int, {nullable:false})
     sessions?: number;
@@ -275,6 +420,12 @@ export class UserCount {
     breaks?: number;
     @Field(() => Int, {nullable:false})
     workLogs?: number;
+    @Field(() => Int, {nullable:false})
+    taskSuggestions?: number;
+    @Field(() => Int, {nullable:false})
+    taskAssignments?: number;
+    @Field(() => Int, {nullable:false})
+    taskApprovals?: number;
 }
 
 @ObjectType()
@@ -305,6 +456,12 @@ export class User {
     breaks?: Array<Break>;
     @Field(() => [WorkLog], {nullable:true})
     workLogs?: Array<WorkLog>;
+    @Field(() => [Task], {nullable:true})
+    taskSuggestions?: Array<Task>;
+    @Field(() => [Task], {nullable:true})
+    taskAssignments?: Array<Task>;
+    @Field(() => [Task], {nullable:true})
+    taskApprovals?: Array<Task>;
     @Field(() => UserCount, {nullable:false})
     _count?: InstanceType<typeof UserCount>;
 }

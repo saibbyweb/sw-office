@@ -57,6 +57,9 @@ model User {
   workLogs      WorkLog[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  taskSuggestions Task[] @relation("TaskSuggestedBy")
+  taskAssignments Task[] @relation("TaskAssignedTo")
+  taskApprovals Task[] @relation("TaskApprovedBy")
 
   @@map("users")
 }
@@ -91,6 +94,7 @@ model Project {
   updatedAt DateTime  @updatedAt
   sessions  Session[] @relation("sessionProject")
   workLogs  WorkLog[] @relation("workLogProject")
+  tasks     Task[] @relation("projectTasks")
 
   @@map("projects")
 }
@@ -144,4 +148,90 @@ model Segment {
   updatedAt DateTime    @updatedAt
 
   @@map("segments")
+}
+
+enum TaskStatus {
+  SUGGESTED
+  APPROVED
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+  BLOCKED
+}
+
+enum TaskCategory {
+  MOBILE_APP
+  WEB_FRONTEND
+  BACKEND_API
+  FULL_STACK
+  BUG_FIX
+  DEBUGGING
+  CODE_REVIEW
+  TESTING_QA
+  DEVOPS
+  DOCUMENTATION
+  CLIENT_COMMUNICATION
+  MENTORING
+  RESEARCH
+  OFFICE_TASKS
+  MISCELLANEOUS
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model Task {
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String
+  category    TaskCategory
+  priority    TaskPriority @default(MEDIUM)
+  status      TaskStatus   @default(SUGGESTED)
+  
+  // Performance Metrics
+  points              Int
+  suggestedPoints     Int? // What the developer suggested
+  estimatedHours      Float
+  actualHours         Float?
+  
+  // People
+  suggestedById       String?  @db.ObjectId
+  suggestedBy         User?    @relation("TaskSuggestedBy", fields: [suggestedById], references: [id])
+  assignedToId        String?  @db.ObjectId
+  assignedTo          User?    @relation("TaskAssignedTo", fields: [assignedToId], references: [id])
+  approvedById        String?  @db.ObjectId
+  approvedBy          User?    @relation("TaskApprovedBy", fields: [approvedById], references: [id])
+  
+  // Dates
+  suggestedDate       DateTime @default(now())
+  approvedDate        DateTime?
+  startedDate         DateTime?
+  completedDate       DateTime?
+  dueDate             DateTime?
+  
+  // Evidence & Quality
+  prLinks             String[]
+  commitLinks         String[]
+  screenshots         String[]
+  
+  // Production Bug Tracking
+  causedProductionBug Boolean  @default(false)
+  productionBugPenalty Int     @default(0)
+  relatedBugTaskId    String?  @db.ObjectId // If this task is fixing a production bug
+  
+  // Admin Control
+  rejectionReason     String?
+  adminNotes          String?
+  
+  // Relations
+  projectId           String?  @db.ObjectId
+  project             Project? @relation("projectTasks", fields: [projectId], references: [id])
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
 }
