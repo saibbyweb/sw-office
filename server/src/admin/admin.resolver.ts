@@ -1,9 +1,11 @@
-import { Resolver, Query, Args, ID } from '@nestjs/graphql';
+import { Resolver, Query, Args, ID, Mutation } from '@nestjs/graphql';
 import { Session, User, WorkLog } from '../generated-nestjs-typegraphql';
 import { GetSessionsInput } from '../types/session.types';
 import { SessionService } from '../services/session.service';
 import { UsersService } from '../users/users.service';
 import { WorkLogService } from '../services/worklog.service';
+import { PrismaService } from '../prisma/prisma.service';
+import * as bcrypt from 'bcrypt';
 
 @Resolver()
 export class AdminResolver {
@@ -11,6 +13,7 @@ export class AdminResolver {
     private readonly sessionService: SessionService,
     private readonly usersService: UsersService,
     private readonly workLogService: WorkLogService,
+    private readonly prisma: PrismaService,
   ) {}
 
   @Query(() => [User])
@@ -38,5 +41,28 @@ export class AdminResolver {
     @Args('sessionId', { type: () => ID }) sessionId: string,
   ): Promise<WorkLog[]> {
     return this.workLogService.getSessionWorkLogsForAdmin(sessionId);
+  }
+
+  @Mutation(() => User)
+  async adminUpdateUserPassword(
+    @Args('userId', { type: () => ID }) userId: string,
+    @Args('newPassword') newPassword: string,
+  ): Promise<User> {
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
+  }
+
+  @Mutation(() => User)
+  async adminArchiveUser(
+    @Args('userId', { type: () => ID }) userId: string,
+    @Args('archived') archived: boolean,
+  ): Promise<User> {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { archived },
+    });
   }
 }

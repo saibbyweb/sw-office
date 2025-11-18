@@ -5,6 +5,7 @@ export interface AdminUser {
   avatarUrl?: string;
   isOnline: boolean;
   currentStatus: string;
+  archived: boolean;
 }
 
 export interface Project {

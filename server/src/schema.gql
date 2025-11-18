@@ -104,6 +104,8 @@ type MeetingStatus {
 
 type Mutation {
   addWorkLog(input: AddWorkLogInput!): WorkLog!
+  adminArchiveUser(archived: Boolean!, userId: ID!): User!
+  adminUpdateUserPassword(newPassword: String!, userId: ID!): User!
   cancelCall(callId: String!): Call!
   cleanupInconsistentBreaks: String!
   createOnlineMeeting(endTime: String!, startTime: String!, subject: String!, userId: String!): OnlineMeeting!
@@ -372,6 +374,7 @@ input UpdateWorkLogInput {
 type User {
   _count: UserCount!
   activeSession: Session
+  archived: Boolean!
   avatarUrl: String
   breaks: [Break!]
   createdAt: DateTime!

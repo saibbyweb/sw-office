@@ -55,6 +55,7 @@ model User {
   sessions      Session[]
   breaks        Break[]
   workLogs      WorkLog[]
+  archived      Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   taskSuggestions Task[] @relation("TaskSuggestedBy")

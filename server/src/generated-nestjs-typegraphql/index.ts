@@ -25,6 +25,7 @@ export enum UserScalarFieldEnum {
     avatarUrl = "avatarUrl",
     isOnline = "isOnline",
     currentStatus = "currentStatus",
+    archived = "archived",
     createdAt = "createdAt",
     updatedAt = "updatedAt"
 }
@@ -446,6 +447,8 @@ export class User {
     isOnline!: boolean;
     @Field(() => String, {nullable:true})
     currentStatus!: string | null;
+    @Field(() => Boolean, {defaultValue:false,nullable:false})
+    archived!: boolean;
     @Field(() => Date, {nullable:false})
     createdAt!: Date;
     @Field(() => Date, {nullable:false})

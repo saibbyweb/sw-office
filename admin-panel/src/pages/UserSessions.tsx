@@ -30,6 +30,7 @@ export default function UserSessions() {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [viewType, setViewType] = useState<ViewType>(null);
   const [daysRange, setDaysRange] = useState<number>(28);
+  const [showArchived, setShowArchived] = useState(false);
 
   // Memoize the date range to prevent unnecessary re-renders
   const dateRange = useMemo(() => ({
@@ -71,6 +72,12 @@ export default function UserSessions() {
   const selectedUser = usersData?.adminUsers.find(user => user.id === selectedUserId);
   const session = sessionData?.adminSession;
   const workLogs = workLogsData?.adminSessionWorkLogs || [];
+
+  const filteredUsers = usersData?.adminUsers.filter(user =>
+    showArchived ? true : !user.archived
+  ) || [];
+
+  const archivedCount = usersData?.adminUsers.filter(user => user.archived).length || 0;
 
   const handleViewDetails = (sessionId: string) => {
     setSelectedSessionId(sessionId);
@@ -154,6 +161,19 @@ export default function UserSessions() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {archivedCount > 0 && (
+                <label className="flex items-center gap-2 cursor-pointer bg-white/40 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/20 hover:bg-white/60 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={showArchived}
+                    onChange={(e) => setShowArchived(e.target.checked)}
+                    className="w-3.5 h-3.5 text-violet-600 rounded focus:ring-violet-500"
+                  />
+                  <span className="text-xs text-gray-700">
+                    Show archived ({archivedCount})
+                  </span>
+                </label>
+              )}
               <select
                 value={daysRange}
                 onChange={(e) => setDaysRange(Number(e.target.value))}
@@ -178,7 +198,7 @@ export default function UserSessions() {
             <div className="p-3 border-b border-white/20 bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10">
               <h2 className="text-base font-semibold flex items-center gap-2 text-gray-800">
                 <FiUser className="w-4 h-4 text-violet-600" />
-                Users {usersData && `(${usersData.adminUsers.length})`}
+                Users ({filteredUsers.length})
               </h2>
             </div>
             <div className="divide-y divide-white/20 overflow-y-auto h-[calc(100%-53px)]">
@@ -194,7 +214,7 @@ export default function UserSessions() {
                   </div>
                 ))
               ) : (
-                usersData?.adminUsers.map((user) => (
+                filteredUsers.map((user) => (
                   <button
                     key={user.id}
                     onClick={() => setSelectedUserId(user.id)}
