@@ -275,4 +275,63 @@ export const TEAM_USERS_QUERY = gql`
       }
     }
   }
+`;
+
+export const AVAILABLE_TASKS = gql`
+  query AvailableTasks {
+    tasks {
+      id
+      title
+      description
+      status
+      priority
+      category
+      points
+      estimatedHours
+      actualHours
+      dueDate
+      startedDate
+      completedDate
+      assignedTo {
+        id
+        name
+        email
+      }
+      project {
+        id
+        name
+      }
+      suggestedBy {
+        id
+        name
+      }
+      approvedBy {
+        id
+        name
+      }
+    }
+  }
+`;
+
+export const CREATE_TASK = gql`
+  mutation CreateTask($input: CreateTaskInputType!) {
+    createTask(input: $input) {
+      id
+      title
+      description
+      status
+      priority
+      category
+      points
+      estimatedHours
+      project {
+        id
+        name
+      }
+      suggestedBy {
+        id
+        name
+      }
+    }
+  }
 `; 

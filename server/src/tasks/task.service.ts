@@ -61,4 +61,53 @@ export class TaskService {
       },
     });
   }
+
+  async assignTask(taskId: string, userId: string | null): Promise<Task> {
+    return this.prisma.task.update({
+      where: { id: taskId },
+      data: {
+        assignedToId: userId,
+      },
+      include: {
+        project: true,
+        suggestedBy: true,
+        assignedTo: true,
+        approvedBy: true,
+      },
+    });
+  }
+
+  async approveTask(taskId: string, approvedById: string): Promise<Task> {
+    return this.prisma.task.update({
+      where: { id: taskId },
+      data: {
+        status: 'APPROVED',
+        approvedById: approvedById,
+        approvedDate: new Date(),
+      },
+      include: {
+        project: true,
+        suggestedBy: true,
+        assignedTo: true,
+        approvedBy: true,
+      },
+    });
+  }
+
+  async unapproveTask(taskId: string): Promise<Task> {
+    return this.prisma.task.update({
+      where: { id: taskId },
+      data: {
+        status: 'SUGGESTED',
+        approvedById: null,
+        approvedDate: null,
+      },
+      include: {
+        project: true,
+        suggestedBy: true,
+        assignedTo: true,
+        approvedBy: true,
+      },
+    });
+  }
 }

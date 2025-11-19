@@ -1,7 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import { Users, Edit2, Clock, ArrowLeft } from 'react-feather';
+import { Users, Edit2, Clock, ArrowLeft, CheckSquare } from 'react-feather';
 import { Button } from './Button';
 import appIcon from '../../../assets/icon.png';
 
@@ -139,6 +139,10 @@ export const Header: React.FC<HeaderProps> = ({
         <TeamsButton onClick={() => navigate('/history')}>
           <Clock size={18} />
           History
+        </TeamsButton>
+        <TeamsButton onClick={() => navigate('/tasks')}>
+          <CheckSquare size={18} />
+          Tasks
         </TeamsButton>
         <UserInfo>
           {userName} ({userEmail})

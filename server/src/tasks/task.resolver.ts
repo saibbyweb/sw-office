@@ -45,4 +45,27 @@ export class TaskResolver {
   async createTask(@Args('input') input: CreateTaskInputType): Promise<Task> {
     return this.taskService.createTask(input);
   }
+
+  @Mutation(() => Task)
+  async assignTask(
+    @Args('taskId') taskId: string,
+    @Args('userId', { type: () => String, nullable: true }) userId: string | null,
+  ): Promise<Task> {
+    return this.taskService.assignTask(taskId, userId);
+  }
+
+  @Mutation(() => Task)
+  async approveTask(
+    @Args('taskId') taskId: string,
+    @Args('approvedById') approvedById: string,
+  ): Promise<Task> {
+    return this.taskService.approveTask(taskId, approvedById);
+  }
+
+  @Mutation(() => Task)
+  async unapproveTask(
+    @Args('taskId') taskId: string,
+  ): Promise<Task> {
+    return this.taskService.unapproveTask(taskId);
+  }
 }

@@ -11,6 +11,7 @@ import { Home } from './routes/Home';
 import { History } from './routes/History';
 import { Login } from './routes/Login';
 import { Teams } from './routes/Teams';
+import { Tasks } from './routes/Tasks';
 import { UpdateInfo } from './components/common/UpdateInfo';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import { notificationService } from '../services/NotificationService';
@@ -38,6 +39,11 @@ const AppContent: React.FC = () => {
           <Route path="/teams" element={
             <PrivateRoute>
               <Teams />
+            </PrivateRoute>
+          } />
+          <Route path="/tasks" element={
+            <PrivateRoute>
+              <Tasks />
             </PrivateRoute>
           } />
         </Routes>

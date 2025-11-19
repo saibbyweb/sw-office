@@ -116,6 +116,8 @@ type Mutation {
   addWorkLog(input: AddWorkLogInput!): WorkLog!
   adminArchiveUser(archived: Boolean!, userId: ID!): User!
   adminUpdateUserPassword(newPassword: String!, userId: ID!): User!
+  approveTask(approvedById: String!, taskId: String!): Task!
+  assignTask(taskId: String!, userId: String): Task!
   cancelCall(callId: String!): Call!
   cleanupInconsistentBreaks: String!
   createOnlineMeeting(endTime: String!, startTime: String!, subject: String!, userId: String!): OnlineMeeting!
@@ -135,6 +137,7 @@ type Mutation {
   startSession(input: StartSessionInput!): Session!
   switchProject(input: SwitchProjectInput!): Session!
   testInitiateCall(callerId: String!, receiverId: String!): Call!
+  unapproveTask(taskId: String!): Task!
   updateProfile(input: UpdateProfileInput!): User!
   updateWorkLog(input: UpdateWorkLogInput!): WorkLog!
 }

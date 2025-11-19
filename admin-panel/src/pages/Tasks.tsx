@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@apollo/client';
-import { FiArrowLeft, FiPlus, FiX, FiAlertCircle, FiCheckCircle, FiClock, FiTarget, FiZap, FiAward } from 'react-icons/fi';
+import { FiArrowLeft, FiPlus, FiX, FiAlertCircle, FiCheckCircle, FiClock, FiTarget, FiZap, FiAward, FiUser, FiUserPlus, FiCheck, FiCornerUpLeft } from 'react-icons/fi';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import Select from 'react-select';
 import { PROJECTS_QUERY } from '../graphql/projects.queries';
-import { CREATE_TASK_MUTATION, TASKS_QUERY } from '../graphql/tasks.mutations';
+import { CREATE_TASK_MUTATION, TASKS_QUERY, ASSIGN_TASK_MUTATION, APPROVE_TASK_MUTATION, UNAPPROVE_TASK_MUTATION } from '../graphql/tasks.mutations';
+import { ADMIN_USERS_QUERY } from '../graphql/admin.queries';
 
 interface Project {
   id: string;
@@ -79,6 +81,16 @@ const statusConfig = {
   BLOCKED: { color: 'text-orange-600', bg: 'bg-orange-100', label: 'Blocked' },
 };
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
+
+interface UsersData {
+  adminUsers: User[];
+}
+
 interface TasksData {
   tasks: Array<{
     id: string;
@@ -91,16 +103,82 @@ interface TasksData {
     estimatedHours: number;
     actualHours?: number;
     project?: { id: string; name: string; };
+    assignedTo?: User;
   }>;
 }
 
 export default function Tasks() {
   const navigate = useNavigate();
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [assignModalTask, setAssignModalTask] = useState<string | null>(null);
   const { data: tasksData, loading: tasksLoading, refetch } = useQuery<TasksData>(TASKS_QUERY);
+  const { data: usersData, loading: usersLoading } = useQuery<UsersData>(ADMIN_USERS_QUERY);
+  const [assignTask] = useMutation(ASSIGN_TASK_MUTATION);
+  const [approveTask] = useMutation(APPROVE_TASK_MUTATION, {
+    refetchQueries: [{ query: TASKS_QUERY }],
+  });
+  const [unapproveTask] = useMutation(UNAPPROVE_TASK_MUTATION, {
+    refetchQueries: [{ query: TASKS_QUERY }],
+  });
 
   const handleCreateTask = () => {
     setShowCreateForm(true);
+  };
+
+  const handleAssignTask = async (taskId: string, userId: string | null) => {
+    try {
+      await assignTask({
+        variables: { taskId, userId },
+      });
+      toast.success('Task assigned successfully!');
+      setAssignModalTask(null);
+      refetch();
+    } catch (error) {
+      toast.error('Failed to assign task');
+    }
+  };
+
+  const handleApproveTask = async (taskId: string) => {
+    if (usersLoading) {
+      toast.error('Loading users, please wait...');
+      return;
+    }
+
+    try {
+      // Use first admin user as approver (TODO: Get from auth context)
+      const approvedById = usersData?.adminUsers[0]?.id;
+      if (!approvedById) {
+        toast.error('No admin user found');
+        console.error('Users data:', usersData);
+        return;
+      }
+
+      console.log('Approving task:', taskId, 'by:', approvedById);
+
+      const result = await approveTask({
+        variables: { taskId, approvedById },
+      });
+
+      console.log('Approve result:', result);
+      toast.success('Task approved successfully!');
+    } catch (error: any) {
+      console.error('Approve task error:', error);
+      const errorMessage = error?.message || error?.graphQLErrors?.[0]?.message || 'Failed to approve task';
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleUnapproveTask = async (taskId: string) => {
+    try {
+      await unapproveTask({
+        variables: { taskId },
+      });
+      toast.success('Task moved back to suggested!');
+    } catch (error: any) {
+      console.error('Unapprove task error:', error);
+      const errorMessage = error?.message || error?.graphQLErrors?.[0]?.message || 'Failed to move task';
+      toast.error(errorMessage);
+    }
   };
 
   return (
@@ -154,84 +232,84 @@ export default function Tasks() {
             <p className="text-gray-400 text-sm">Create your first task to get started!</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {tasksData?.tasks.map((task, index) => {
-            const PriorityIcon = priorityConfig[task.priority as keyof typeof priorityConfig].icon;
-            const categoryGradient = categoryColors[task.category as keyof typeof categoryColors];
-
-            return (
-              <motion.div
-                key={task.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-white/80 backdrop-blur-md rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-white/40 overflow-hidden group"
-              >
-                {/* Card Header with Gradient */}
-                <div className={`h-2 bg-gradient-to-r ${categoryGradient}`} />
-
-                <div className="p-6">
-                  {/* Title and Status */}
-                  <div className="flex items-start justify-between gap-3 mb-4">
-                    <h3 className="text-lg font-bold text-gray-800 group-hover:text-violet-600 transition-colors">
-                      {task.title}
-                    </h3>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusConfig[task.status as keyof typeof statusConfig].bg} ${statusConfig[task.status as keyof typeof statusConfig].color} whitespace-nowrap`}>
-                      {statusConfig[task.status as keyof typeof statusConfig].label}
-                    </span>
-                  </div>
-
-                  {/* Description */}
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                    {task.description}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Suggested Tasks Column */}
+            <div>
+              <div className="mb-4 flex items-center gap-3">
+                <div className="h-10 w-1 bg-gradient-to-b from-gray-400 to-gray-600 rounded-full" />
+                <div>
+                  <h2 className="text-xl font-bold text-gray-800">Suggested Tasks</h2>
+                  <p className="text-sm text-gray-500">
+                    {tasksData?.tasks.filter(t => t.status === 'SUGGESTED').length} tasks
                   </p>
-
-                  {/* Metadata */}
-                  <div className="flex items-center gap-4 mb-4 text-sm">
-                    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg ${priorityConfig[task.priority as keyof typeof priorityConfig].bg}`}>
-                      <PriorityIcon className={`w-4 h-4 ${priorityConfig[task.priority as keyof typeof priorityConfig].color}`} />
-                      <span className={`font-medium ${priorityConfig[task.priority as keyof typeof priorityConfig].color}`}>
-                        {task.priority}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-gray-600">
-                      <FiAward className="w-4 h-4 text-amber-500" />
-                      <span className="font-bold text-amber-600">{task.points}</span>
-                      <span className="text-xs">pts</span>
-                    </div>
-                  </div>
-
-                  {/* Progress Bar (if in progress) */}
-                  {task.actualHours && (
-                    <div className="mb-4">
-                      <div className="flex justify-between text-xs text-gray-600 mb-1">
-                        <span>Progress</span>
-                        <span>{task.actualHours}h / {task.estimatedHours}h</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full bg-gradient-to-r ${categoryGradient} transition-all duration-500`}
-                          style={{ width: `${Math.min((task.actualHours / task.estimatedHours) * 100, 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Footer */}
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                    <div className="text-xs text-gray-500">
-                      {task.category.replace(/_/g, ' ')}
-                    </div>
-                    {task.project && (
-                      <div className="text-xs font-medium text-violet-600 bg-violet-50 px-2 py-1 rounded">
-                        {task.project.name}
-                      </div>
-                    )}
-                  </div>
                 </div>
-              </motion.div>
-            );
-          })}
+              </div>
+              <div className="space-y-4">
+                {tasksData?.tasks.filter(t => t.status === 'SUGGESTED').length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-48 text-center bg-white/60 backdrop-blur-md rounded-2xl border-2 border-dashed border-gray-300">
+                    <FiCheckCircle className="w-12 h-12 text-gray-300 mb-2" />
+                    <p className="text-gray-400 text-sm">No suggested tasks</p>
+                  </div>
+                ) : (
+                  tasksData?.tasks.filter(t => t.status === 'SUGGESTED').map((task, index) => {
+                    const PriorityIcon = priorityConfig[task.priority as keyof typeof priorityConfig].icon;
+                    const categoryGradient = categoryColors[task.category as keyof typeof categoryColors];
+
+                    return (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        index={index}
+                        PriorityIcon={PriorityIcon}
+                        categoryGradient={categoryGradient}
+                        onAssign={setAssignModalTask}
+                        onApprove={handleApproveTask}
+                        onUnapprove={handleUnapproveTask}
+                      />
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Active Tasks Column */}
+            <div>
+              <div className="mb-4 flex items-center gap-3">
+                <div className="h-10 w-1 bg-gradient-to-b from-violet-500 to-fuchsia-600 rounded-full" />
+                <div>
+                  <h2 className="text-xl font-bold text-gray-800">Active Tasks</h2>
+                  <p className="text-sm text-gray-500">
+                    {tasksData?.tasks.filter(t => t.status !== 'SUGGESTED' && t.status !== 'REJECTED').length} tasks
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                {tasksData?.tasks.filter(t => t.status !== 'SUGGESTED' && t.status !== 'REJECTED').length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-48 text-center bg-white/60 backdrop-blur-md rounded-2xl border-2 border-dashed border-gray-300">
+                    <FiCheckCircle className="w-12 h-12 text-gray-300 mb-2" />
+                    <p className="text-gray-400 text-sm">No active tasks</p>
+                  </div>
+                ) : (
+                  tasksData?.tasks.filter(t => t.status !== 'SUGGESTED' && t.status !== 'REJECTED').map((task, index) => {
+                    const PriorityIcon = priorityConfig[task.priority as keyof typeof priorityConfig].icon;
+                    const categoryGradient = categoryColors[task.category as keyof typeof categoryColors];
+
+                    return (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        index={index}
+                        PriorityIcon={PriorityIcon}
+                        categoryGradient={categoryGradient}
+                        onAssign={setAssignModalTask}
+                        onApprove={handleApproveTask}
+                        onUnapprove={handleUnapproveTask}
+                      />
+                    );
+                  })
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -242,7 +320,210 @@ export default function Tasks() {
           <CreateTaskModal onClose={() => setShowCreateForm(false)} onSuccess={refetch} />
         )}
       </AnimatePresence>
+
+      {/* Assign Task Modal */}
+      <AnimatePresence>
+        {assignModalTask && (
+          <AssignTaskModal
+            task={tasksData?.tasks.find(t => t.id === assignModalTask)!}
+            users={usersData?.adminUsers.filter(u => !u.archived) || []}
+            onClose={() => setAssignModalTask(null)}
+            onAssign={(userId) => handleAssignTask(assignModalTask, userId)}
+          />
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+function TaskCard({
+  task,
+  index,
+  PriorityIcon,
+  categoryGradient,
+  onAssign,
+  onApprove,
+  onUnapprove,
+}: {
+  task: TasksData['tasks'][0];
+  index: number;
+  PriorityIcon: any;
+  categoryGradient: string;
+  onAssign: (taskId: string) => void;
+  onApprove: (taskId: string) => Promise<void>;
+  onUnapprove: (taskId: string) => Promise<void>;
+}) {
+  const [isApproving, setIsApproving] = useState(false);
+  const [isUnapproving, setIsUnapproving] = useState(false);
+
+  const handleApprove = async () => {
+    setIsApproving(true);
+    try {
+      await onApprove(task.id);
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
+  const handleUnapprove = async () => {
+    setIsUnapproving(true);
+    try {
+      await onUnapprove(task.id);
+    } finally {
+      setIsUnapproving(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      className="bg-white/80 backdrop-blur-md rounded-xl shadow-md hover:shadow-lg transition-all duration-300 border border-white/40 overflow-hidden group"
+    >
+      {/* Card Header with Gradient */}
+      <div className={`h-1 bg-gradient-to-r ${categoryGradient}`} />
+
+      <div className="p-4">
+        {/* Title, Status and Metadata */}
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-base font-bold text-gray-800 group-hover:text-violet-600 transition-colors truncate">
+              {task.title}
+            </h3>
+            <p className="text-gray-500 text-xs mt-1 line-clamp-1">
+              {task.description}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-md ${priorityConfig[task.priority as keyof typeof priorityConfig].bg}`}>
+              <PriorityIcon className={`w-3 h-3 ${priorityConfig[task.priority as keyof typeof priorityConfig].color}`} />
+            </div>
+            <span className={`px-2 py-1 rounded-md text-xs font-medium ${statusConfig[task.status as keyof typeof statusConfig].bg} ${statusConfig[task.status as keyof typeof statusConfig].color}`}>
+              {statusConfig[task.status as keyof typeof statusConfig].label}
+            </span>
+          </div>
+        </div>
+
+        {/* Metadata Row */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3 text-xs">
+            <div className="flex items-center gap-1 text-gray-600">
+              <FiAward className="w-3 h-3 text-amber-500" />
+              <span className="font-bold text-amber-600">{task.points}</span>
+              <span className="text-gray-400">pts</span>
+            </div>
+            <div className="text-gray-400">•</div>
+            <div className="text-gray-500">
+              {task.category.replace(/_/g, ' ')}
+            </div>
+            {task.project && (
+              <>
+                <div className="text-gray-400">•</div>
+                <div className="text-violet-600 font-medium">
+                  {task.project.name}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Progress Bar (if in progress) */}
+        {task.actualHours && (
+          <div className="mb-3">
+            <div className="flex justify-between text-xs text-gray-500 mb-1">
+              <span>Progress</span>
+              <span className="font-medium">{task.actualHours}h / {task.estimatedHours}h</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-1.5">
+              <div
+                className={`h-1.5 rounded-full bg-gradient-to-r ${categoryGradient} transition-all duration-500`}
+                style={{ width: `${Math.min((task.actualHours / task.estimatedHours) * 100, 100)}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Assigned User & Actions */}
+        <div className="flex items-center gap-2">
+          {task.assignedTo ? (
+            <div className="flex-1 flex items-center gap-2 px-2 py-1.5 bg-gradient-to-r from-violet-50 to-fuchsia-50 border border-violet-200 rounded-lg">
+              <div className="w-6 h-6 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 flex items-center justify-center text-white font-bold text-xs">
+                {task.assignedTo.name.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-gray-800 truncate">{task.assignedTo.name}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex items-center gap-2 px-2 py-1.5 bg-gray-50 border border-dashed border-gray-300 rounded-lg">
+              <FiUser className="w-4 h-4 text-gray-400" />
+              <span className="text-xs text-gray-500">Unassigned</span>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-1">
+            {task.status === 'SUGGESTED' ? (
+              <motion.button
+                whileHover={{ scale: isApproving ? 1 : 1.05 }}
+                whileTap={{ scale: isApproving ? 1 : 0.95 }}
+                onClick={handleApprove}
+                disabled={isApproving}
+                className="px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-all flex items-center gap-1.5 text-xs font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Approve Task"
+              >
+                {isApproving ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Approving...
+                  </>
+                ) : (
+                  <>
+                    <FiCheck className="w-3.5 h-3.5" />
+                    Approve
+                  </>
+                )}
+              </motion.button>
+            ) : (
+              <motion.button
+                whileHover={{ scale: isUnapproving ? 1 : 1.05 }}
+                whileTap={{ scale: isUnapproving ? 1 : 0.95 }}
+                onClick={handleUnapprove}
+                disabled={isUnapproving}
+                className="px-3 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-all flex items-center gap-1.5 text-xs font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Move back to Suggested"
+              >
+                {isUnapproving ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Moving...
+                  </>
+                ) : (
+                  <>
+                    <FiCornerUpLeft className="w-3.5 h-3.5" />
+                    Unapprove
+                  </>
+                )}
+              </motion.button>
+            )}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => onAssign(task.id)}
+              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-xs font-medium ${
+                task.assignedTo
+                  ? 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
+                  : 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white hover:from-violet-700 hover:to-fuchsia-700 shadow-sm'
+              }`}
+              title={task.assignedTo ? 'Re-assign Task' : 'Assign Task'}
+            >
+              <FiUserPlus className="w-3.5 h-3.5" />
+            </motion.button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
   );
 }
 
@@ -512,6 +793,206 @@ function CreateTaskModal({ onClose, onSuccess }: { onClose: () => void; onSucces
             </motion.button>
           </div>
         </form>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function AssignTaskModal({
+  task,
+  users,
+  onClose,
+  onAssign
+}: {
+  task: TasksData['tasks'][0];
+  users: User[];
+  onClose: () => void;
+  onAssign: (userId: string | null) => Promise<void>;
+}) {
+  const [selectedUser, setSelectedUser] = useState<{ value: string; label: string; email: string } | null>(
+    task.assignedTo ? {
+      value: task.assignedTo.id,
+      label: task.assignedTo.name,
+      email: task.assignedTo.email
+    } : null
+  );
+  const [isAssigning, setIsAssigning] = useState(false);
+
+  const userOptions = users.map(user => ({
+    value: user.id,
+    label: user.name,
+    email: user.email,
+  }));
+
+  const handleAssign = async () => {
+    setIsAssigning(true);
+    try {
+      await onAssign(selectedUser?.value || null);
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  const customStyles = {
+    control: (base: any, state: any) => ({
+      ...base,
+      minHeight: '56px',
+      borderRadius: '12px',
+      borderWidth: '2px',
+      borderColor: state.isFocused ? '#9333ea' : '#e5e7eb',
+      boxShadow: state.isFocused ? '0 0 0 4px rgba(147, 51, 234, 0.1)' : 'none',
+      '&:hover': {
+        borderColor: '#9333ea',
+      },
+    }),
+    option: (base: any, state: any) => ({
+      ...base,
+      backgroundColor: state.isSelected
+        ? '#9333ea'
+        : state.isFocused
+        ? '#f3e8ff'
+        : 'white',
+      color: state.isSelected ? 'white' : '#1f2937',
+      padding: '12px 16px',
+      cursor: 'pointer',
+      '&:active': {
+        backgroundColor: '#9333ea',
+      },
+    }),
+    menu: (base: any) => ({
+      ...base,
+      borderRadius: '12px',
+      overflow: 'hidden',
+      boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+      zIndex: 9999,
+    }),
+    menuList: (base: any) => ({
+      ...base,
+      padding: '8px',
+      maxHeight: '240px',
+    }),
+    menuPortal: (base: any) => ({
+      ...base,
+      zIndex: 9999,
+    }),
+  };
+
+  const formatOptionLabel = ({ label, email }: { label: string; email: string; value: string }) => (
+    <div className="flex items-center gap-3">
+      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 flex items-center justify-center text-white font-bold">
+        {label.charAt(0).toUpperCase()}
+      </div>
+      <div>
+        <p className="font-semibold text-gray-800">{label}</p>
+        <p className="text-sm text-gray-500">{email}</p>
+      </div>
+    </div>
+  );
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden"
+      >
+        {/* Header */}
+        <div className="relative bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600 p-6 text-white">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iYSIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVHJhbnNmb3JtPSJyb3RhdGUoNDUpIj48cGF0aCBkPSJNLTEwIDMwaDYwIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMSIgb3BhY2l0eT0iMC4xIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2EpIi8+PC9zdmc+')] opacity-30" />
+          <div className="relative">
+            <button
+              onClick={onClose}
+              className="absolute right-0 top-0 p-2 hover:bg-white/20 rounded-lg transition-colors"
+            >
+              <FiX className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-3 mb-2">
+              <FiUserPlus className="w-7 h-7" />
+              <h2 className="text-2xl font-bold">Assign Task</h2>
+            </div>
+            <p className="text-white/90 text-sm">Choose a team member for this task</p>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          {/* Task Info */}
+          <div className="mb-6 p-4 bg-gradient-to-r from-violet-50 to-fuchsia-50 rounded-xl border border-violet-200">
+            <p className="text-sm text-gray-600 mb-1">Task</p>
+            <p className="font-bold text-gray-800">{task.title}</p>
+          </div>
+
+          {/* User Select */}
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-gray-700 mb-3">
+              Assign to
+            </label>
+            <Select
+              value={selectedUser}
+              onChange={setSelectedUser}
+              options={userOptions}
+              styles={customStyles}
+              formatOptionLabel={formatOptionLabel}
+              placeholder="Select a team member..."
+              isClearable
+              isSearchable
+              menuPortalTarget={document.body}
+              menuPosition="fixed"
+              className="react-select-container"
+              classNamePrefix="react-select"
+            />
+          </div>
+
+          {/* Current Assignment Info */}
+          {task.assignedTo && (
+            <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-xs font-semibold text-blue-800 mb-1">Currently assigned to</p>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold text-xs">
+                  {task.assignedTo.name.charAt(0).toUpperCase()}
+                </div>
+                <p className="text-sm font-medium text-blue-900">{task.assignedTo.name}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Buttons */}
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isAssigning}
+              className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Cancel
+            </button>
+            <motion.button
+              type="button"
+              onClick={handleAssign}
+              disabled={isAssigning}
+              whileHover={{ scale: isAssigning ? 1 : 1.02 }}
+              whileTap={{ scale: isAssigning ? 1 : 0.98 }}
+              className="flex-1 px-6 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-xl hover:from-violet-700 hover:to-fuchsia-700 transition-all shadow-lg hover:shadow-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+            >
+              {isAssigning ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Assigning...
+                </>
+              ) : (
+                <>{selectedUser ? 'Assign Task' : 'Unassign Task'}</>
+              )}
+            </motion.button>
+          </div>
+        </div>
       </motion.div>
     </motion.div>
   );
