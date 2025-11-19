@@ -1,4 +1,4 @@
-import { FiUsers, FiGitBranch, FiBarChart2, FiUserPlus } from 'react-icons/fi';
+import { FiUsers, FiGitBranch, FiBarChart2, FiUserPlus, FiCheckSquare } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 
 const pages = [
@@ -17,6 +17,14 @@ const pages = [
     icon: FiUserPlus,
     gradient: 'from-emerald-600 to-teal-600',
     bgGradient: 'from-emerald-500/20 to-teal-500/20',
+  },
+  {
+    title: 'Tasks',
+    description: 'Manage tasks, track progress, and celebrate wins',
+    path: '/tasks',
+    icon: FiCheckSquare,
+    gradient: 'from-amber-600 to-orange-600',
+    bgGradient: 'from-amber-500/20 to-orange-500/20',
   },
   {
     title: 'Workflow View',

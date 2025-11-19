@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Dashboard from './components/Dashboard';
 import UserSessions from './pages/UserSessions';
 import Team from './pages/Team';
+import Tasks from './pages/Tasks';
 import WorkflowView from './pages/WorkflowView';
 import Workflow from './pages/Workflow';
 
@@ -14,6 +15,7 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/sessions" element={<UserSessions />} />
           <Route path="/team" element={<Team />} />
+          <Route path="/tasks" element={<Tasks />} />
           <Route path="/workflow/:sessionId" element={<WorkflowView />} />
           <Route path="/workflow-v2/:sessionId" element={<Workflow />} />
         </Routes>
