@@ -334,4 +334,19 @@ export const CREATE_TASK = gql`
       }
     }
   }
+`;
+
+export const ASSIGN_TASK = gql`
+  mutation AssignTask($taskId: String!, $userId: String) {
+    assignTask(taskId: $taskId, userId: $userId) {
+      id
+      title
+      status
+      assignedTo {
+        id
+        name
+        email
+      }
+    }
+  }
 `; 

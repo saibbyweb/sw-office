@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@apollo/client';
-import { FiArrowLeft, FiPlus, FiX, FiAlertCircle, FiCheckCircle, FiClock, FiTarget, FiZap, FiAward, FiUser, FiUserPlus, FiCheck, FiCornerUpLeft } from 'react-icons/fi';
+import { FiArrowLeft, FiPlus, FiX, FiAlertCircle, FiCheckCircle, FiClock, FiTarget, FiZap, FiAward, FiUser, FiUserPlus, FiCheck, FiCornerUpLeft, FiEdit2, FiCalendar, FiActivity } from 'react-icons/fi';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import Select from 'react-select';
 import { PROJECTS_QUERY } from '../graphql/projects.queries';
-import { CREATE_TASK_MUTATION, TASKS_QUERY, ASSIGN_TASK_MUTATION, APPROVE_TASK_MUTATION, UNAPPROVE_TASK_MUTATION } from '../graphql/tasks.mutations';
+import { CREATE_TASK_MUTATION, TASKS_QUERY, ASSIGN_TASK_MUTATION, APPROVE_TASK_MUTATION, UNAPPROVE_TASK_MUTATION, UPDATE_TASK_MUTATION, COMPLETE_TASK_MUTATION, UNCOMPLETE_TASK_MUTATION, COMPLETED_TASKS_QUERY } from '../graphql/tasks.mutations';
 import { ADMIN_USERS_QUERY } from '../graphql/admin.queries';
 
 interface Project {
@@ -111,14 +111,44 @@ export default function Tasks() {
   const navigate = useNavigate();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [assignModalTask, setAssignModalTask] = useState<string | null>(null);
+  const [editModalTask, setEditModalTask] = useState<TasksData['tasks'][0] | null>(null);
+  const [activeView, setActiveView] = useState<'tasks' | 'activity'>('tasks');
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
   const { data: tasksData, loading: tasksLoading, refetch } = useQuery<TasksData>(TASKS_QUERY);
   const { data: usersData, loading: usersLoading } = useQuery<UsersData>(ADMIN_USERS_QUERY);
+
+  // Get date range for completed tasks query
+  const getDateRange = () => {
+    if (selectedDate) {
+      const date = new Date(selectedDate);
+      const startOfDay = new Date(date.setHours(0, 0, 0, 0));
+      const endOfDay = new Date(date.setHours(23, 59, 59, 999));
+      return { startDate: startOfDay.toISOString(), endDate: endOfDay.toISOString() };
+    }
+    return {};
+  };
+
+  const { data: completedTasksData, loading: completedLoading, refetch: refetchCompleted } = useQuery<TasksData>(
+    COMPLETED_TASKS_QUERY,
+    {
+      variables: getDateRange(),
+      skip: activeView !== 'activity',
+    }
+  );
+
   const [assignTask] = useMutation(ASSIGN_TASK_MUTATION);
   const [approveTask] = useMutation(APPROVE_TASK_MUTATION, {
     refetchQueries: [{ query: TASKS_QUERY }],
   });
   const [unapproveTask] = useMutation(UNAPPROVE_TASK_MUTATION, {
     refetchQueries: [{ query: TASKS_QUERY }],
+  });
+  const [completeTask] = useMutation(COMPLETE_TASK_MUTATION, {
+    refetchQueries: [{ query: TASKS_QUERY }, { query: COMPLETED_TASKS_QUERY }],
+  });
+  const [uncompleteTask] = useMutation(UNCOMPLETE_TASK_MUTATION, {
+    refetchQueries: [{ query: TASKS_QUERY }, { query: COMPLETED_TASKS_QUERY }],
   });
 
   const handleCreateTask = () => {
@@ -181,6 +211,32 @@ export default function Tasks() {
     }
   };
 
+  const handleCompleteTask = async (taskId: string) => {
+    try {
+      await completeTask({
+        variables: { taskId },
+      });
+      toast.success('Task marked as completed!');
+    } catch (error: any) {
+      console.error('Complete task error:', error);
+      const errorMessage = error?.message || error?.graphQLErrors?.[0]?.message || 'Failed to complete task';
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleUncompleteTask = async (taskId: string) => {
+    try {
+      await uncompleteTask({
+        variables: { taskId },
+      });
+      toast.success('Task moved back to active!');
+    } catch (error: any) {
+      console.error('Uncomplete task error:', error);
+      const errorMessage = error?.message || error?.graphQLErrors?.[0]?.message || 'Failed to uncomplete task';
+      toast.error(errorMessage);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 via-fuchsia-50 to-pink-50">
       <Toaster position="top-right" />
@@ -216,23 +272,50 @@ export default function Tasks() {
               <span className="font-medium">Create Task</span>
             </motion.button>
           </div>
+
+          {/* View Tabs */}
+          <div className="mt-4 flex gap-2">
+            <button
+              onClick={() => setActiveView('tasks')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                activeView === 'tasks'
+                  ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-md'
+                  : 'bg-white/60 text-gray-700 hover:bg-white/80'
+              }`}
+            >
+              <FiTarget className="w-4 h-4" />
+              Tasks
+            </button>
+            <button
+              onClick={() => setActiveView('activity')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                activeView === 'activity'
+                  ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-md'
+                  : 'bg-white/60 text-gray-700 hover:bg-white/80'
+              }`}
+            >
+              <FiActivity className="w-4 h-4" />
+              Activity
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="p-6">
-        {tasksLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="text-gray-500">Loading tasks...</div>
-          </div>
-        ) : tasksData?.tasks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 text-center">
-            <FiCheckCircle className="w-16 h-16 text-gray-300 mb-4" />
-            <p className="text-gray-500 text-lg">No tasks yet</p>
-            <p className="text-gray-400 text-sm">Create your first task to get started!</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {activeView === 'tasks' ? (
+          tasksLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-gray-500">Loading tasks...</div>
+            </div>
+          ) : tasksData?.tasks.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64 text-center">
+              <FiCheckCircle className="w-16 h-16 text-gray-300 mb-4" />
+              <p className="text-gray-500 text-lg">No tasks yet</p>
+              <p className="text-gray-400 text-sm">Create your first task to get started!</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Suggested Tasks Column */}
             <div>
               <div className="mb-4 flex items-center gap-3">
@@ -265,6 +348,9 @@ export default function Tasks() {
                         onAssign={setAssignModalTask}
                         onApprove={handleApproveTask}
                         onUnapprove={handleUnapproveTask}
+                        onEdit={setEditModalTask}
+                        onComplete={handleCompleteTask}
+                        onUncomplete={handleUncompleteTask}
                       />
                     );
                   })
@@ -279,18 +365,18 @@ export default function Tasks() {
                 <div>
                   <h2 className="text-xl font-bold text-gray-800">Active Tasks</h2>
                   <p className="text-sm text-gray-500">
-                    {tasksData?.tasks.filter(t => t.status !== 'SUGGESTED' && t.status !== 'REJECTED').length} tasks
+                    {tasksData?.tasks.filter(t => t.status !== 'SUGGESTED' && t.status !== 'REJECTED' && t.status !== 'COMPLETED').length} tasks
                   </p>
                 </div>
               </div>
               <div className="space-y-4">
-                {tasksData?.tasks.filter(t => t.status !== 'SUGGESTED' && t.status !== 'REJECTED').length === 0 ? (
+                {tasksData?.tasks.filter(t => t.status !== 'SUGGESTED' && t.status !== 'REJECTED' && t.status !== 'COMPLETED').length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-48 text-center bg-white/60 backdrop-blur-md rounded-2xl border-2 border-dashed border-gray-300">
                     <FiCheckCircle className="w-12 h-12 text-gray-300 mb-2" />
                     <p className="text-gray-400 text-sm">No active tasks</p>
                   </div>
                 ) : (
-                  tasksData?.tasks.filter(t => t.status !== 'SUGGESTED' && t.status !== 'REJECTED').map((task, index) => {
+                  tasksData?.tasks.filter(t => t.status !== 'SUGGESTED' && t.status !== 'REJECTED' && t.status !== 'COMPLETED').map((task, index) => {
                     const PriorityIcon = priorityConfig[task.priority as keyof typeof priorityConfig].icon;
                     const categoryGradient = categoryColors[task.category as keyof typeof categoryColors];
 
@@ -304,12 +390,97 @@ export default function Tasks() {
                         onAssign={setAssignModalTask}
                         onApprove={handleApproveTask}
                         onUnapprove={handleUnapproveTask}
+                        onEdit={setEditModalTask}
+                        onComplete={handleCompleteTask}
+                        onUncomplete={handleUncompleteTask}
                       />
                     );
                   })
                 )}
               </div>
             </div>
+          </div>
+        )
+        ) : (
+          /* Activity View */
+          <div>
+            {/* Date Filter */}
+            <div className="mb-6 bg-white/60 backdrop-blur-md rounded-2xl p-6 border border-white/40">
+              <div className="flex items-center gap-4">
+                <FiCalendar className="w-5 h-5 text-violet-600" />
+                <div className="flex-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Filter by Date
+                  </label>
+                  <input
+                    type="date"
+                    value={selectedDate || ''}
+                    onChange={(e) => setSelectedDate(e.target.value || null)}
+                    className="px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-violet-500 focus:ring-4 focus:ring-violet-100 transition-all outline-none"
+                  />
+                </div>
+                {selectedDate && (
+                  <button
+                    onClick={() => setSelectedDate(null)}
+                    className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 font-medium"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Completed Tasks */}
+            {completedLoading ? (
+              <div className="flex items-center justify-center h-64">
+                <div className="text-gray-500">Loading completed tasks...</div>
+              </div>
+            ) : !completedTasksData?.tasks || completedTasksData.tasks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 text-center bg-white/60 backdrop-blur-md rounded-2xl border-2 border-dashed border-gray-300">
+                <FiCheckCircle className="w-16 h-16 text-gray-300 mb-4" />
+                <p className="text-gray-500 text-lg">No completed tasks</p>
+                <p className="text-gray-400 text-sm">
+                  {selectedDate ? 'No tasks were completed on this date' : 'Complete some tasks to see activity here'}
+                </p>
+              </div>
+            ) : (
+              <div>
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="h-10 w-1 bg-gradient-to-b from-green-500 to-emerald-600 rounded-full" />
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-800">
+                      {selectedDate ? `Completed on ${new Date(selectedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}` : 'All Completed Tasks'}
+                    </h2>
+                    <p className="text-sm text-gray-500">
+                      {completedTasksData.tasks.length} task{completedTasksData.tasks.length !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  {completedTasksData.tasks.map((task, index) => {
+                    const PriorityIcon = priorityConfig[task.priority as keyof typeof priorityConfig].icon;
+                    const categoryGradient = categoryColors[task.category as keyof typeof categoryColors];
+
+                    return (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        index={index}
+                        PriorityIcon={PriorityIcon}
+                        categoryGradient={categoryGradient}
+                        onAssign={setAssignModalTask}
+                        onApprove={handleApproveTask}
+                        onUnapprove={handleUnapproveTask}
+                        onEdit={setEditModalTask}
+                        onComplete={handleCompleteTask}
+                        onUncomplete={handleUncompleteTask}
+                        isCompleted={true}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -332,6 +503,17 @@ export default function Tasks() {
           />
         )}
       </AnimatePresence>
+
+      {/* Edit Task Modal */}
+      <AnimatePresence>
+        {editModalTask && (
+          <EditTaskModal
+            task={editModalTask}
+            onClose={() => setEditModalTask(null)}
+            onUpdate={refetch}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -344,6 +526,10 @@ function TaskCard({
   onAssign,
   onApprove,
   onUnapprove,
+  onEdit,
+  onComplete,
+  onUncomplete,
+  isCompleted = false,
 }: {
   task: TasksData['tasks'][0];
   index: number;
@@ -352,9 +538,15 @@ function TaskCard({
   onAssign: (taskId: string) => void;
   onApprove: (taskId: string) => Promise<void>;
   onUnapprove: (taskId: string) => Promise<void>;
+  onEdit: (task: TasksData['tasks'][0]) => void;
+  onComplete?: (taskId: string) => Promise<void>;
+  onUncomplete?: (taskId: string) => Promise<void>;
+  isCompleted?: boolean;
 }) {
   const [isApproving, setIsApproving] = useState(false);
   const [isUnapproving, setIsUnapproving] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [isUncompleting, setIsUncompleting] = useState(false);
 
   const handleApprove = async () => {
     setIsApproving(true);
@@ -374,6 +566,26 @@ function TaskCard({
     }
   };
 
+  const handleComplete = async () => {
+    if (!onComplete) return;
+    setIsCompleting(true);
+    try {
+      await onComplete(task.id);
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+
+  const handleUncomplete = async () => {
+    if (!onUncomplete) return;
+    setIsUncompleting(true);
+    try {
+      await onUncomplete(task.id);
+    } finally {
+      setIsUncompleting(false);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -387,13 +599,22 @@ function TaskCard({
       <div className="p-4">
         {/* Title, Status and Metadata */}
         <div className="flex items-start justify-between gap-2 mb-2">
-          <div className="flex-1 min-w-0">
-            <h3 className="text-base font-bold text-gray-800 group-hover:text-violet-600 transition-colors truncate">
-              {task.title}
-            </h3>
-            <p className="text-gray-500 text-xs mt-1 line-clamp-1">
-              {task.description}
-            </p>
+          <div className="flex-1 min-w-0 flex items-start gap-2">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-base font-bold text-gray-800 group-hover:text-violet-600 transition-colors truncate">
+                {task.title}
+              </h3>
+              <p className="text-gray-500 text-xs mt-1 line-clamp-1">
+                {task.description}
+              </p>
+            </div>
+            <button
+              onClick={() => onEdit(task)}
+              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors flex-shrink-0"
+              title="Edit Task"
+            >
+              <FiEdit2 className="w-3.5 h-3.5 text-gray-500 hover:text-violet-600" />
+            </button>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <div className={`flex items-center gap-1 px-2 py-1 rounded-md ${priorityConfig[task.priority as keyof typeof priorityConfig].bg}`}>
@@ -464,37 +685,17 @@ function TaskCard({
 
           {/* Action Buttons */}
           <div className="flex items-center gap-1">
-            {task.status === 'SUGGESTED' ? (
+            {isCompleted ? (
+              /* Show Uncomplete button for completed tasks */
               <motion.button
-                whileHover={{ scale: isApproving ? 1 : 1.05 }}
-                whileTap={{ scale: isApproving ? 1 : 0.95 }}
-                onClick={handleApprove}
-                disabled={isApproving}
-                className="px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-all flex items-center gap-1.5 text-xs font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Approve Task"
+                whileHover={{ scale: isUncompleting ? 1 : 1.05 }}
+                whileTap={{ scale: isUncompleting ? 1 : 0.95 }}
+                onClick={handleUncomplete}
+                disabled={isUncompleting}
+                className="px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all flex items-center gap-1.5 text-xs font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Move back to Active"
               >
-                {isApproving ? (
-                  <>
-                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Approving...
-                  </>
-                ) : (
-                  <>
-                    <FiCheck className="w-3.5 h-3.5" />
-                    Approve
-                  </>
-                )}
-              </motion.button>
-            ) : (
-              <motion.button
-                whileHover={{ scale: isUnapproving ? 1 : 1.05 }}
-                whileTap={{ scale: isUnapproving ? 1 : 0.95 }}
-                onClick={handleUnapprove}
-                disabled={isUnapproving}
-                className="px-3 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-all flex items-center gap-1.5 text-xs font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Move back to Suggested"
-              >
-                {isUnapproving ? (
+                {isUncompleting ? (
                   <>
                     <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     Moving...
@@ -502,10 +703,80 @@ function TaskCard({
                 ) : (
                   <>
                     <FiCornerUpLeft className="w-3.5 h-3.5" />
-                    Unapprove
+                    Reopen
                   </>
                 )}
               </motion.button>
+            ) : (
+              <>
+                {task.status === 'SUGGESTED' ? (
+                  <motion.button
+                    whileHover={{ scale: isApproving ? 1 : 1.05 }}
+                    whileTap={{ scale: isApproving ? 1 : 0.95 }}
+                    onClick={handleApprove}
+                    disabled={isApproving}
+                    className="px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-all flex items-center gap-1.5 text-xs font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Approve Task"
+                  >
+                    {isApproving ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Approving...
+                      </>
+                    ) : (
+                      <>
+                        <FiCheck className="w-3.5 h-3.5" />
+                        Approve
+                      </>
+                    )}
+                  </motion.button>
+                ) : task.status !== 'COMPLETED' ? (
+                  <>
+                    <motion.button
+                      whileHover={{ scale: isUnapproving ? 1 : 1.05 }}
+                      whileTap={{ scale: isUnapproving ? 1 : 0.95 }}
+                      onClick={handleUnapprove}
+                      disabled={isUnapproving}
+                      className="px-3 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-all flex items-center gap-1.5 text-xs font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Move back to Suggested"
+                    >
+                      {isUnapproving ? (
+                        <>
+                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Moving...
+                        </>
+                      ) : (
+                        <>
+                          <FiCornerUpLeft className="w-3.5 h-3.5" />
+                          Unapprove
+                        </>
+                      )}
+                    </motion.button>
+                    {onComplete && (
+                      <motion.button
+                        whileHover={{ scale: isCompleting ? 1 : 1.05 }}
+                        whileTap={{ scale: isCompleting ? 1 : 0.95 }}
+                        onClick={handleComplete}
+                        disabled={isCompleting}
+                        className="px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-all flex items-center gap-1.5 text-xs font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Mark as Complete"
+                      >
+                        {isCompleting ? (
+                          <>
+                            <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            Completing...
+                          </>
+                        ) : (
+                          <>
+                            <FiCheckCircle className="w-3.5 h-3.5" />
+                            Complete
+                          </>
+                        )}
+                      </motion.button>
+                    )}
+                  </>
+                ) : null}
+              </>
             )}
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -993,6 +1264,302 @@ function AssignTaskModal({
             </motion.button>
           </div>
         </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function EditTaskModal({
+  task,
+  onClose,
+  onUpdate
+}: {
+  task: TasksData['tasks'][0];
+  onClose: () => void;
+  onUpdate: () => void;
+}) {
+  const { data: projectsData, loading: projectsLoading } = useQuery<ProjectsData>(PROJECTS_QUERY);
+  const [updateTask, { loading: updating }] = useMutation(UPDATE_TASK_MUTATION);
+
+  const [formData, setFormData] = useState({
+    title: task.title,
+    description: task.description,
+    category: task.category,
+    priority: task.priority,
+    points: task.points,
+    estimatedHours: task.estimatedHours,
+    projectId: task.project?.id || '',
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      await updateTask({
+        variables: {
+          taskId: task.id,
+          input: {
+            title: formData.title,
+            description: formData.description,
+            category: formData.category,
+            priority: formData.priority,
+            points: formData.points,
+            estimatedHours: formData.estimatedHours,
+            projectId: formData.projectId || undefined,
+          },
+        },
+      });
+
+      toast.success(
+        <div className="flex items-center gap-2">
+          <FiCheckCircle className="w-5 h-5 text-green-500" />
+          <div>
+            <p className="font-medium">Task Updated!</p>
+            <p className="text-sm text-gray-600">Changes saved successfully</p>
+          </div>
+        </div>,
+        {
+          duration: 3000,
+          style: {
+            background: '#fff',
+            padding: '16px',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+          },
+        }
+      );
+
+      onUpdate();
+      onClose();
+    } catch (error) {
+      toast.error(
+        <div className="flex items-center gap-2">
+          <FiAlertCircle className="w-5 h-5 text-red-500" />
+          <div>
+            <p className="font-medium">Error Updating Task</p>
+            <p className="text-sm text-gray-600">{error instanceof Error ? error.message : 'Something went wrong'}</p>
+          </div>
+        </div>,
+        {
+          duration: 4000,
+          style: {
+            background: '#fff',
+            padding: '16px',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+          },
+        }
+      );
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
+      >
+        {/* Decorative Header */}
+        <div className="relative bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600 p-8 text-white">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iYSIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVHJhbnNmb3JtPSJyb3RhdGUoNDUpIj48cGF0aCBkPSJNLTEwIDMwaDYwIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMSIgb3BhY2l0eT0iMC4xIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2EpIi8+PC9zdmc+')] opacity-30" />
+          <div className="relative">
+            <button
+              onClick={onClose}
+              className="absolute right-0 top-0 p-2 hover:bg-white/20 rounded-lg transition-colors"
+            >
+              <FiX className="w-6 h-6" />
+            </button>
+            <div className="flex items-center gap-3 mb-2">
+              <FiEdit2 className="w-7 h-7" />
+              <h2 className="text-3xl font-bold">Edit Task</h2>
+            </div>
+            <p className="text-white/90">Update task details below</p>
+          </div>
+        </div>
+
+        {/* Form Content */}
+        <form onSubmit={handleSubmit} className="p-8 space-y-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+          {/* Project */}
+          <div className="bg-gradient-to-r from-violet-50 via-fuchsia-50 to-pink-50 rounded-2xl p-6 border-2 border-violet-200">
+            <label className="block text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+              <span className="text-2xl">📋</span>
+              Project
+            </label>
+            {projectsLoading ? (
+              <div className="w-full px-5 py-4 rounded-xl border-2 border-gray-200 bg-white text-gray-400 text-lg">
+                Loading projects...
+              </div>
+            ) : (
+              <select
+                value={formData.projectId}
+                onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
+                className="w-full px-5 py-4 text-lg rounded-xl border-2 border-violet-300 focus:border-violet-500 focus:ring-4 focus:ring-violet-200 transition-all outline-none bg-white font-medium"
+              >
+                <option value="">🚫 No Project</option>
+                {projectsData?.projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    📦 {project.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* Title */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Task Title *
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-violet-500 focus:ring-4 focus:ring-violet-100 transition-all outline-none"
+              placeholder="e.g., Implement user authentication"
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Description *
+            </label>
+            <textarea
+              required
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              rows={4}
+              className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-violet-500 focus:ring-4 focus:ring-violet-100 transition-all outline-none resize-none"
+              placeholder="Describe the task in detail..."
+            />
+          </div>
+
+          {/* Category and Priority Row */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Category *
+              </label>
+              <select
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-violet-500 focus:ring-4 focus:ring-violet-100 transition-all outline-none bg-white"
+              >
+                <option value="MOBILE_APP">Mobile App</option>
+                <option value="WEB_FRONTEND">Web Frontend</option>
+                <option value="BACKEND_API">Backend API</option>
+                <option value="FULL_STACK">Full Stack</option>
+                <option value="BUG_FIX">Bug Fix</option>
+                <option value="DEBUGGING">Debugging</option>
+                <option value="CODE_REVIEW">Code Review</option>
+                <option value="TESTING_QA">Testing/QA</option>
+                <option value="DEVOPS">DevOps</option>
+                <option value="DOCUMENTATION">Documentation</option>
+                <option value="CLIENT_COMMUNICATION">Client Communication</option>
+                <option value="MENTORING">Mentoring</option>
+                <option value="RESEARCH">Research</option>
+                <option value="OFFICE_TASKS">Office Tasks</option>
+                <option value="MISCELLANEOUS">Miscellaneous</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Priority *
+              </label>
+              <select
+                value={formData.priority}
+                onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-violet-500 focus:ring-4 focus:ring-violet-100 transition-all outline-none bg-white"
+              >
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+                <option value="CRITICAL">Critical</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Points and Hours Row */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Story Points *
+              </label>
+              <input
+                type="number"
+                required
+                min="0"
+                max="100"
+                value={formData.points}
+                onChange={(e) => setFormData({ ...formData, points: parseInt(e.target.value) })}
+                className={`w-full px-4 py-3 rounded-xl border-2 focus:ring-4 transition-all outline-none ${
+                  formData.points === 0
+                    ? 'border-amber-300 bg-amber-50 focus:border-amber-500 focus:ring-amber-100'
+                    : 'border-gray-200 focus:border-violet-500 focus:ring-violet-100'
+                }`}
+              />
+              {formData.points === 0 && (
+                <p className="mt-2 text-xs text-amber-700 font-medium">
+                  ⚠️ Not assigned yet
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Estimated Hours *
+              </label>
+              <input
+                type="number"
+                required
+                min="0"
+                step="0.5"
+                value={formData.estimatedHours}
+                onChange={(e) => setFormData({ ...formData, estimatedHours: parseFloat(e.target.value) })}
+                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-violet-500 focus:ring-4 focus:ring-violet-100 transition-all outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Submit Buttons */}
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={updating}
+              className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Cancel
+            </button>
+            <motion.button
+              type="submit"
+              disabled={updating}
+              whileHover={{ scale: updating ? 1 : 1.02 }}
+              whileTap={{ scale: updating ? 1 : 0.98 }}
+              className="flex-1 px-6 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-xl hover:from-violet-700 hover:to-fuchsia-700 transition-all shadow-lg hover:shadow-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {updating ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </motion.button>
+          </div>
+        </form>
       </motion.div>
     </motion.div>
   );

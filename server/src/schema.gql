@@ -120,6 +120,7 @@ type Mutation {
   assignTask(taskId: String!, userId: String): Task!
   cancelCall(callId: String!): Call!
   cleanupInconsistentBreaks: String!
+  completeTask(taskId: String!): Task!
   createOnlineMeeting(endTime: String!, startTime: String!, subject: String!, userId: String!): OnlineMeeting!
   createTask(input: CreateTaskInputType!): Task!
   deleteWorkLog(id: ID!): Boolean!
@@ -138,7 +139,9 @@ type Mutation {
   switchProject(input: SwitchProjectInput!): Session!
   testInitiateCall(callerId: String!, receiverId: String!): Call!
   unapproveTask(taskId: String!): Task!
+  uncompleteTask(taskId: String!): Task!
   updateProfile(input: UpdateProfileInput!): User!
+  updateTask(input: UpdateTaskInputType!, taskId: String!): Task!
   updateWorkLog(input: UpdateWorkLogInput!): WorkLog!
 }
 
@@ -195,6 +198,7 @@ type Query {
   adminUserWorkLogs(input: GetSessionsInput!, userId: ID!): [WorkLog!]!
   adminUsers: [User!]!
   checkUserInMeeting(userId: String!): MeetingStatus!
+  completedTasks(endDate: String, startDate: String): [Task!]!
   debugData: String!
   getAllUsers: [TeamsUser!]!
   getAllUsersWithPresence: [TeamsUserWithPresence!]!
@@ -379,6 +383,16 @@ type TeamsUserWithPresence {
 input UpdateProfileInput {
   avatarUrl: String
   name: String!
+}
+
+input UpdateTaskInputType {
+  category: String
+  description: String
+  estimatedHours: Float
+  points: Int
+  priority: String
+  projectId: String
+  title: String
 }
 
 input UpdateWorkLogInput {

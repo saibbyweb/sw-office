@@ -237,7 +237,6 @@ export const SuggestTaskModal: React.FC<SuggestTaskModalProps> = ({ onClose }) =
     description: '',
     category: '',
     priority: '',
-    points: '',
     estimatedHours: '',
     projectId: '',
   });
@@ -281,10 +280,6 @@ export const SuggestTaskModal: React.FC<SuggestTaskModalProps> = ({ onClose }) =
       toast.error('Please select a priority');
       return;
     }
-    if (!formData.points || parseInt(formData.points) <= 0) {
-      toast.error('Please enter valid points');
-      return;
-    }
     if (!formData.estimatedHours || parseFloat(formData.estimatedHours) <= 0) {
       toast.error('Please enter valid estimated hours');
       return;
@@ -298,7 +293,7 @@ export const SuggestTaskModal: React.FC<SuggestTaskModalProps> = ({ onClose }) =
             description: formData.description.trim(),
             category: formData.category,
             priority: formData.priority,
-            points: parseInt(formData.points),
+            points: 0,
             estimatedHours: parseFloat(formData.estimatedHours),
             projectId: formData.projectId || null,
           },
@@ -402,40 +397,22 @@ export const SuggestTaskModal: React.FC<SuggestTaskModalProps> = ({ onClose }) =
             </FormGroup>
           </FormRow>
 
-          <FormRow>
-            <FormGroup>
-              <Label>
-                Points<Required>*</Required>
-              </Label>
-              <Input
-                type="number"
-                name="points"
-                value={formData.points}
-                onChange={handleChange}
-                placeholder="e.g., 5"
-                min="1"
-                required
-              />
-              <HelpText>Complexity/effort points (1-10)</HelpText>
-            </FormGroup>
-
-            <FormGroup>
-              <Label>
-                Estimated Hours<Required>*</Required>
-              </Label>
-              <Input
-                type="number"
-                name="estimatedHours"
-                value={formData.estimatedHours}
-                onChange={handleChange}
-                placeholder="e.g., 4.5"
-                step="0.5"
-                min="0.5"
-                required
-              />
-              <HelpText>Time to complete (in hours)</HelpText>
-            </FormGroup>
-          </FormRow>
+          <FormGroup>
+            <Label>
+              Estimated Hours<Required>*</Required>
+            </Label>
+            <Input
+              type="number"
+              name="estimatedHours"
+              value={formData.estimatedHours}
+              onChange={handleChange}
+              placeholder="e.g., 4.5"
+              step="0.5"
+              min="0.5"
+              required
+            />
+            <HelpText>Time to complete (in hours)</HelpText>
+          </FormGroup>
 
           <FormGroup>
             <Label>Project</Label>

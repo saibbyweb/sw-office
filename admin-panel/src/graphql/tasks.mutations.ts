@@ -32,6 +32,7 @@ export const TASKS_QUERY = gql`
       points
       estimatedHours
       actualHours
+      completedDate
       project {
         id
         name
@@ -84,6 +85,77 @@ export const UNAPPROVE_TASK_MUTATION = gql`
         id
         name
       }
+    }
+  }
+`;
+
+export const UPDATE_TASK_MUTATION = gql`
+  mutation UpdateTask($taskId: String!, $input: UpdateTaskInputType!) {
+    updateTask(taskId: $taskId, input: $input) {
+      id
+      title
+      description
+      category
+      priority
+      status
+      points
+      estimatedHours
+      project {
+        id
+        name
+      }
+    }
+  }
+`;
+
+export const COMPLETE_TASK_MUTATION = gql`
+  mutation CompleteTask($taskId: String!) {
+    completeTask(taskId: $taskId) {
+      id
+      status
+      completedDate
+    }
+  }
+`;
+
+export const UNCOMPLETE_TASK_MUTATION = gql`
+  mutation UncompleteTask($taskId: String!) {
+    uncompleteTask(taskId: $taskId) {
+      id
+      status
+      completedDate
+    }
+  }
+`;
+
+export const COMPLETED_TASKS_QUERY = gql`
+  query CompletedTasks($startDate: String, $endDate: String) {
+    completedTasks(startDate: $startDate, endDate: $endDate) {
+      id
+      title
+      description
+      category
+      priority
+      status
+      points
+      estimatedHours
+      actualHours
+      completedDate
+      project {
+        id
+        name
+      }
+      assignedTo {
+        id
+        name
+        email
+      }
+      approvedBy {
+        id
+        name
+      }
+      createdAt
+      updatedAt
     }
   }
 `;
