@@ -169,6 +169,15 @@ type OrganizationMeeting {
   subject: String!
 }
 
+type PaginatedTasksResponse {
+  availableTasksCount: Int!
+  hasMore: Boolean!
+  myTasksCount: Int!
+  suggestedTasksCount: Int!
+  tasks: [Task!]!
+  total: Int!
+}
+
 type Project {
   _count: ProjectCount!
   createdAt: DateTime!
@@ -213,7 +222,7 @@ type Query {
   session(id: ID!): Session
   sessionWorkLogs(sessionId: ID!): [WorkLog!]!
   task(id: String!): Task
-  tasks: [Task!]!
+  tasks(filters: TaskFiltersInput, skip: Int, take: Int, userId: String): PaginatedTasksResponse!
   userSessionDates(input: GetSessionDatesInput!): [SessionDate!]!
   userSessions(input: GetSessionsInput!): [Session!]!
 }
@@ -347,6 +356,16 @@ enum TaskCategory {
   RESEARCH
   TESTING_QA
   WEB_FRONTEND
+}
+
+input TaskFiltersInput {
+  assignedToId: String
+  myTasksUserId: String
+  priority: String
+  projectId: String
+  searchQuery: String
+  status: String
+  unassignedOnly: Boolean
 }
 
 enum TaskPriority {

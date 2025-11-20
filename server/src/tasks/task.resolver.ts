@@ -1,7 +1,28 @@
-import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
+import { Resolver, Query, Mutation, Args, ObjectType } from '@nestjs/graphql';
 import { Task } from '../generated-nestjs-typegraphql';
 import { TaskService, CreateTaskInput, UpdateTaskInput } from './task.service';
 import { InputType, Field, Float, Int } from '@nestjs/graphql';
+
+@ObjectType()
+class PaginatedTasksResponse {
+  @Field(() => [Task])
+  tasks: Task[];
+
+  @Field(() => Int)
+  total: number;
+
+  @Field()
+  hasMore: boolean;
+
+  @Field(() => Int)
+  myTasksCount: number;
+
+  @Field(() => Int)
+  availableTasksCount: number;
+
+  @Field(() => Int)
+  suggestedTasksCount: number;
+}
 
 @InputType()
 class CreateTaskInputType {
@@ -51,13 +72,42 @@ class UpdateTaskInputType {
   projectId?: string;
 }
 
+@InputType()
+class TaskFiltersInput {
+  @Field({ nullable: true })
+  searchQuery?: string;
+
+  @Field({ nullable: true })
+  projectId?: string;
+
+  @Field({ nullable: true })
+  status?: string;
+
+  @Field({ nullable: true })
+  priority?: string;
+
+  @Field({ nullable: true })
+  assignedToId?: string;
+
+  @Field({ nullable: true })
+  unassignedOnly?: boolean;
+
+  @Field({ nullable: true })
+  myTasksUserId?: string;
+}
+
 @Resolver(() => Task)
 export class TaskResolver {
   constructor(private readonly taskService: TaskService) {}
 
-  @Query(() => [Task])
-  async tasks(): Promise<Task[]> {
-    return this.taskService.getAllTasks();
+  @Query(() => PaginatedTasksResponse)
+  async tasks(
+    @Args('skip', { type: () => Int, nullable: true }) skip?: number,
+    @Args('take', { type: () => Int, nullable: true }) take?: number,
+    @Args('filters', { nullable: true }) filters?: TaskFiltersInput,
+    @Args('userId', { type: () => String, nullable: true }) userId?: string,
+  ): Promise<PaginatedTasksResponse> {
+    return this.taskService.getAllTasks(skip, take, filters, userId);
   }
 
   @Query(() => Task, { nullable: true })

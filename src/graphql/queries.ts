@@ -278,37 +278,44 @@ export const TEAM_USERS_QUERY = gql`
 `;
 
 export const AVAILABLE_TASKS = gql`
-  query AvailableTasks {
-    tasks {
-      id
-      title
-      description
-      status
-      priority
-      category
-      points
-      estimatedHours
-      actualHours
-      dueDate
-      startedDate
-      completedDate
-      assignedTo {
+  query AvailableTasks($skip: Int, $take: Int, $filters: TaskFiltersInput, $userId: String) {
+    tasks(skip: $skip, take: $take, filters: $filters, userId: $userId) {
+      tasks {
         id
-        name
-        email
+        title
+        description
+        status
+        priority
+        category
+        points
+        estimatedHours
+        actualHours
+        dueDate
+        startedDate
+        completedDate
+        assignedTo {
+          id
+          name
+          email
+        }
+        project {
+          id
+          name
+        }
+        suggestedBy {
+          id
+          name
+        }
+        approvedBy {
+          id
+          name
+        }
       }
-      project {
-        id
-        name
-      }
-      suggestedBy {
-        id
-        name
-      }
-      approvedBy {
-        id
-        name
-      }
+      total
+      hasMore
+      myTasksCount
+      availableTasksCount
+      suggestedTasksCount
     }
   }
 `;

@@ -22,6 +22,25 @@ export interface UpdateTaskInput {
   projectId?: string;
 }
 
+export interface PaginatedTasksResponse {
+  tasks: Task[];
+  total: number;
+  hasMore: boolean;
+  myTasksCount: number;
+  availableTasksCount: number;
+  suggestedTasksCount: number;
+}
+
+export interface TaskFilters {
+  searchQuery?: string;
+  projectId?: string;
+  status?: string;
+  priority?: string;
+  assignedToId?: string;
+  unassignedOnly?: boolean;
+  myTasksUserId?: string;
+}
+
 @Injectable()
 export class TaskService {
   constructor(private readonly prisma: PrismaService) {}
@@ -46,18 +65,101 @@ export class TaskService {
     });
   }
 
-  async getAllTasks(): Promise<Task[]> {
-    return this.prisma.task.findMany({
-      include: {
-        project: true,
-        suggestedBy: true,
-        assignedTo: true,
-        approvedBy: true,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
+  async getAllTasks(skip?: number, take?: number, filters?: TaskFilters, userId?: string): Promise<PaginatedTasksResponse> {
+    const includeClause = {
+      project: true,
+      suggestedBy: true,
+      assignedTo: true,
+      approvedBy: true,
+    };
+
+    const orderByClause = {
+      createdAt: 'desc' as const,
+    };
+
+    // Build where clause based on filters
+    const whereClause: any = {};
+
+    if (filters) {
+      // Search query - search in title, description, and assignee name
+      if (filters.searchQuery) {
+        whereClause.OR = [
+          { title: { contains: filters.searchQuery, mode: 'insensitive' } },
+          { description: { contains: filters.searchQuery, mode: 'insensitive' } },
+          {
+            assignedTo: {
+              name: { contains: filters.searchQuery, mode: 'insensitive' },
+            },
+          },
+        ];
+      }
+
+      // Project filter
+      if (filters.projectId) {
+        whereClause.projectId = filters.projectId;
+      }
+
+      // Status filter
+      if (filters.status) {
+        whereClause.status = filters.status;
+      }
+
+      // Priority filter
+      if (filters.priority) {
+        whereClause.priority = filters.priority;
+      }
+
+      // My tasks filter
+      if (filters.myTasksUserId) {
+        whereClause.assignedToId = filters.myTasksUserId;
+      }
+
+      // Unassigned only filter
+      if (filters.unassignedOnly) {
+        whereClause.assignedToId = null;
+      }
+
+      // Specific user assignment filter
+      if (filters.assignedToId) {
+        whereClause.assignedToId = filters.assignedToId;
+      }
+    }
+
+    // Get counts for tabs (always calculated regardless of filters)
+    const [myTasksCount, availableTasksCount, suggestedTasksCount] = await Promise.all([
+      // My tasks count
+      userId ? this.prisma.task.count({ where: { assignedToId: userId } }) : 0,
+      // Available tasks count (approved and unassigned)
+      this.prisma.task.count({ where: { status: 'APPROVED', assignedToId: null } }),
+      // Suggested tasks count
+      this.prisma.task.count({ where: { status: 'SUGGESTED' } }),
+    ]);
+
+    // Get total count with filters
+    const total = await this.prisma.task.count({ where: whereClause });
+
+    // Get paginated tasks with filters
+    const tasks = await this.prisma.task.findMany({
+      where: whereClause,
+      include: includeClause,
+      orderBy: orderByClause,
+      skip: skip || 0,
+      take: take || undefined,
     });
+
+    // Calculate if there are more results
+    const hasMore = skip !== undefined && take !== undefined
+      ? (skip + take) < total
+      : false;
+
+    return {
+      tasks,
+      total,
+      hasMore,
+      myTasksCount,
+      availableTasksCount,
+      suggestedTasksCount,
+    };
   }
 
   async getTaskById(id: string): Promise<Task | null> {
