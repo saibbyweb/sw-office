@@ -91,27 +91,37 @@ interface UsersData {
   adminUsers: User[];
 }
 
+interface Task {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  priority: string;
+  status: string;
+  points: number;
+  estimatedHours: number;
+  actualHours?: number;
+  completedDate?: string;
+  project?: { id: string; name: string; };
+  assignedTo?: User;
+}
+
 interface TasksData {
-  tasks: Array<{
-    id: string;
-    title: string;
-    description: string;
-    category: string;
-    priority: string;
-    status: string;
-    points: number;
-    estimatedHours: number;
-    actualHours?: number;
-    project?: { id: string; name: string; };
-    assignedTo?: User;
-  }>;
+  tasks: {
+    tasks: Task[];
+    total: number;
+  };
+}
+
+interface CompletedTasksData {
+  completedTasks: Task[];
 }
 
 export default function Tasks() {
   const navigate = useNavigate();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [assignModalTask, setAssignModalTask] = useState<string | null>(null);
-  const [editModalTask, setEditModalTask] = useState<TasksData['tasks'][0] | null>(null);
+  const [editModalTask, setEditModalTask] = useState<Task | null>(null);
   const [activeView, setActiveView] = useState<'tasks' | 'activity'>('tasks');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
@@ -129,7 +139,7 @@ export default function Tasks() {
     return {};
   };
 
-  const { data: completedTasksData, loading: completedLoading, refetch: refetchCompleted } = useQuery<TasksData>(
+  const { data: completedTasksData, loading: completedLoading, refetch: refetchCompleted } = useQuery<CompletedTasksData>(
     COMPLETED_TASKS_QUERY,
     {
       variables: getDateRange(),
@@ -308,7 +318,7 @@ export default function Tasks() {
             <div className="flex items-center justify-center h-64">
               <div className="text-gray-500">Loading tasks...</div>
             </div>
-          ) : tasksData?.tasks.length === 0 ? (
+          ) : tasksData?.tasks.tasks.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-center">
               <FiCheckCircle className="w-16 h-16 text-gray-300 mb-4" />
               <p className="text-gray-500 text-lg">No tasks yet</p>
@@ -323,18 +333,18 @@ export default function Tasks() {
                 <div>
                   <h2 className="text-xl font-bold text-gray-800">Suggested Tasks</h2>
                   <p className="text-sm text-gray-500">
-                    {tasksData?.tasks.filter(t => t.status === 'SUGGESTED').length} tasks
+                    {tasksData?.tasks.tasks.filter(t => t.status === 'SUGGESTED').length} tasks
                   </p>
                 </div>
               </div>
               <div className="space-y-4">
-                {tasksData?.tasks.filter(t => t.status === 'SUGGESTED').length === 0 ? (
+                {tasksData?.tasks.tasks.filter(t => t.status === 'SUGGESTED').length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-48 text-center bg-white/60 backdrop-blur-md rounded-2xl border-2 border-dashed border-gray-300">
                     <FiCheckCircle className="w-12 h-12 text-gray-300 mb-2" />
                     <p className="text-gray-400 text-sm">No suggested tasks</p>
                   </div>
                 ) : (
-                  tasksData?.tasks.filter(t => t.status === 'SUGGESTED').map((task, index) => {
+                  tasksData?.tasks.tasks.filter(t => t.status === 'SUGGESTED').map((task, index) => {
                     const PriorityIcon = priorityConfig[task.priority as keyof typeof priorityConfig].icon;
                     const categoryGradient = categoryColors[task.category as keyof typeof categoryColors];
 
@@ -365,18 +375,18 @@ export default function Tasks() {
                 <div>
                   <h2 className="text-xl font-bold text-gray-800">Active Tasks</h2>
                   <p className="text-sm text-gray-500">
-                    {tasksData?.tasks.filter(t => t.status !== 'SUGGESTED' && t.status !== 'REJECTED' && t.status !== 'COMPLETED').length} tasks
+                    {tasksData?.tasks.tasks.filter(t => t.status !== 'SUGGESTED' && t.status !== 'REJECTED' && t.status !== 'COMPLETED').length} tasks
                   </p>
                 </div>
               </div>
               <div className="space-y-4">
-                {tasksData?.tasks.filter(t => t.status !== 'SUGGESTED' && t.status !== 'REJECTED' && t.status !== 'COMPLETED').length === 0 ? (
+                {tasksData?.tasks.tasks.filter(t => t.status !== 'SUGGESTED' && t.status !== 'REJECTED' && t.status !== 'COMPLETED').length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-48 text-center bg-white/60 backdrop-blur-md rounded-2xl border-2 border-dashed border-gray-300">
                     <FiCheckCircle className="w-12 h-12 text-gray-300 mb-2" />
                     <p className="text-gray-400 text-sm">No active tasks</p>
                   </div>
                 ) : (
-                  tasksData?.tasks.filter(t => t.status !== 'SUGGESTED' && t.status !== 'REJECTED' && t.status !== 'COMPLETED').map((task, index) => {
+                  tasksData?.tasks.tasks.filter(t => t.status !== 'SUGGESTED' && t.status !== 'REJECTED' && t.status !== 'COMPLETED').map((task, index) => {
                     const PriorityIcon = priorityConfig[task.priority as keyof typeof priorityConfig].icon;
                     const categoryGradient = categoryColors[task.category as keyof typeof categoryColors];
 
@@ -435,7 +445,7 @@ export default function Tasks() {
               <div className="flex items-center justify-center h-64">
                 <div className="text-gray-500">Loading completed tasks...</div>
               </div>
-            ) : !completedTasksData?.tasks || completedTasksData.tasks.length === 0 ? (
+            ) : !completedTasksData?.completedTasks || completedTasksData.completedTasks.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-64 text-center bg-white/60 backdrop-blur-md rounded-2xl border-2 border-dashed border-gray-300">
                 <FiCheckCircle className="w-16 h-16 text-gray-300 mb-4" />
                 <p className="text-gray-500 text-lg">No completed tasks</p>
@@ -452,12 +462,12 @@ export default function Tasks() {
                       {selectedDate ? `Completed on ${new Date(selectedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}` : 'All Completed Tasks'}
                     </h2>
                     <p className="text-sm text-gray-500">
-                      {completedTasksData.tasks.length} task{completedTasksData.tasks.length !== 1 ? 's' : ''}
+                      {completedTasksData.completedTasks.length} task{completedTasksData.completedTasks.length !== 1 ? 's' : ''}
                     </p>
                   </div>
                 </div>
                 <div className="space-y-4">
-                  {completedTasksData.tasks.map((task, index) => {
+                  {completedTasksData.completedTasks.map((task, index) => {
                     const PriorityIcon = priorityConfig[task.priority as keyof typeof priorityConfig].icon;
                     const categoryGradient = categoryColors[task.category as keyof typeof categoryColors];
 
@@ -496,7 +506,7 @@ export default function Tasks() {
       <AnimatePresence>
         {assignModalTask && (
           <AssignTaskModal
-            task={tasksData?.tasks.find(t => t.id === assignModalTask)!}
+            task={tasksData?.tasks.tasks.find(t => t.id === assignModalTask)!}
             users={usersData?.adminUsers.filter(u => !u.archived) || []}
             onClose={() => setAssignModalTask(null)}
             onAssign={(userId) => handleAssignTask(assignModalTask, userId)}
@@ -531,14 +541,14 @@ function TaskCard({
   onUncomplete,
   isCompleted = false,
 }: {
-  task: TasksData['tasks'][0];
+  task: Task;
   index: number;
   PriorityIcon: any;
   categoryGradient: string;
   onAssign: (taskId: string) => void;
   onApprove: (taskId: string) => Promise<void>;
   onUnapprove: (taskId: string) => Promise<void>;
-  onEdit: (task: TasksData['tasks'][0]) => void;
+  onEdit: (task: Task) => void;
   onComplete?: (taskId: string) => Promise<void>;
   onUncomplete?: (taskId: string) => Promise<void>;
   isCompleted?: boolean;
@@ -1075,7 +1085,7 @@ function AssignTaskModal({
   onClose,
   onAssign
 }: {
-  task: TasksData['tasks'][0];
+  task: Task;
   users: User[];
   onClose: () => void;
   onAssign: (userId: string | null) => Promise<void>;
@@ -1274,7 +1284,7 @@ function EditTaskModal({
   onClose,
   onUpdate
 }: {
-  task: TasksData['tasks'][0];
+  task: Task;
   onClose: () => void;
   onUpdate: () => void;
 }) {

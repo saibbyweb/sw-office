@@ -20,7 +20,7 @@ const Container = styled.div`
 
 const MainContent = styled.div`
   flex: 1;
-  padding: ${props => props.theme.spacing.lg} ${props => props.theme.spacing.xl};
+  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.lg};
   padding-bottom: 150px;
   overflow-y: auto;
   max-height: calc(100vh - 60px);
@@ -28,8 +28,8 @@ const MainContent = styled.div`
 
 const FiltersBar = styled.div`
   display: flex;
-  gap: ${props => props.theme.spacing.md};
-  margin-bottom: ${props => props.theme.spacing.lg};
+  gap: ${props => props.theme.spacing.sm};
+  margin-bottom: ${props => props.theme.spacing.md};
   flex-wrap: wrap;
   align-items: center;
 `;
@@ -183,7 +183,7 @@ const TopBar = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.md};
 `;
 
 const ResultsCount = styled.div`
@@ -193,9 +193,9 @@ const ResultsCount = styled.div`
 
 const SummaryCards = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: ${props => props.theme.spacing.md};
-  margin-bottom: ${props => props.theme.spacing.lg};
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: ${props => props.theme.spacing.sm};
+  margin-bottom: ${props => props.theme.spacing.md};
 `;
 
 const SummaryCard = styled.div<{ variant?: 'primary' | 'success' | 'info'; isActive?: boolean }>`
@@ -247,11 +247,11 @@ const SummaryCard = styled.div<{ variant?: 'primary' | 'success' | 'info'; isAct
         return props.theme.colors.text + '10';
     }
   }};
-  border-radius: 12px;
-  padding: ${props => props.theme.spacing.md};
+  border-radius: 10px;
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
   display: flex;
   align-items: center;
-  gap: ${props => props.theme.spacing.md};
+  gap: ${props => props.theme.spacing.sm};
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: ${props => props.isActive ? `0 4px 12px ${props.theme.colors.text}15` : 'none'};
@@ -263,9 +263,9 @@ const SummaryCard = styled.div<{ variant?: 'primary' | 'success' | 'info'; isAct
 `;
 
 const SummaryIconWrapper = styled.div<{ variant?: 'primary' | 'success' | 'info' }>`
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -300,15 +300,15 @@ const SummaryContent = styled.div`
 `;
 
 const SummaryLabel = styled.div`
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: ${props => props.theme.colors.text}70;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 `;
 
 const SummaryValue = styled.div`
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: ${props => props.theme.colors.text};
 `;
@@ -316,20 +316,20 @@ const SummaryValue = styled.div`
 const SectionHeader = styled.div`
   display: flex;
   align-items: center;
-  gap: ${props => props.theme.spacing.md};
-  margin: ${props => props.theme.spacing.xl} 0 ${props => props.theme.spacing.md};
-  padding-bottom: ${props => props.theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
+  margin: ${props => props.theme.spacing.lg} 0 ${props => props.theme.spacing.sm};
+  padding-bottom: ${props => props.theme.spacing.xs};
   border-bottom: 2px solid ${props => props.theme.colors.text}20;
 `;
 
 const SectionTitle = styled.h2`
   margin: 0;
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 600;
   color: ${props => props.theme.colors.text};
   display: flex;
   align-items: center;
-  gap: ${props => props.theme.spacing.sm};
+  gap: ${props => props.theme.spacing.xs};
 `;
 
 const SectionCount = styled.span`
@@ -365,8 +365,8 @@ const SuggestTaskButton = styled.button`
 
 const TasksGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: ${props => props.theme.spacing.lg};
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: ${props => props.theme.spacing.md};
 `;
 
 const TaskCard = styled.div<{ priority?: string }>`
@@ -387,11 +387,11 @@ const TaskCard = styled.div<{ priority?: string }>`
         return props.theme.colors.text + '30';
     }
   }};
-  border-radius: 12px;
-  padding: ${props => props.theme.spacing.lg};
+  border-radius: 10px;
+  padding: ${props => props.theme.spacing.md};
   backdrop-filter: blur(20px);
-  box-shadow: 0 8px 32px ${props => props.theme.colors.text}08,
-              0 2px 8px ${props => props.theme.colors.text}05;
+  box-shadow: 0 4px 16px ${props => props.theme.colors.text}08,
+              0 2px 4px ${props => props.theme.colors.text}05;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   overflow: hidden;
@@ -872,7 +872,6 @@ export const Tasks: React.FC = () => {
 
   const { data: userData } = useQuery(ME);
   const [assignTask, { loading: assignLoading }] = useMutation(ASSIGN_TASK, {
-    refetchQueries: [{ query: AVAILABLE_TASKS }],
     onCompleted: () => {
       toast.success('Task assigned successfully!');
       setTaskToAssign(null);
@@ -903,7 +902,7 @@ export const Tasks: React.FC = () => {
     return Object.keys(filterObj).length > 0 ? filterObj : undefined;
   }, [debouncedSearchQuery, selectedProject, selectedStatus, selectedPriority, activeTab, userData?.me?.id]);
 
-  const { data: tasksData, loading } = useQuery(AVAILABLE_TASKS, {
+  const { data: tasksData, loading, refetch } = useQuery(AVAILABLE_TASKS, {
     fetchPolicy: 'network-only',
     variables: {
       skip: (page - 1) * tasksPerPage,
@@ -1006,6 +1005,8 @@ export const Tasks: React.FC = () => {
           userId: currentUserId,
         },
       });
+      // Refetch tasks with current filters to update the UI
+      refetch();
     } catch (error) {
       console.error('Error assigning task:', error);
     }

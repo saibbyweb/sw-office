@@ -23,27 +23,30 @@ export const CREATE_TASK_MUTATION = gql`
 export const TASKS_QUERY = gql`
   query Tasks {
     tasks {
-      id
-      title
-      description
-      category
-      priority
-      status
-      points
-      estimatedHours
-      actualHours
-      completedDate
-      project {
+      tasks {
         id
-        name
+        title
+        description
+        category
+        priority
+        status
+        points
+        estimatedHours
+        actualHours
+        completedDate
+        project {
+          id
+          name
+        }
+        assignedTo {
+          id
+          name
+          email
+        }
+        createdAt
+        updatedAt
       }
-      assignedTo {
-        id
-        name
-        email
-      }
-      createdAt
-      updatedAt
+      total
     }
   }
 `;
