@@ -12,8 +12,18 @@ export interface CallNotification {
   reason?: string;
 }
 
+export interface TaskNotification {
+  type: 'TASK_ASSIGNED' | 'TASK_APPROVED' | 'TASK_COMPLETED' | 'TASK_REJECTED';
+  taskId: string;
+  taskTitle: string;
+  message: string;
+  priority?: string;
+}
+
+export type Notification = CallNotification | TaskNotification;
+
 export interface SocketEvents {
-  'notification': (data: CallNotification) => void;
+  'notification': (data: Notification) => void;
   'auth': (token: string, callback: (response: AuthResponse) => void) => void;
   'call:response': (data: { callId: string; accept: boolean }) => void;
   'call:initiate': (data: { receiverId: string }) => void;

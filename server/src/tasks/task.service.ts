@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { Task } from '../generated-nestjs-typegraphql';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { SocketManagerService } from '../notifications/socket-manager.service';
 
 export interface CreateTaskInput {
   title: string;
@@ -43,7 +45,11 @@ export interface TaskFilters {
 
 @Injectable()
 export class TaskService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationsGateway: NotificationsGateway,
+    private readonly socketManager: SocketManagerService,
+  ) {}
 
   async createTask(input: CreateTaskInput): Promise<Task> {
     return this.prisma.task.create({
@@ -175,7 +181,7 @@ export class TaskService {
   }
 
   async assignTask(taskId: string, userId: string | null): Promise<Task> {
-    return this.prisma.task.update({
+    const task = await this.prisma.task.update({
       where: { id: taskId },
       data: {
         assignedToId: userId,
@@ -187,6 +193,25 @@ export class TaskService {
         approvedBy: true,
       },
     });
+
+    // Send real-time notification to the assigned user
+    if (userId) {
+      const socketId = this.socketManager.getUserSocketId(userId);
+      if (socketId) {
+        console.log(`[TaskService] Sending task assignment notification to user ${userId}`);
+        this.notificationsGateway.sendNotificationToClient(socketId, {
+          type: 'TASK_ASSIGNED',
+          taskId: task.id,
+          taskTitle: task.title,
+          message: `You've been assigned to: ${task.title}`,
+          priority: task.priority,
+        });
+      } else {
+        console.log(`[TaskService] User ${userId} is not connected, skipping notification`);
+      }
+    }
+
+    return task;
   }
 
   async approveTask(taskId: string, approvedById: string): Promise<Task> {
