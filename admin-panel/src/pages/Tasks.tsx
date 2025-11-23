@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@apollo/client';
-import { FiArrowLeft, FiPlus, FiX, FiAlertCircle, FiCheckCircle, FiClock, FiTarget, FiZap, FiAward, FiUser, FiUserPlus, FiCheck, FiCornerUpLeft, FiEdit2, FiCalendar, FiActivity } from 'react-icons/fi';
+import { FiArrowLeft, FiPlus, FiX, FiAlertCircle, FiCheckCircle, FiClock, FiTarget, FiZap, FiAward, FiUser, FiUserPlus, FiCheck, FiCornerUpLeft, FiEdit2, FiCalendar, FiActivity, FiFilter } from 'react-icons/fi';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import Select from 'react-select';
@@ -106,6 +106,7 @@ interface Task {
   completedDate?: string;
   project?: { id: string; name: string; };
   assignedTo?: User;
+  suggestedBy?: User;
 }
 
 interface TasksData {
@@ -126,6 +127,8 @@ export default function Tasks() {
   const [editModalTask, setEditModalTask] = useState<Task | null>(null);
   const [activeView, setActiveView] = useState<'tasks' | 'activity'>('tasks');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [leftColumnStatuses, setLeftColumnStatuses] = useState<string[]>(['SUGGESTED']);
+  const [rightColumnStatuses, setRightColumnStatuses] = useState<string[]>(['APPROVED', 'IN_PROGRESS', 'BLOCKED']);
 
   const { data: tasksData, loading: tasksLoading, refetch } = useQuery<TasksData>(TASKS_QUERY);
   const { data: usersData, loading: usersLoading } = useQuery<UsersData>(ADMIN_USERS_QUERY);
@@ -249,6 +252,20 @@ export default function Tasks() {
     }
   };
 
+  const toggleStatusInColumn = (column: 'left' | 'right', status: string) => {
+    if (column === 'left') {
+      setLeftColumnStatuses(prev =>
+        prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]
+      );
+    } else {
+      setRightColumnStatuses(prev =>
+        prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]
+      );
+    }
+  };
+
+  const availableStatuses = Object.keys(statusConfig);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 via-fuchsia-50 to-pink-50">
       <Toaster position="top-right" />
@@ -328,25 +345,51 @@ export default function Tasks() {
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Suggested Tasks Column */}
+            {/* Left Column */}
             <div>
-              <div className="mb-4 flex items-center gap-3">
-                <div className="h-10 w-1 bg-gradient-to-b from-gray-400 to-gray-600 rounded-full" />
-                <div>
-                  <h2 className="text-xl font-bold text-gray-800">Suggested Tasks</h2>
-                  <p className="text-sm text-gray-500">
-                    {tasksData?.tasks.tasks.filter(t => t.status === 'SUGGESTED').length} tasks
-                  </p>
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-1 bg-gradient-to-b from-gray-400 to-gray-600 rounded-full" />
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-800">Column 1</h2>
+                      <p className="text-sm text-gray-500">
+                        {tasksData?.tasks.tasks.filter(t => leftColumnStatuses.includes(t.status)).length} tasks
+                      </p>
+                    </div>
+                  </div>
+                  <div className="relative group">
+                    <button className="p-2 hover:bg-white/60 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <FiFilter className="w-4 h-4" />
+                      Filter
+                    </button>
+                    <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-gray-200 p-3 min-w-[200px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                      <p className="text-xs font-semibold text-gray-500 mb-2 uppercase">Show Status</p>
+                      {availableStatuses.map(status => (
+                        <label key={status} className="flex items-center gap-2 py-1.5 px-2 hover:bg-gray-50 rounded cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={leftColumnStatuses.includes(status)}
+                            onChange={() => toggleStatusInColumn('left', status)}
+                            className="w-4 h-4 text-violet-600 rounded focus:ring-violet-500"
+                          />
+                          <span className={`text-sm px-2 py-0.5 rounded ${statusConfig[status as keyof typeof statusConfig].bg} ${statusConfig[status as keyof typeof statusConfig].color}`}>
+                            {statusConfig[status as keyof typeof statusConfig].label}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="space-y-4">
-                {tasksData?.tasks.tasks.filter(t => t.status === 'SUGGESTED').length === 0 ? (
+                {tasksData?.tasks.tasks.filter(t => leftColumnStatuses.includes(t.status)).length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-48 text-center bg-white/60 backdrop-blur-md rounded-2xl border-2 border-dashed border-gray-300">
                     <FiCheckCircle className="w-12 h-12 text-gray-300 mb-2" />
-                    <p className="text-gray-400 text-sm">No suggested tasks</p>
+                    <p className="text-gray-400 text-sm">No tasks matching selected filters</p>
                   </div>
                 ) : (
-                  tasksData?.tasks.tasks.filter(t => t.status === 'SUGGESTED').map((task, index) => {
+                  tasksData?.tasks.tasks.filter(t => leftColumnStatuses.includes(t.status)).map((task, index) => {
                     const PriorityIcon = priorityConfig[task.priority as keyof typeof priorityConfig].icon;
                     const categoryGradient = categoryColors[task.category as keyof typeof categoryColors];
 
@@ -370,25 +413,51 @@ export default function Tasks() {
               </div>
             </div>
 
-            {/* Active Tasks Column */}
+            {/* Right Column */}
             <div>
-              <div className="mb-4 flex items-center gap-3">
-                <div className="h-10 w-1 bg-gradient-to-b from-violet-500 to-fuchsia-600 rounded-full" />
-                <div>
-                  <h2 className="text-xl font-bold text-gray-800">Active Tasks</h2>
-                  <p className="text-sm text-gray-500">
-                    {tasksData?.tasks.tasks.filter(t => t.status !== 'SUGGESTED' && t.status !== 'REJECTED' && t.status !== 'COMPLETED').length} tasks
-                  </p>
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-1 bg-gradient-to-b from-violet-500 to-fuchsia-600 rounded-full" />
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-800">Column 2</h2>
+                      <p className="text-sm text-gray-500">
+                        {tasksData?.tasks.tasks.filter(t => rightColumnStatuses.includes(t.status)).length} tasks
+                      </p>
+                    </div>
+                  </div>
+                  <div className="relative group">
+                    <button className="p-2 hover:bg-white/60 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <FiFilter className="w-4 h-4" />
+                      Filter
+                    </button>
+                    <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-gray-200 p-3 min-w-[200px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                      <p className="text-xs font-semibold text-gray-500 mb-2 uppercase">Show Status</p>
+                      {availableStatuses.map(status => (
+                        <label key={status} className="flex items-center gap-2 py-1.5 px-2 hover:bg-gray-50 rounded cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={rightColumnStatuses.includes(status)}
+                            onChange={() => toggleStatusInColumn('right', status)}
+                            className="w-4 h-4 text-violet-600 rounded focus:ring-violet-500"
+                          />
+                          <span className={`text-sm px-2 py-0.5 rounded ${statusConfig[status as keyof typeof statusConfig].bg} ${statusConfig[status as keyof typeof statusConfig].color}`}>
+                            {statusConfig[status as keyof typeof statusConfig].label}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="space-y-4">
-                {tasksData?.tasks.tasks.filter(t => t.status !== 'SUGGESTED' && t.status !== 'REJECTED' && t.status !== 'COMPLETED').length === 0 ? (
+                {tasksData?.tasks.tasks.filter(t => rightColumnStatuses.includes(t.status)).length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-48 text-center bg-white/60 backdrop-blur-md rounded-2xl border-2 border-dashed border-gray-300">
                     <FiCheckCircle className="w-12 h-12 text-gray-300 mb-2" />
-                    <p className="text-gray-400 text-sm">No active tasks</p>
+                    <p className="text-gray-400 text-sm">No tasks matching selected filters</p>
                   </div>
                 ) : (
-                  tasksData?.tasks.tasks.filter(t => t.status !== 'SUGGESTED' && t.status !== 'REJECTED' && t.status !== 'COMPLETED').map((task, index) => {
+                  tasksData?.tasks.tasks.filter(t => rightColumnStatuses.includes(t.status)).map((task, index) => {
                     const PriorityIcon = priorityConfig[task.priority as keyof typeof priorityConfig].icon;
                     const categoryGradient = categoryColors[task.category as keyof typeof categoryColors];
 
@@ -660,6 +729,20 @@ function TaskCard({
             )}
           </div>
         </div>
+
+        {/* Suggested By */}
+        {task.suggestedBy && (
+          <div className="mb-3 flex items-center gap-2 px-2 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="w-5 h-5 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold text-xs">
+              {task.suggestedBy.name.charAt(0).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-blue-800">
+                <span className="text-blue-600 font-medium">Suggested by:</span> {task.suggestedBy.name}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Progress Bar (if in progress) */}
         {task.actualHours && (

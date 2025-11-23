@@ -1159,6 +1159,7 @@ export const Tasks: React.FC = () => {
 
   const { data: userData } = useQuery(ME);
   const [assignTask, { loading: assignLoading }] = useMutation(ASSIGN_TASK, {
+    refetchQueries: ['AvailableTasks'],
     onCompleted: () => {
       toast.success('Task assigned successfully!');
       setTaskToAssign(null);
@@ -1169,6 +1170,7 @@ export const Tasks: React.FC = () => {
   });
 
   const [updateTaskStatus, { loading: updateStatusLoading }] = useMutation(UPDATE_TASK_STATUS, {
+    refetchQueries: ['AvailableTasks'],
     onCompleted: (data) => {
       const status = data.updateTaskStatus.status;
       if (status === 'COMPLETED') {
@@ -1182,7 +1184,6 @@ export const Tasks: React.FC = () => {
       } else if (status === 'APPROVED') {
         toast('Task reset to initial state', { icon: '🔄' });
       }
-      refetch();
     },
     onError: (error) => {
       toast.error(`Failed to update task status: ${error.message}`);
@@ -1201,6 +1202,7 @@ export const Tasks: React.FC = () => {
     if (activeTab === 'my') {
       filterObj.myTasksUserId = userData?.me?.id;
     } else if (activeTab === 'available') {
+      // Task Pool: unassigned + approved tasks
       filterObj.status = 'APPROVED';
       filterObj.unassignedOnly = true;
     } else if (activeTab === 'suggested') {
@@ -1254,11 +1256,22 @@ export const Tasks: React.FC = () => {
   }, [allMyTasks, myTasksTab]);
 
   const otherTasks = useMemo(() => {
+    // When Task Pool tab is active, backend already filtered to unassigned APPROVED tasks
+    if (activeTab === 'available') {
+      return tasks;
+    }
+
+    // Otherwise, filter out tasks assigned to current user
     return tasks.filter(task => !task.assignedTo || task.assignedTo.id !== currentUserId);
-  }, [tasks, currentUserId]);
+  }, [tasks, currentUserId, activeTab]);
 
   // Determine the section title based on content
   const otherTasksTitle = useMemo(() => {
+    // When Task Pool is active, always show "Task Pool"
+    if (activeTab === 'available') {
+      return 'Task Pool';
+    }
+
     const hasAssignedToOthers = otherTasks.some(task => task.assignedTo && task.assignedTo.id !== currentUserId);
     const hasUnassigned = otherTasks.some(task => !task.assignedTo);
 
@@ -1269,17 +1282,24 @@ export const Tasks: React.FC = () => {
     } else {
       return 'Available Tasks';
     }
-  }, [otherTasks, currentUserId]);
+  }, [otherTasks, currentUserId, activeTab]);
+
+  // Calculate current tasks count (excluding completed/partially completed)
+  const currentTasksCount = useMemo(() => {
+    return allMyTasks.filter(task =>
+      task.status !== 'COMPLETED' && task.status !== 'PARTIALLY_COMPLETED'
+    ).length;
+  }, [allMyTasks]);
 
   // Task statistics - using counts from server
   const taskStats = useMemo(() => {
     return {
-      myTotal: myTasksCount,
+      myTotal: currentTasksCount,
       myInProgress: 0, // Would need separate query
       availableTotal: availableTasksCount,
       suggestedTotal: suggestedTasksCount,
     };
-  }, [myTasksCount, availableTasksCount, suggestedTasksCount]);
+  }, [currentTasksCount, availableTasksCount, suggestedTasksCount]);
 
   const handleTabClick = (tab: 'my' | 'available' | 'suggested') => {
     // Toggle: if clicking the same tab, remove filter (show all)
@@ -1326,8 +1346,6 @@ export const Tasks: React.FC = () => {
           userId: currentUserId,
         },
       });
-      // Refetch tasks with current filters to update the UI
-      refetch();
     } catch (error) {
       console.error('Error assigning task:', error);
     }
@@ -1527,7 +1545,7 @@ export const Tasks: React.FC = () => {
               <CheckSquare size={24} />
             </SummaryIconWrapper>
             <SummaryContent>
-              <SummaryLabel>Available to Assign</SummaryLabel>
+              <SummaryLabel>Task Pool</SummaryLabel>
               {loading ? <SkeletonSummaryValue /> : <SummaryValue>{taskStats.availableTotal}</SummaryValue>}
             </SummaryContent>
           </SummaryCard>
@@ -1607,8 +1625,8 @@ export const Tasks: React.FC = () => {
           </EmptyState>
         ) : (
           <>
-            {/* My Tasks Section */}
-            {(myTasks.length > 0 || allMyTasks.length > 0) && (
+            {/* My Tasks Section - Hide when Task Pool tab is active */}
+            {activeTab !== 'available' && (myTasks.length > 0 || allMyTasks.length > 0) && (
               <>
                 <SectionHeader>
                   <SectionTitle>
@@ -1660,9 +1678,6 @@ export const Tasks: React.FC = () => {
                         <CategoryBadge>
                           {formatCategory(task.category)}
                         </CategoryBadge>
-                        <Badge>
-                          {task.points} pts
-                        </Badge>
                         <Badge>
                           <Clock size={10} />
                           {task.estimatedHours}h
@@ -1861,9 +1876,6 @@ export const Tasks: React.FC = () => {
                         <CategoryBadge>
                           {formatCategory(task.category)}
                         </CategoryBadge>
-                        <Badge>
-                          {task.points} pts
-                        </Badge>
                         <Badge>
                           <Clock size={10} />
                           {task.estimatedHours}h

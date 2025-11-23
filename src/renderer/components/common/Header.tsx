@@ -67,9 +67,37 @@ const TeamsButton = styled.button`
   color: ${({ theme }) => theme.colors.primary};
   cursor: pointer;
   transition: background-color 0.2s;
+  position: relative;
 
   &:hover {
     background-color: ${({ theme }) => theme.colors.primary}30;
+  }
+`;
+
+const BetaBadge = styled.span`
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, ${({ theme }) => theme.colors.success}, ${({ theme }) => theme.colors.primary});
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  animation: pulse 2s ease-in-out infinite;
+
+  @keyframes pulse {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.05);
+      opacity: 0.95;
+    }
   }
 `;
 
@@ -143,6 +171,7 @@ export const Header: React.FC<HeaderProps> = ({
         <TeamsButton onClick={() => navigate('/tasks')}>
           <CheckSquare size={18} />
           Tasks
+          <BetaBadge>Beta</BetaBadge>
         </TeamsButton>
         <UserInfo>
           {userName} ({userEmail})

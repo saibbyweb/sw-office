@@ -243,7 +243,7 @@ export const SuggestTaskModal: React.FC<SuggestTaskModalProps> = ({ onClose }) =
 
   const { data: projectsData } = useQuery(GET_PROJECTS);
   const [createTask, { loading }] = useMutation(CREATE_TASK, {
-    refetchQueries: [{ query: AVAILABLE_TASKS }],
+    refetchQueries: ['AvailableTasks'],
     onCompleted: () => {
       toast.success('Task suggestion submitted successfully!');
       onClose();

@@ -1,7 +1,10 @@
-import { Resolver, Query, Mutation, Args, ObjectType } from '@nestjs/graphql';
+import { Resolver, Query, Mutation, Args, ObjectType, Context } from '@nestjs/graphql';
+import { UseGuards } from '@nestjs/common';
 import { Task } from '../generated-nestjs-typegraphql';
 import { TaskService, CreateTaskInput, UpdateTaskInput } from './task.service';
 import { InputType, Field, Float, Int } from '@nestjs/graphql';
+import { GraphQLContext } from '../users/users.resolver';
+import { JwtGuard } from '../auth/guards/jwt.guard';
 
 @ObjectType()
 class PaginatedTasksResponse {
@@ -116,8 +119,20 @@ export class TaskResolver {
   }
 
   @Mutation(() => Task)
-  async createTask(@Args('input') input: CreateTaskInputType): Promise<Task> {
-    return this.taskService.createTask(input);
+  @UseGuards(JwtGuard)
+  async createTask(
+    @Args('input') input: CreateTaskInputType,
+    @Context() context: GraphQLContext,
+  ): Promise<Task> {
+    const userId = context.req.user?.id;
+    console.log('[TaskResolver] Creating task, user from context:', context.req.user);
+    console.log('[TaskResolver] User ID:', userId);
+
+    if (!userId) {
+      throw new Error('User not authenticated - suggestedById cannot be derived');
+    }
+
+    return this.taskService.createTask(input, userId);
   }
 
   @Mutation(() => Task)

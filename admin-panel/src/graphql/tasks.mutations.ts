@@ -43,6 +43,11 @@ export const TASKS_QUERY = gql`
           name
           email
         }
+        suggestedBy {
+          id
+          name
+          email
+        }
         createdAt
         updatedAt
       }
@@ -149,6 +154,11 @@ export const COMPLETED_TASKS_QUERY = gql`
         name
       }
       assignedTo {
+        id
+        name
+        email
+      }
+      suggestedBy {
         id
         name
         email

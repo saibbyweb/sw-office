@@ -51,7 +51,7 @@ export class TaskService {
     private readonly socketManager: SocketManagerService,
   ) {}
 
-  async createTask(input: CreateTaskInput): Promise<Task> {
+  async createTask(input: CreateTaskInput, userId?: string): Promise<Task> {
     return this.prisma.task.create({
       data: {
         title: input.title,
@@ -61,6 +61,7 @@ export class TaskService {
         points: input.points,
         estimatedHours: input.estimatedHours,
         projectId: input.projectId || undefined,
+        suggestedById: userId || undefined,
       },
       include: {
         project: true,
@@ -122,7 +123,7 @@ export class TaskService {
 
       // Unassigned only filter
       if (filters.unassignedOnly) {
-        whereClause.assignedToId = null;
+        whereClause.assignedToId = { isSet: false };
       }
 
       // Specific user assignment filter
@@ -136,7 +137,7 @@ export class TaskService {
       // My tasks count
       userId ? this.prisma.task.count({ where: { assignedToId: userId } }) : 0,
       // Available tasks count (approved and unassigned)
-      this.prisma.task.count({ where: { status: 'APPROVED', assignedToId: null } }),
+      this.prisma.task.count({ where: { status: 'APPROVED', assignedToId: { isSet: false } } }),
       // Suggested tasks count
       this.prisma.task.count({ where: { status: 'SUGGESTED' } }),
     ]);
@@ -215,7 +216,7 @@ export class TaskService {
   }
 
   async approveTask(taskId: string, approvedById: string): Promise<Task> {
-    return this.prisma.task.update({
+    const task = await this.prisma.task.update({
       where: { id: taskId },
       data: {
         status: 'APPROVED',
@@ -229,6 +230,25 @@ export class TaskService {
         approvedBy: true,
       },
     });
+
+    // Send real-time notification to the user who suggested the task
+    if (task.suggestedById) {
+      const socketId = this.socketManager.getUserSocketId(task.suggestedById);
+      if (socketId) {
+        console.log(`[TaskService] Sending task approval notification to user ${task.suggestedById}`);
+        this.notificationsGateway.sendNotificationToClient(socketId, {
+          type: 'TASK_APPROVED',
+          taskId: task.id,
+          taskTitle: task.title,
+          message: `Your suggested task "${task.title}" has been approved!`,
+          priority: task.priority,
+        });
+      } else {
+        console.log(`[TaskService] User ${task.suggestedById} is not connected, skipping notification`);
+      }
+    }
+
+    return task;
   }
 
   async unapproveTask(taskId: string): Promise<Task> {
