@@ -263,7 +263,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setIncomingCall(data);
     };
-
+    // @ts-expect-error - socket.on is not typed
     socket.on("notification", (notification: CallNotificationType) => {
       console.log("[CallProvider] 📩 Received notification:", {
         type: notification.type,

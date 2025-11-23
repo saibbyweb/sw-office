@@ -1826,7 +1826,7 @@ export const Tasks: React.FC = () => {
                             {/* If task is BLOCKED, show option to resume */}
                             {task.status === 'BLOCKED' && (
                               <PrimaryActionButton
-                                isActive={false}
+                                // isActive={false}
                                 disabled={updateStatusLoading}
                                 onClick={(e) => {
                                   e.stopPropagation();
