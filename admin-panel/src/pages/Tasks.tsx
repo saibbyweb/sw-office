@@ -77,6 +77,8 @@ const statusConfig = {
   APPROVED: { color: 'text-blue-600', bg: 'bg-blue-100', label: 'Approved' },
   IN_PROGRESS: { color: 'text-purple-600', bg: 'bg-purple-100', label: 'In Progress' },
   COMPLETED: { color: 'text-green-600', bg: 'bg-green-100', label: 'Completed' },
+  PARTIALLY_COMPLETED: { color: 'text-teal-600', bg: 'bg-teal-100', label: 'Partially Completed' },
+  ABANDONED: { color: 'text-gray-600', bg: 'bg-gray-200', label: 'Abandoned' },
   REJECTED: { color: 'text-red-600', bg: 'bg-red-100', label: 'Rejected' },
   BLOCKED: { color: 'text-orange-600', bg: 'bg-orange-100', label: 'Blocked' },
 };

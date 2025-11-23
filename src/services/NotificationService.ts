@@ -52,12 +52,13 @@ class NotificationService {
     this.socket.on('notification', (data: Notification) => {
       console.log('[NotificationService] Received notification:', data);
 
-      // Handle task notifications
+      // Handle task notifications - show OS notification + toast
       if ('taskId' in data) {
         this.handleTaskNotification(data);
       }
 
-      // Notify all registered listeners
+      // Notify all registered listeners (for other uses like updating UI state)
+      // Don't let listeners show duplicate toasts
       this.listeners.forEach((callback) => {
         callback(data);
       });
@@ -92,20 +93,14 @@ class NotificationService {
   private handleTaskNotification(data: Notification & { taskId: string }) {
     console.log('[NotificationService] Handling task notification:', data);
 
+    // Only show OS notifications, no in-app toast
     switch (data.type) {
       case 'TASK_ASSIGNED':
-        // Show OS notification
         localNotificationService.show({
           title: 'New Task Assigned',
           body: data.message,
           bounceDock: true,
           silent: false,
-        });
-
-        // Show toast notification
-        toast.success(data.message, {
-          duration: 5000,
-          icon: '📋',
         });
         break;
 
@@ -116,7 +111,6 @@ class NotificationService {
           bounceDock: true,
           silent: false,
         });
-        toast.success(data.message, { duration: 5000, icon: '✅' });
         break;
 
       case 'TASK_COMPLETED':
@@ -126,7 +120,6 @@ class NotificationService {
           bounceDock: false,
           silent: true,
         });
-        toast(data.message, { duration: 4000, icon: '🎉' });
         break;
 
       case 'TASK_REJECTED':
@@ -136,7 +129,6 @@ class NotificationService {
           bounceDock: true,
           silent: false,
         });
-        toast.error(data.message, { duration: 5000 });
         break;
 
       default:

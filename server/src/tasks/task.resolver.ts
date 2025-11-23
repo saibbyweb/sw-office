@@ -165,6 +165,15 @@ export class TaskResolver {
     return this.taskService.uncompleteTask(taskId);
   }
 
+  @Mutation(() => Task)
+  async updateTaskStatus(
+    @Args('taskId') taskId: string,
+    @Args('status') status: string,
+    @Args('userId') userId: string,
+  ): Promise<Task> {
+    return this.taskService.updateTaskStatus(taskId, status, userId);
+  }
+
   @Query(() => [Task])
   async completedTasks(
     @Args('startDate', { nullable: true }) startDate?: string,

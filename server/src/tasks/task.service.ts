@@ -303,6 +303,64 @@ export class TaskService {
     });
   }
 
+  async updateTaskStatus(taskId: string, status: string, userId: string): Promise<Task> {
+    const updateData: any = { status };
+
+    // Set startedDate when status changes to IN_PROGRESS for the first time
+    if (status === 'IN_PROGRESS') {
+      const existingTask = await this.prisma.task.findUnique({
+        where: { id: taskId },
+        select: { startedDate: true },
+      });
+
+      if (!existingTask?.startedDate) {
+        updateData.startedDate = new Date();
+      }
+    }
+
+    // Set completedDate when status is COMPLETED or PARTIALLY_COMPLETED
+    if (status === 'COMPLETED' || status === 'PARTIALLY_COMPLETED') {
+      updateData.completedDate = new Date();
+    }
+
+    const task = await this.prisma.task.update({
+      where: { id: taskId },
+      data: updateData,
+      include: {
+        project: true,
+        suggestedBy: true,
+        assignedTo: true,
+        approvedBy: true,
+      },
+    });
+
+    // Send notification to admins when task is submitted (COMPLETED or PARTIALLY_COMPLETED)
+    if (status === 'COMPLETED' || status === 'PARTIALLY_COMPLETED') {
+      // Get all admin users
+      const admins = await this.prisma.user.findMany({
+        where: { role: 'ADMIN' },
+        select: { id: true },
+      });
+
+      // Send notification to all online admins
+      admins.forEach((admin) => {
+        const socketId = this.socketManager.getUserSocketId(admin.id);
+        if (socketId) {
+          console.log(`[TaskService] Sending task ${status.toLowerCase()} notification to admin ${admin.id}`);
+          this.notificationsGateway.sendNotificationToClient(socketId, {
+            type: status === 'COMPLETED' ? 'TASK_COMPLETED' : 'TASK_COMPLETED',
+            taskId: task.id,
+            taskTitle: task.title,
+            message: `${task.assignedTo?.name} submitted task: ${task.title} (${status === 'COMPLETED' ? 'Completed' : 'Partially Completed'})`,
+            priority: task.priority,
+          });
+        }
+      });
+    }
+
+    return task;
+  }
+
   async getCompletedTasks(startDate?: Date, endDate?: Date): Promise<Task[]> {
     const whereClause: any = {
       status: 'COMPLETED',

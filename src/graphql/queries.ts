@@ -356,4 +356,21 @@ export const ASSIGN_TASK = gql`
       }
     }
   }
+`;
+
+export const UPDATE_TASK_STATUS = gql`
+  mutation UpdateTaskStatus($taskId: String!, $status: String!, $userId: String!) {
+    updateTaskStatus(taskId: $taskId, status: $status, userId: $userId) {
+      id
+      title
+      status
+      startedDate
+      completedDate
+      assignedTo {
+        id
+        name
+        email
+      }
+    }
+  }
 `; 

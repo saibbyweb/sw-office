@@ -6,8 +6,9 @@ import { Header } from '../components/common/Header';
 import { Loader } from '../components/common/Loader';
 import { SuggestTaskModal } from '../components/modals/SuggestTaskModal';
 import { SelfAssignConfirmModal } from '../components/modals/SelfAssignConfirmModal';
-import { ME, AVAILABLE_TASKS, GET_PROJECTS, ASSIGN_TASK } from '../../graphql/queries';
-import { CheckSquare, Clock, User, Calendar, AlertCircle, Briefcase, Search, Filter, X, Plus, UserPlus } from 'react-feather';
+import { TaskCompletionConfirmModal } from '../components/modals/TaskCompletionConfirmModal';
+import { ME, AVAILABLE_TASKS, GET_PROJECTS, ASSIGN_TASK, UPDATE_TASK_STATUS } from '../../graphql/queries';
+import { CheckSquare, Clock, User, Calendar, AlertCircle, Briefcase, Search, Filter, X, Plus, UserPlus, Play, Check, Slash, AlertTriangle, ArrowLeft, RotateCcw, RefreshCw } from 'react-feather';
 import toast from 'react-hot-toast';
 
 const Container = styled.div`
@@ -132,6 +133,38 @@ const ClearFiltersButton = styled.button`
   &:hover {
     background: ${props => props.theme.colors.background}60;
     border-color: ${props => props.theme.colors.primary}40;
+  }
+`;
+
+const RefreshButton = styled.button<{ isRefreshing?: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  background: ${props => props.theme.colors.primary}15;
+  border: 1px solid ${props => props.theme.colors.primary}30;
+  border-radius: 8px;
+  color: ${props => props.theme.colors.primary};
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  svg {
+    transition: transform 0.6s ease;
+    transform: ${props => props.isRefreshing ? 'rotate(360deg)' : 'rotate(0deg)'};
+  }
+
+  &:hover {
+    background: ${props => props.theme.colors.primary}25;
+    border-color: ${props => props.theme.colors.primary}50;
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
   }
 `;
 
@@ -316,6 +349,7 @@ const SummaryValue = styled.div`
 const SectionHeader = styled.div`
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: ${props => props.theme.spacing.sm};
   margin: ${props => props.theme.spacing.lg} 0 ${props => props.theme.spacing.sm};
   padding-bottom: ${props => props.theme.spacing.xs};
@@ -336,6 +370,40 @@ const SectionCount = styled.span`
   font-size: 0.875rem;
   color: ${props => props.theme.colors.text}70;
   font-weight: 400;
+`;
+
+const SectionTabs = styled.div`
+  display: flex;
+  gap: 4px;
+  background: ${props => props.theme.colors.background}40;
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid ${props => props.theme.colors.text}15;
+`;
+
+const SectionTab = styled.button<{ isActive: boolean }>`
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  background: ${props => props.isActive
+    ? props.theme.colors.primary
+    : 'transparent'};
+  color: ${props => props.isActive
+    ? 'white'
+    : props.theme.colors.text + '80'};
+
+  &:hover {
+    background: ${props => props.isActive
+      ? props.theme.colors.primary + 'DD'
+      : props.theme.colors.text + '10'};
+    color: ${props => props.isActive
+      ? 'white'
+      : props.theme.colors.text};
+  }
 `;
 
 const SuggestTaskButton = styled.button`
@@ -812,6 +880,221 @@ const CategoryBadge = styled(Badge)`
   letter-spacing: 0.3px;
 `;
 
+const StatusButtonsContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: ${props => props.theme.spacing.sm};
+  padding-top: ${props => props.theme.spacing.sm};
+  border-top: 1px solid ${props => props.theme.colors.text}10;
+`;
+
+const PrimaryActionButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 2px solid;
+  background: ${props => props.theme.colors.primary}12;
+  color: ${props => props.theme.colors.primary};
+  border-color: ${props => props.theme.colors.primary}30;
+  box-shadow: 0 2px 4px ${props => props.theme.colors.text}05;
+
+  &:hover {
+    transform: translateY(-2px);
+    background: ${props => props.theme.colors.primary}18;
+    box-shadow: 0 6px 20px ${props => props.theme.colors.primary}35;
+  }
+
+  &:active {
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+`;
+
+const SecondaryActionsRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+`;
+
+const SecondaryActionButton = styled.button<{ variant: 'blocked' | 'end' | 'reset' }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid;
+
+  ${props => {
+    if (props.variant === 'blocked') {
+      return `
+        background: ${props.theme.colors.error}12;
+        color: ${props.theme.colors.error};
+        border-color: ${props.theme.colors.error}30;
+
+        &:hover {
+          background: ${props.theme.colors.error}20;
+          box-shadow: 0 4px 12px ${props.theme.colors.error}25;
+        }
+      `;
+    } else if (props.variant === 'end') {
+      return `
+        background: ${props.theme.colors.success}12;
+        color: ${props.theme.colors.success};
+        border-color: ${props.theme.colors.success}30;
+
+        &:hover {
+          background: ${props.theme.colors.success}20;
+          box-shadow: 0 4px 12px ${props.theme.colors.success}25;
+        }
+      `;
+    } else {
+      return `
+        background: ${props.theme.colors.text}08;
+        color: ${props.theme.colors.text}70;
+        border-color: ${props.theme.colors.text}20;
+
+        &:hover {
+          background: ${props.theme.colors.text}15;
+          color: ${props.theme.colors.text}90;
+          box-shadow: 0 4px 12px ${props.theme.colors.text}10;
+        }
+      `;
+    }
+  }}
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+`;
+
+const CompletionButtonsContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: slideDown 0.3s ease;
+
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+`;
+
+const CompletionButtonsRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+`;
+
+const CompletionButton = styled.button<{ variant: 'completed' | 'partial' }>`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid;
+
+  ${props => props.variant === 'completed'
+    ? `
+      background: ${props.theme.colors.success}15;
+      color: ${props.theme.colors.success};
+      border-color: ${props.theme.colors.success}40;
+
+      &:hover {
+        background: ${props.theme.colors.success}25;
+        box-shadow: 0 4px 16px ${props.theme.colors.success}30;
+        transform: translateY(-2px);
+      }
+    `
+    : `
+      background: ${props.theme.colors.warning}15;
+      color: ${props.theme.colors.warning};
+      border-color: ${props.theme.colors.warning}40;
+
+      &:hover {
+        background: ${props.theme.colors.warning}25;
+        box-shadow: 0 4px 16px ${props.theme.colors.warning}30;
+        transform: translateY(-2px);
+      }
+    `
+  }
+
+  &:active {
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+`;
+
+const CancelButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: ${props => props.theme.colors.text}08;
+  color: ${props => props.theme.colors.text}80;
+  border: 1px solid ${props => props.theme.colors.text}15;
+
+  &:hover {
+    background: ${props => props.theme.colors.text}12;
+    color: ${props => props.theme.colors.text}95;
+    border-color: ${props => props.theme.colors.text}25;
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
 interface Task {
   id: string;
   title: string;
@@ -859,6 +1142,10 @@ export const Tasks: React.FC = () => {
   const [showSuggestModal, setShowSuggestModal] = useState(false);
   const [taskToAssign, setTaskToAssign] = useState<Task | null>(null);
   const [page, setPage] = useState(1);
+  const [showCompletionButtons, setShowCompletionButtons] = useState<string | null>(null);
+  const [taskToComplete, setTaskToComplete] = useState<{ task: Task; type: 'COMPLETED' | 'PARTIALLY_COMPLETED' } | null>(null);
+  const [myTasksTab, setMyTasksTab] = useState<'current' | 'history'>('current');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const tasksPerPage = 50;
 
   // Debounce search query
@@ -878,6 +1165,27 @@ export const Tasks: React.FC = () => {
     },
     onError: (error) => {
       toast.error(`Failed to assign task: ${error.message}`);
+    },
+  });
+
+  const [updateTaskStatus, { loading: updateStatusLoading }] = useMutation(UPDATE_TASK_STATUS, {
+    onCompleted: (data) => {
+      const status = data.updateTaskStatus.status;
+      if (status === 'COMPLETED') {
+        toast.success('Task marked as completed! 🎉');
+      } else if (status === 'PARTIALLY_COMPLETED') {
+        toast.success('Task submitted as partially completed');
+      } else if (status === 'IN_PROGRESS') {
+        toast.success('Task started! Good luck! 💪');
+      } else if (status === 'BLOCKED') {
+        toast.error('Task marked as blocked');
+      } else if (status === 'APPROVED') {
+        toast('Task reset to initial state', { icon: '🔄' });
+      }
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(`Failed to update task status: ${error.message}`);
     },
   });
   // Build filters object
@@ -928,9 +1236,22 @@ export const Tasks: React.FC = () => {
 
   // No client-side filtering needed - all filtering happens on server
   // Separate my tasks from other tasks for display sections
-  const myTasks = useMemo(() => {
+  const allMyTasks = useMemo(() => {
     return tasks.filter(task => task.assignedTo && task.assignedTo.id === currentUserId);
   }, [tasks, currentUserId]);
+
+  // Filter my tasks based on current/history tab
+  const myTasks = useMemo(() => {
+    if (myTasksTab === 'current') {
+      return allMyTasks.filter(task =>
+        task.status !== 'COMPLETED' && task.status !== 'PARTIALLY_COMPLETED'
+      );
+    } else {
+      return allMyTasks.filter(task =>
+        task.status === 'COMPLETED' || task.status === 'PARTIALLY_COMPLETED'
+      );
+    }
+  }, [allMyTasks, myTasksTab]);
 
   const otherTasks = useMemo(() => {
     return tasks.filter(task => !task.assignedTo || task.assignedTo.id !== currentUserId);
@@ -1016,9 +1337,59 @@ export const Tasks: React.FC = () => {
     return task.status === 'APPROVED' && !task.assignedTo;
   };
 
+  const handleStatusUpdate = async (taskId: string, newStatus: string) => {
+    if (!currentUserId) return;
+
+    try {
+      await updateTaskStatus({
+        variables: {
+          taskId,
+          status: newStatus,
+          userId: currentUserId,
+        },
+      });
+    } catch (error) {
+      console.error('Error updating task status:', error);
+    }
+  };
+
+  const confirmTaskCompletion = async () => {
+    if (!taskToComplete || !currentUserId) return;
+
+    try {
+      await updateTaskStatus({
+        variables: {
+          taskId: taskToComplete.task.id,
+          status: taskToComplete.type,
+          userId: currentUserId,
+        },
+      });
+      setTaskToComplete(null);
+      setShowCompletionButtons(null);
+    } catch (error) {
+      console.error('Error completing task:', error);
+    }
+  };
+
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch();
+      toast.success('Tasks refreshed successfully');
+    } catch (error) {
+      console.error('Error refreshing tasks:', error);
+      toast.error('Failed to refresh tasks');
+    } finally {
+      // Keep spinning animation for a minimum duration for better UX
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 600);
+    }
   };
 
   const getPageNumbers = () => {
@@ -1112,6 +1483,15 @@ export const Tasks: React.FC = () => {
               <option value="MEDIUM">Medium</option>
               <option value="LOW">Low</option>
             </Select>
+
+            <RefreshButton
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              isRefreshing={isRefreshing}
+            >
+              <RefreshCw size={14} />
+              Refresh
+            </RefreshButton>
 
             {hasActiveFilters && (
               <ClearFiltersButton onClick={clearFilters}>
@@ -1228,7 +1608,7 @@ export const Tasks: React.FC = () => {
         ) : (
           <>
             {/* My Tasks Section */}
-            {myTasks.length > 0 && (
+            {(myTasks.length > 0 || allMyTasks.length > 0) && (
               <>
                 <SectionHeader>
                   <SectionTitle>
@@ -1236,10 +1616,35 @@ export const Tasks: React.FC = () => {
                     My Tasks
                     <SectionCount>({myTasks.length})</SectionCount>
                   </SectionTitle>
+                  <SectionTabs>
+                    <SectionTab
+                      isActive={myTasksTab === 'current'}
+                      onClick={() => setMyTasksTab('current')}
+                    >
+                      Current
+                    </SectionTab>
+                    <SectionTab
+                      isActive={myTasksTab === 'history'}
+                      onClick={() => setMyTasksTab('history')}
+                    >
+                      History
+                    </SectionTab>
+                  </SectionTabs>
                 </SectionHeader>
-                <TasksGrid>
-                  {myTasks.map((task) => (
-                    <TaskCard key={task.id} priority={task.priority}>
+                {myTasks.length === 0 ? (
+                  <EmptyState>
+                    <User size={48} />
+                    <h3>No {myTasksTab === 'current' ? 'current' : 'completed'} tasks</h3>
+                    <p>
+                      {myTasksTab === 'current'
+                        ? 'You don\'t have any active tasks at the moment.'
+                        : 'You haven\'t completed any tasks yet.'}
+                    </p>
+                  </EmptyState>
+                ) : (
+                  <TasksGrid>
+                    {myTasks.map((task) => (
+                      <TaskCard key={task.id} priority={task.priority}>
                       <TaskHeader>
                         <TaskTitle>{task.title}</TaskTitle>
                         <Badge variant={task.status}>{task.status.replace(/_/g, ' ')}</Badge>
@@ -1265,51 +1670,166 @@ export const Tasks: React.FC = () => {
                       </TaskMeta>
 
                       <TaskFooter>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          {task.assignedTo ? (
-                            <AssignedUserContainer>
-                              <UserAvatar>{getInitials(task.assignedTo.name)}</UserAvatar>
-                              <UserName>{task.assignedTo.name}</UserName>
-                            </AssignedUserContainer>
-                          ) : canSelfAssign(task) ? (
-                            <AssignButton onClick={(e) => {
-                              e.stopPropagation();
-                              handleSelfAssign(task);
-                            }}>
-                              <UserPlus size={14} />
-                              Assign to Myself
-                            </AssignButton>
-                          ) : (
-                            <UnassignedLabel>
-                              <User size={10} />
-                              Unassigned
-                            </UnassignedLabel>
-                          )}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            {task.assignedTo ? (
+                              <AssignedUserContainer>
+                                <UserAvatar>{getInitials(task.assignedTo.name)}</UserAvatar>
+                                <UserName>{task.assignedTo.name}</UserName>
+                              </AssignedUserContainer>
+                            ) : canSelfAssign(task) ? (
+                              <AssignButton onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelfAssign(task);
+                              }}>
+                                <UserPlus size={14} />
+                                Assign to Myself
+                              </AssignButton>
+                            ) : (
+                              <UnassignedLabel>
+                                <User size={10} />
+                                Unassigned
+                              </UnassignedLabel>
+                            )}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-end' }}>
+                              {task.dueDate && (
+                                <TaskInfo>
+                                  <Calendar size={10} />
+                                  {new Date(task.dueDate).toLocaleDateString()}
+                                </TaskInfo>
+                              )}
+                              {task.startedDate && task.status === 'IN_PROGRESS' && (
+                                <TaskInfo style={{ color: 'inherit', opacity: 0.7 }}>
+                                  <Clock size={10} />
+                                  Started {new Date(task.startedDate).toLocaleDateString()}
+                                </TaskInfo>
+                              )}
+                            </div>
+                          </div>
                           {task.project && (
                             <TaskInfo>
                               <Briefcase size={10} />
                               {task.project.name}
                             </TaskInfo>
                           )}
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-end' }}>
-                          {task.dueDate && (
-                            <TaskInfo>
-                              <Calendar size={10} />
-                              {new Date(task.dueDate).toLocaleDateString()}
-                            </TaskInfo>
-                          )}
-                          {task.startedDate && task.status === 'IN_PROGRESS' && (
-                            <TaskInfo style={{ color: 'inherit', opacity: 0.7 }}>
-                              <Clock size={10} />
-                              Started {new Date(task.startedDate).toLocaleDateString()}
-                            </TaskInfo>
-                          )}
+                          <StatusButtonsContainer>
+                            {/* Start Task Button (only show when APPROVED or not started) */}
+                            {task.status === 'APPROVED' && (
+                              <PrimaryActionButton
+                                disabled={updateStatusLoading}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStatusUpdate(task.id, 'IN_PROGRESS');
+                                  setShowCompletionButtons(null);
+                                }}
+                              >
+                                <Play size={14} />
+                                Start Task
+                              </PrimaryActionButton>
+                            )}
+
+                            {/* Secondary Actions: Reset / I'm Blocked / End Task (only show when IN_PROGRESS) */}
+                            {task.status === 'IN_PROGRESS' && showCompletionButtons !== task.id && (
+                              <SecondaryActionsRow>
+                                <SecondaryActionButton
+                                  variant="reset"
+                                  disabled={updateStatusLoading}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleStatusUpdate(task.id, 'APPROVED');
+                                    setShowCompletionButtons(null);
+                                  }}
+                                >
+                                  <RotateCcw size={11} />
+                                  Reset
+                                </SecondaryActionButton>
+                                <SecondaryActionButton
+                                  variant="blocked"
+                                  disabled={updateStatusLoading}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleStatusUpdate(task.id, 'BLOCKED');
+                                    setShowCompletionButtons(null);
+                                  }}
+                                >
+                                  <Slash size={11} />
+                                  I'm Blocked
+                                </SecondaryActionButton>
+                                <SecondaryActionButton
+                                  variant="end"
+                                  disabled={updateStatusLoading}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowCompletionButtons(task.id);
+                                  }}
+                                >
+                                  <Check size={11} />
+                                  End
+                                </SecondaryActionButton>
+                              </SecondaryActionsRow>
+                            )}
+
+                            {/* Completion Buttons (show when "End Task" is clicked) */}
+                            {showCompletionButtons === task.id && (
+                              <CompletionButtonsContainer>
+                                <CompletionButtonsRow>
+                                  <CompletionButton
+                                    variant="completed"
+                                    disabled={updateStatusLoading}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setTaskToComplete({ task, type: 'COMPLETED' });
+                                    }}
+                                  >
+                                    <Check size={14} />
+                                    Completed
+                                  </CompletionButton>
+                                  <CompletionButton
+                                    variant="partial"
+                                    disabled={updateStatusLoading}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setTaskToComplete({ task, type: 'PARTIALLY_COMPLETED' });
+                                    }}
+                                  >
+                                    <AlertTriangle size={14} />
+                                    Partial
+                                  </CompletionButton>
+                                </CompletionButtonsRow>
+                                <CancelButton
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowCompletionButtons(null);
+                                  }}
+                                >
+                                  <ArrowLeft size={12} />
+                                  Go Back
+                                </CancelButton>
+                              </CompletionButtonsContainer>
+                            )}
+
+                            {/* If task is BLOCKED, show option to resume */}
+                            {task.status === 'BLOCKED' && (
+                              <PrimaryActionButton
+                                isActive={false}
+                                disabled={updateStatusLoading}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleStatusUpdate(task.id, 'IN_PROGRESS');
+                                  setShowCompletionButtons(null);
+                                }}
+                              >
+                                <Play size={14} />
+                                Resume Task
+                              </PrimaryActionButton>
+                            )}
+                          </StatusButtonsContainer>
                         </div>
                       </TaskFooter>
                     </TaskCard>
                   ))}
-                </TasksGrid>
+                  </TasksGrid>
+                )}
               </>
             )}
 
@@ -1447,6 +1967,16 @@ export const Tasks: React.FC = () => {
           onConfirm={confirmSelfAssign}
           onCancel={() => setTaskToAssign(null)}
           loading={assignLoading}
+        />
+      )}
+
+      {taskToComplete && (
+        <TaskCompletionConfirmModal
+          task={taskToComplete.task}
+          completionType={taskToComplete.type}
+          onConfirm={confirmTaskCompletion}
+          onCancel={() => setTaskToComplete(null)}
+          loading={updateStatusLoading}
         />
       )}
     </Container>

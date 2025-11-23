@@ -142,6 +142,7 @@ type Mutation {
   uncompleteTask(taskId: String!): Task!
   updateProfile(input: UpdateProfileInput!): User!
   updateTask(input: UpdateTaskInputType!, taskId: String!): Task!
+  updateTaskStatus(status: String!, taskId: String!, userId: String!): Task!
   updateWorkLog(input: UpdateWorkLogInput!): WorkLog!
 }
 
