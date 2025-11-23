@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import styled from 'styled-components';
-import { Wifi, WifiOff } from 'react-feather';
+import { Wifi, WifiOff, RefreshCw } from 'react-feather';
 import { notificationService } from '../services/NotificationService';
 import { useSocket } from '../services/socket';
 
@@ -38,20 +38,79 @@ const SocketId = styled.span`
   margin-left: 8px;
 `;
 
+const ReconnectButton = styled.button<{ isReconnecting: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  margin-left: 8px;
+  background-color: ${props => props.theme.colors?.primary || '#007bff'};
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: ${props => props.isReconnecting ? 'not-allowed' : 'pointer'};
+  opacity: ${props => props.isReconnecting ? 0.6 : 1};
+  transition: all 0.2s ease;
+
+  &:hover {
+    opacity: ${props => props.isReconnecting ? 0.6 : 0.8};
+  }
+
+  svg {
+    animation: ${props => props.isReconnecting ? 'spin 1s linear infinite' : 'none'};
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+`;
+
 export const ConnectionStatus: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
   const { socket } = useSocket();
   const [socketId, setSocketId] = useState<string>('');
+  const [isReconnecting, setIsReconnecting] = useState(false);
+
+  const handleReconnect = useCallback(() => {
+    if (isReconnecting) return;
+
+    console.log('[ConnectionStatus] Attempting to reconnect...');
+    setIsReconnecting(true);
+
+    // First disconnect completely, then reconnect
+    // This is what happens at app startup
+    notificationService.disconnect();
+
+    // Small delay to ensure clean disconnection
+    setTimeout(() => {
+      notificationService.connect();
+
+      // Set a timeout to stop the reconnecting state if connection doesn't succeed
+      setTimeout(() => {
+        if (!socket?.connected) {
+          console.log('[ConnectionStatus] Reconnection attempt timed out');
+          setIsReconnecting(false);
+        }
+      }, 5000);
+    }, 100);
+  }, [isReconnecting, socket]);
 
   useEffect(() => {
     const handleConnect = () => {
       setIsConnected(true);
+      setIsReconnecting(false);
       if (socket) {
         console.log('[ConnectionStatus] Socket connected with ID:', socket.id);
         setSocketId(socket.id || '');
       }
     };
-    
+
     const handleDisconnect = () => {
       console.log('[ConnectionStatus] Socket disconnected');
       setIsConnected(false);
@@ -71,6 +130,22 @@ export const ConnectionStatus: React.FC = () => {
     };
   }, [socket]);
 
+  // Auto-reconnect when disconnected
+  useEffect(() => {
+    if (!isConnected && !isReconnecting) {
+      console.log('[ConnectionStatus] Disconnected, setting up auto-reconnect...');
+      const reconnectInterval = setInterval(() => {
+        console.log('[ConnectionStatus] Auto-reconnect attempt...');
+        handleReconnect();
+      }, 5000);
+
+      return () => {
+        console.log('[ConnectionStatus] Clearing auto-reconnect interval');
+        clearInterval(reconnectInterval);
+      };
+    }
+  }, [isConnected, isReconnecting, handleReconnect]);
+
   return (
     <StatusContainer>
       <StatusDot isConnected={isConnected} />
@@ -84,6 +159,14 @@ export const ConnectionStatus: React.FC = () => {
         <>
           <WifiOff size={14} color="#f44336" />
           <StatusText>Disconnected</StatusText>
+          <ReconnectButton
+            onClick={handleReconnect}
+            isReconnecting={isReconnecting}
+            disabled={isReconnecting}
+          >
+            <RefreshCw size={12} />
+            {isReconnecting ? 'Reconnecting...' : 'Reconnect'}
+          </ReconnectButton>
         </>
       )}
     </StatusContainer>
