@@ -20,33 +20,6 @@ interface ProjectsData {
   projects: Project[];
 }
 
-// Temporary mock data - will be replaced with GraphQL
-const mockTasks = [
-  {
-    id: '1',
-    title: 'Implement user authentication flow',
-    description: 'Add JWT-based authentication with refresh tokens',
-    category: 'BACKEND_API',
-    priority: 'HIGH',
-    status: 'IN_PROGRESS',
-    points: 13,
-    estimatedHours: 8,
-    actualHours: 5.5,
-    project: { name: 'Auth Service' },
-  },
-  {
-    id: '2',
-    title: 'Fix mobile responsive issues on dashboard',
-    description: 'Dashboard breaks on screens below 768px width',
-    category: 'BUG_FIX',
-    priority: 'CRITICAL',
-    status: 'SUGGESTED',
-    points: 5,
-    estimatedHours: 3,
-    project: { name: 'Admin Panel' },
-  },
-];
-
 const categoryColors = {
   MOBILE_APP: 'from-blue-500 to-cyan-500',
   WEB_FRONTEND: 'from-purple-500 to-pink-500',
@@ -87,6 +60,7 @@ interface User {
   id: string;
   name: string;
   email: string;
+  archived?: boolean;
 }
 
 interface UsersData {
@@ -144,7 +118,7 @@ export default function Tasks() {
     return {};
   };
 
-  const { data: completedTasksData, loading: completedLoading, refetch: refetchCompleted } = useQuery<CompletedTasksData>(
+  const { data: completedTasksData, loading: completedLoading } = useQuery<CompletedTasksData>(
     COMPLETED_TASKS_QUERY,
     {
       variables: getDateRange(),
