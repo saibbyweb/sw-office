@@ -1508,6 +1508,7 @@ interface Task {
     id: string;
     name: string;
     email: string;
+    avatarUrl?: string;
   };
   project?: {
     id: string;
@@ -1516,10 +1517,12 @@ interface Task {
   suggestedBy?: {
     id: string;
     name: string;
+    avatarUrl?: string;
   };
   approvedBy?: {
     id: string;
     name: string;
+    avatarUrl?: string;
   };
 }
 
@@ -2659,15 +2662,15 @@ export const Tasks: React.FC = () => {
                           <TaskFooter>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                               <AssignedUserContainer>
-                                <UserAvatar src={task.assignedTo.avatarUrl}>
-                                  {!task.assignedTo.avatarUrl && getInitials(task.assignedTo.name)}
+                                <UserAvatar src={task.assignedTo?.avatarUrl}>
+                                  {!task.assignedTo?.avatarUrl && task.assignedTo && getInitials(task.assignedTo.name)}
                                 </UserAvatar>
                                 <UserName>
                                   <ClickableUserName onClick={(e) => {
                                     e.stopPropagation();
                                     setSelectedProfileUserId(task.assignedTo!.id);
                                   }}>
-                                    {task.assignedTo.name}
+                                    {task.assignedTo?.name}
                                   </ClickableUserName>
                                 </UserName>
                               </AssignedUserContainer>

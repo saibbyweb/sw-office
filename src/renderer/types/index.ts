@@ -76,8 +76,11 @@ export interface Theme {
     error: string;
     info: string;
     background: string;
+    cardBackground: string;
     text: string;
     textLight: string;
+    border: string;
+    hover: string;
   };
   spacing: {
     xs: string;
