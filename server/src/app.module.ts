@@ -16,6 +16,7 @@ import { CallsModule } from './calls/calls.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { UploadModule } from './upload/upload.module';
 import { TaskModule } from './tasks/task.module';
+import { SlackModule } from './slack/slack.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { TaskModule } from './tasks/task.module';
     CallsModule,
     UploadModule,
     TaskModule,
+    SlackModule,
   ],
 })
 export class AppModule {}

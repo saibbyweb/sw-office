@@ -6,6 +6,7 @@ export interface AdminUser {
   isOnline: boolean;
   currentStatus: string;
   archived: boolean;
+  slackUserId?: string;
 }
 
 export interface Project {

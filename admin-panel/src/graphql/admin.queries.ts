@@ -10,6 +10,7 @@ export const ADMIN_USERS_QUERY = gql`
       isOnline
       currentStatus
       archived
+      slackUserId
     }
   }
 `;

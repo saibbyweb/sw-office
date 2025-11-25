@@ -17,4 +17,7 @@ export class RegisterInput extends LoginInput {
   @Field()
   @MinLength(2)
   name: string;
+
+  @Field({ nullable: true })
+  slackUserId?: string;
 }

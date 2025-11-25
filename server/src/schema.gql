@@ -116,6 +116,7 @@ type Mutation {
   addWorkLog(input: AddWorkLogInput!): WorkLog!
   adminArchiveUser(archived: Boolean!, userId: ID!): User!
   adminUpdateUserPassword(newPassword: String!, userId: ID!): User!
+  adminUpdateUserSlackId(avatarUrl: String, slackUserId: String, userId: ID!): User!
   approveTask(approvedById: String!, taskId: String!): Task!
   assignTask(taskId: String!, userId: String): Task!
   cancelCall(callId: String!): Call!
@@ -138,6 +139,8 @@ type Mutation {
   startBreak(input: StartBreakInput!): Break!
   startSession(input: StartSessionInput!): Session!
   switchProject(input: SwitchProjectInput!): Session!
+  syncAllSlackUserIds: [User!]!
+  syncSlackUserIds: String!
   testInitiateCall(callerId: String!, receiverId: String!): Call!
   unapproveTask(taskId: String!): Task!
   uncompleteTask(taskId: String!): Task!
@@ -220,12 +223,14 @@ type Query {
   getUsers: [User!]!
   getWorkLogNotificationConfig: NotificationConfig!
   hello: String!
+  listSlackUsers: [SlackUserOutput!]!
   me: User!
   projects: [Project!]!
   session(id: ID!): Session
   sessionWorkLogs(sessionId: ID!): [WorkLog!]!
   task(id: String!): Task
   tasks(filters: TaskFiltersInput, skip: Int, take: Int, userId: String): PaginatedTasksResponse!
+  testSlackConnection: String!
   userSessionDates(input: GetSessionDatesInput!): [SessionDate!]!
   userSessions(input: GetSessionsInput!): [Session!]!
 }
@@ -234,6 +239,7 @@ input RegisterInput {
   email: String!
   name: String!
   password: String!
+  slackUserId: String
 }
 
 type Segment {
@@ -291,6 +297,27 @@ enum SessionStatus {
   ACTIVE
   COMPLETED
   TERMINATED
+}
+
+type SlackUserOutput {
+  deleted: Boolean!
+  id: String!
+  is_bot: Boolean!
+  name: String!
+  profile: SlackUserProfile!
+  real_name: String!
+}
+
+type SlackUserProfile {
+  display_name: String
+  email: String
+  image_24: String
+  image_32: String
+  image_48: String
+  image_72: String
+  image_192: String
+  image_512: String
+  real_name: String
 }
 
 input StartBreakInput {
@@ -441,6 +468,7 @@ type User {
   password: String!
   role: UserRole!
   sessions: [Session!]
+  slackUserId: String
   taskApprovals: [Task!]
   taskAssignments: [Task!]
   taskSuggestions: [Task!]

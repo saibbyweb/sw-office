@@ -80,4 +80,19 @@ export class AdminResolver {
       data: { archived },
     });
   }
+
+  @Mutation(() => User)
+  async adminUpdateUserSlackId(
+    @Args('userId', { type: () => ID }) userId: string,
+    @Args('slackUserId', { type: () => String, nullable: true }) slackUserId: string | null,
+    @Args('avatarUrl', { type: () => String, nullable: true }) avatarUrl: string | null,
+  ): Promise<User> {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        slackUserId,
+        ...(avatarUrl && { avatarUrl }),
+      },
+    });
+  }
 }

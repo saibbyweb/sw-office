@@ -25,6 +25,7 @@ export enum UserScalarFieldEnum {
     avatarUrl = "avatarUrl",
     isOnline = "isOnline",
     currentStatus = "currentStatus",
+    slackUserId = "slackUserId",
     archived = "archived",
     createdAt = "createdAt",
     updatedAt = "updatedAt"
@@ -449,6 +450,8 @@ export class User {
     isOnline!: boolean;
     @Field(() => String, {nullable:true})
     currentStatus!: string | null;
+    @Field(() => String, {nullable:true})
+    slackUserId!: string | null;
     @Field(() => Boolean, {defaultValue:false,nullable:false})
     archived!: boolean;
     @Field(() => Date, {nullable:false})

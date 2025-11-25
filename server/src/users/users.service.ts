@@ -26,13 +26,13 @@ export class UsersService {
         sessions: {
           where: {
             status: 'ACTIVE',
-            endTime: { isSet: false },
+            endTime: null,
           },
           include: {
             project: true,
             breaks: {
               where: {
-                endTime: { isSet: false }, // Only get active breaks
+                endTime: null, // Only get active breaks
               },
             },
           },
@@ -45,7 +45,7 @@ export class UsersService {
     return users.map((user) => ({
       ...user,
       isOnline: user.sessions?.[0] && user.sessions[0].breaks.length === 0,
-    }));
+    })) as User[];
   }
 
   async updateProfile(
@@ -86,13 +86,13 @@ export class UsersService {
         sessions: {
           where: {
             status: 'ACTIVE',
-            endTime: { isSet: false },
+            endTime: null,
           },
           include: {
             project: true,
             breaks: {
               where: {
-                endTime: { isSet: false },
+                endTime: null,
               },
             },
           },

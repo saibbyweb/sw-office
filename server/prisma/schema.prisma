@@ -52,6 +52,7 @@ model User {
   avatarUrl     String?
   isOnline      Boolean   @default(false)
   currentStatus String?
+  slackUserId   String?
   sessions      Session[]
   breaks        Break[]
   workLogs      WorkLog[]

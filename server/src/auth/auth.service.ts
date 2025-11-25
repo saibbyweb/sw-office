@@ -78,6 +78,7 @@ export class AuthService {
         password: hashedPassword,
         name: input.name,
         role: UserRole.USER,
+        slackUserId: input.slackUserId,
       },
     });
 

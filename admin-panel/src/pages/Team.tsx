@@ -1,14 +1,35 @@
 import { useQuery, useMutation } from '@apollo/client';
 import { useState } from 'react';
-import { FiUser, FiArrowLeft, FiPlus, FiX, FiMail, FiLock, FiUserPlus, FiArchive, FiKey, FiMoreVertical } from 'react-icons/fi';
+import { FiUser, FiArrowLeft, FiPlus, FiX, FiMail, FiLock, FiUserPlus, FiArchive, FiKey, FiMoreVertical, FiHash, FiSearch, FiCheck } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { ADMIN_USERS_QUERY } from '../graphql/admin.queries';
+import { LIST_SLACK_USERS_QUERY } from '../graphql/slack.queries';
 import { gql } from '@apollo/client';
 import { AdminUser } from '../types/admin.types';
 import toast, { Toaster } from 'react-hot-toast';
 
 interface AdminUsersData {
   adminUsers: AdminUser[];
+}
+
+interface SlackUser {
+  id: string;
+  name: string;
+  real_name: string;
+  profile: {
+    email?: string;
+    real_name?: string;
+    display_name?: string;
+    image_48?: string;
+    image_72?: string;
+    image_192?: string;
+  };
+  deleted: boolean;
+  is_bot: boolean;
+}
+
+interface SlackUsersData {
+  listSlackUsers: SlackUser[];
 }
 
 const REGISTER_MUTATION = gql`
@@ -43,10 +64,22 @@ const ARCHIVE_USER_MUTATION = gql`
   }
 `;
 
+const UPDATE_SLACK_ID_MUTATION = gql`
+  mutation AdminUpdateUserSlackId($userId: ID!, $slackUserId: String, $avatarUrl: String) {
+    adminUpdateUserSlackId(userId: $userId, slackUserId: $slackUserId, avatarUrl: $avatarUrl) {
+      id
+      name
+      slackUserId
+      avatarUrl
+    }
+  }
+`;
+
 export default function Team() {
   const navigate = useNavigate();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showSlackIdModal, setShowSlackIdModal] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [confirmAction, setConfirmAction] = useState<'archive' | 'unarchive' | null>(null);
@@ -57,6 +90,7 @@ export default function Team() {
     name: '',
     email: '',
     password: '',
+    slackUserId: '',
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -64,9 +98,15 @@ export default function Team() {
     confirmPassword: '',
   });
 
+  const [slackIdData, setSlackIdData] = useState({
+    slackUserId: '',
+    avatarUrl: '',
+  });
+
   const { data, loading, refetch } = useQuery<AdminUsersData>(ADMIN_USERS_QUERY);
   const [register, { loading: registerLoading }] = useMutation(REGISTER_MUTATION);
   const [updatePassword, { loading: updatePasswordLoading }] = useMutation(UPDATE_PASSWORD_MUTATION);
+  const [updateSlackId, { loading: updateSlackIdLoading }] = useMutation(UPDATE_SLACK_ID_MUTATION);
   const [archiveUser, { loading: archiveLoading }] = useMutation(ARCHIVE_USER_MUTATION);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -79,7 +119,7 @@ export default function Team() {
         },
       });
       setShowAddModal(false);
-      setFormData({ name: '', email: '', password: '' });
+      setFormData({ name: '', email: '', password: '', slackUserId: '' });
       refetch();
       toast.success('Team member added successfully!', { id: toastId });
     } catch (error: any) {
@@ -119,6 +159,29 @@ export default function Team() {
     }
   };
 
+  const handleSlackIdChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const toastId = toast.loading('Updating Slack ID and avatar...');
+    try {
+      await updateSlackId({
+        variables: {
+          userId: selectedUser!.id,
+          slackUserId: slackIdData.slackUserId || null,
+          avatarUrl: slackIdData.avatarUrl || null,
+        },
+      });
+      setShowSlackIdModal(false);
+      setSlackIdData({ slackUserId: '', avatarUrl: '' });
+      setSelectedUser(null);
+      refetch();
+      toast.success('Slack ID and avatar updated successfully!', { id: toastId });
+    } catch (error: any) {
+      console.error('Slack ID update error:', error);
+      toast.error(error.message || 'Failed to update Slack ID', { id: toastId });
+    }
+  };
+
   const handleArchiveConfirm = async () => {
     if (!selectedUser) return;
 
@@ -154,6 +217,13 @@ export default function Team() {
   const openPasswordDialog = (user: AdminUser) => {
     setSelectedUser(user);
     setShowPasswordModal(true);
+    setOpenMenuId(null);
+  };
+
+  const openSlackIdDialog = (user: AdminUser) => {
+    setSelectedUser(user);
+    setSlackIdData({ slackUserId: user.slackUserId || '', avatarUrl: user.avatarUrl || '' });
+    setShowSlackIdModal(true);
     setOpenMenuId(null);
   };
 
@@ -260,6 +330,13 @@ export default function Team() {
                         >
                           <FiKey className="w-4 h-4" />
                           Change Password
+                        </button>
+                        <button
+                          onClick={() => openSlackIdDialog(user)}
+                          className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2 text-gray-700"
+                        >
+                          <FiHash className="w-4 h-4" />
+                          Edit Slack ID
                         </button>
                         <button
                           onClick={() => openArchiveDialog(user, user.archived ? 'unarchive' : 'archive')}
@@ -413,6 +490,25 @@ export default function Team() {
                 </p>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Slack User ID <span className="text-gray-400 text-xs">(Optional)</span>
+                </label>
+                <div className="relative">
+                  <FiHash className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="text"
+                    value={formData.slackUserId}
+                    onChange={(e) => setFormData({ ...formData, slackUserId: e.target.value })}
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition-all"
+                    placeholder="U01234ABCDE"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  For Slack notifications and integrations
+                </p>
+              </div>
+
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
@@ -519,6 +615,44 @@ export default function Team() {
         </div>
       )}
 
+      {/* Edit Slack ID Modal */}
+      {showSlackIdModal && selectedUser && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold">Edit Slack ID</h2>
+                  <p className="text-sm text-purple-100 mt-1">{selectedUser.name}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowSlackIdModal(false);
+                    setSlackIdData({ slackUserId: '', avatarUrl: '' });
+                    setSelectedUser(null);
+                  }}
+                  className="p-1 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <FiX className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <SlackUserPicker
+              selectedSlackUserId={slackIdData.slackUserId}
+              onSelect={(slackUserId, avatarUrl) => setSlackIdData({ slackUserId, avatarUrl })}
+              onSubmit={handleSlackIdChange}
+              onCancel={() => {
+                setShowSlackIdModal(false);
+                setSlackIdData({ slackUserId: '', avatarUrl: '' });
+                setSelectedUser(null);
+              }}
+              loading={updateSlackIdLoading}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Confirmation Dialog */}
       {showConfirmDialog && selectedUser && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -574,5 +708,130 @@ export default function Team() {
         </div>
       )}
     </div>
+  );
+}
+
+// Slack User Picker Component
+function SlackUserPicker({
+  selectedSlackUserId,
+  onSelect,
+  onSubmit,
+  onCancel,
+  loading,
+}: {
+  selectedSlackUserId: string;
+  onSelect: (slackUserId: string, avatarUrl: string) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  onCancel: () => void;
+  loading: boolean;
+}) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const { data: slackData, loading: slackLoading } = useQuery<SlackUsersData>(LIST_SLACK_USERS_QUERY);
+
+  const filteredUsers = slackData?.listSlackUsers.filter(user =>
+    user.real_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.profile.email?.toLowerCase().includes(searchQuery.toLowerCase())
+  ) || [];
+
+  const selectedUser = slackData?.listSlackUsers.find(u => u.id === selectedSlackUserId);
+
+  return (
+    <form onSubmit={onSubmit} className="p-6 space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Select Slack User
+        </label>
+
+        {/* Search Input */}
+        <div className="relative mb-3">
+          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by name or email..."
+            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
+          />
+        </div>
+
+        {/* Selected User Display */}
+        {selectedUser && (
+          <div className="mb-3 p-3 bg-purple-50 border border-purple-200 rounded-lg flex items-center gap-3">
+            <img
+              src={selectedUser.profile.image_48 || selectedUser.profile.image_72}
+              alt={selectedUser.real_name}
+              className="w-10 h-10 rounded-full"
+            />
+            <div className="flex-1">
+              <p className="font-medium text-gray-900">{selectedUser.real_name}</p>
+              <p className="text-sm text-gray-600">{selectedUser.profile.email}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => onSelect('', '')}
+              className="text-purple-600 hover:text-purple-800"
+            >
+              <FiX className="w-5 h-5" />
+            </button>
+          </div>
+        )}
+
+        {/* Users List */}
+        <div className="border border-gray-300 rounded-lg max-h-64 overflow-y-auto">
+          {slackLoading ? (
+            <div className="p-4 text-center text-gray-500">Loading Slack users...</div>
+          ) : filteredUsers.length === 0 ? (
+            <div className="p-4 text-center text-gray-500">No users found</div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {filteredUsers.map((user) => (
+                <button
+                  key={user.id}
+                  type="button"
+                  onClick={() => onSelect(user.id, user.profile.image_192 || user.profile.image_72 || '')}
+                  className={`w-full p-3 flex items-center gap-3 hover:bg-gray-50 transition-colors ${
+                    selectedSlackUserId === user.id ? 'bg-purple-50' : ''
+                  }`}
+                >
+                  <img
+                    src={user.profile.image_48 || user.profile.image_72}
+                    alt={user.real_name}
+                    className="w-10 h-10 rounded-full"
+                  />
+                  <div className="flex-1 text-left">
+                    <p className="font-medium text-gray-900">{user.real_name}</p>
+                    <p className="text-sm text-gray-600">{user.profile.email}</p>
+                  </div>
+                  {selectedSlackUserId === user.id && (
+                    <FiCheck className="w-5 h-5 text-purple-600" />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <p className="text-xs text-gray-500 mt-2">
+          Select a user from your Slack workspace or leave empty to remove the Slack ID.
+        </p>
+      </div>
+
+      <div className="flex gap-3 pt-4">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={loading}
+          className="flex-1 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? 'Updating...' : 'Update Slack ID'}
+        </button>
+      </div>
+    </form>
   );
 }
