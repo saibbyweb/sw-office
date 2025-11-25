@@ -1,9 +1,9 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import styled from 'styled-components';
 import { useQuery } from '@apollo/client';
-import { startOfMonth, endOfMonth, format, isSameMonth } from 'date-fns';
+import { format } from 'date-fns';
 import { Calendar as CalendarIcon, Clock, Briefcase, Coffee } from 'react-feather';
-import { Calendar } from '../common/Calendar';
+import { BillingCycleCalendar } from '../common/BillingCycleCalendar';
 import { Button } from '../common';
 import { Header } from '../common/Header';
 import { Loader } from '../common/Loader';
@@ -582,11 +582,36 @@ const formatDuration = (seconds: number) => {
   return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
 };
 
+// Helper function to get billing cycle start and end dates
+const getBillingCycle = (referenceDate: Date, billingDay: number = 19) => {
+  const year = referenceDate.getFullYear();
+  const month = referenceDate.getMonth();
+  const day = referenceDate.getDate();
+
+  let cycleStart: Date;
+  let cycleEnd: Date;
+
+  if (day >= billingDay) {
+    cycleStart = new Date(year, month, billingDay);
+    cycleEnd = new Date(year, month + 1, billingDay - 1);
+  } else {
+    cycleStart = new Date(year, month - 1, billingDay);
+    cycleEnd = new Date(year, month, billingDay - 1);
+  }
+
+  return { cycleStart, cycleEnd };
+};
+
 export const PastSessionsScreen: React.FC<PastSessionsScreenProps> = ({ onBack }) => {
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [currentCycleDate, setCurrentCycleDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const today = new Date();
+
+  const { cycleStart, cycleEnd } = useMemo(() =>
+    getBillingCycle(currentCycleDate, 19),
+    [currentCycleDate]
+  );
 
   // Add ME query
   const { data: userData } = useQuery(ME);
@@ -594,8 +619,8 @@ export const PastSessionsScreen: React.FC<PastSessionsScreenProps> = ({ onBack }
   const { data: sessionDatesData, loading: datesLoading } = useQuery<SessionDatesData>(GET_SESSION_DATES, {
     variables: {
       input: {
-        startDate: new Date(startOfMonth(currentMonth).setHours(0, 0, 0, 0)),
-        endDate: new Date(endOfMonth(currentMonth).setHours(23, 59, 59, 999)),
+        startDate: new Date(cycleStart.setHours(0, 0, 0, 0)),
+        endDate: new Date(cycleEnd.setHours(23, 59, 59, 999)),
       },
     },
     fetchPolicy: 'network-only',
@@ -626,13 +651,18 @@ export const PastSessionsScreen: React.FC<PastSessionsScreenProps> = ({ onBack }
     }
   }, [sessionDatesData, selectedDate, selectedSessionId]);
 
-  const handleMonthChange = useCallback((startDate: Date, endDate: Date) => {
-    setCurrentMonth(startDate);
+  const handleCycleChange = useCallback((startDate: Date, endDate: Date) => {
+    setCurrentCycleDate(startDate);
   }, []);
 
-  const handleGoToCurrentMonth = useCallback(() => {
-    setCurrentMonth(today);
+  const handleGoToCurrentCycle = useCallback(() => {
+    setCurrentCycleDate(today);
   }, [today]);
+
+  const isCurrentCycle = useMemo(() => {
+    const { cycleStart: currentStart, cycleEnd: currentEnd } = getBillingCycle(today, 19);
+    return cycleStart.getTime() === currentStart.getTime() && cycleEnd.getTime() === currentEnd.getTime();
+  }, [cycleStart, cycleEnd, today]);
 
   const handleDateClick = useCallback((date: Date) => {
     setSelectedDate(date);
@@ -649,7 +679,6 @@ export const PastSessionsScreen: React.FC<PastSessionsScreenProps> = ({ onBack }
   }, [sessionDatesData]);
 
   const activeDates = sessionDatesData?.userSessionDates || [];
-  const isCurrentMonth = isSameMonth(currentMonth, today);
   const isLoading = datesLoading || (selectedSessionId && (sessionLoading || workLogsLoading));
 
   const renderSessionDetails = () => {
@@ -677,8 +706,8 @@ export const PastSessionsScreen: React.FC<PastSessionsScreenProps> = ({ onBack }
             No sessions on {format(selectedDate, 'MMMM d, yyyy')}
           </PlaceholderText>
           <PlaceholderSubtext>
-            {activeDates.length === 0 
-              ? `There are no recorded sessions in ${format(currentMonth, 'MMMM yyyy')}`
+            {activeDates.length === 0
+              ? `There are no recorded sessions in ${format(cycleStart, 'MMM d')} - ${format(cycleEnd, 'MMM d, yyyy')}`
               : 'Select a highlighted date to view session details'
             }
           </PlaceholderSubtext>
@@ -829,15 +858,16 @@ export const PastSessionsScreen: React.FC<PastSessionsScreenProps> = ({ onBack }
 
         <CalendarWrapper>
           <CalendarStats>
-            <StatsCount>{activeDates.length}</StatsCount> sessions in {format(currentMonth, 'MMMM yyyy')}
+            <StatsCount>{activeDates.length}</StatsCount> sessions in {format(cycleStart, 'MMM d')} - {format(cycleEnd, 'MMM d, yyyy')}
           </CalendarStats>
           <CalendarContainer>
-            <Calendar 
-              activeDates={activeDates.map(date => new Date(date.startTime))} 
-              onMonthChange={handleMonthChange}
-              currentDate={currentMonth}
+            <BillingCycleCalendar
+              activeDates={activeDates.map(date => new Date(date.startTime))}
+              onCycleChange={handleCycleChange}
+              currentDate={currentCycleDate}
               onDateClick={handleDateClick}
               selectedDate={selectedDate}
+              billingDayOfMonth={19}
             />
             {datesLoading && (
               <CalendarOverlay>
@@ -845,9 +875,9 @@ export const PastSessionsScreen: React.FC<PastSessionsScreenProps> = ({ onBack }
               </CalendarOverlay>
             )}
           </CalendarContainer>
-          {!isCurrentMonth && (
-            <CurrentMonthButton variant="secondary" onClick={handleGoToCurrentMonth}>
-              Go to Current Month
+          {!isCurrentCycle && (
+            <CurrentMonthButton variant="secondary" onClick={handleGoToCurrentCycle}>
+              Go to Current Cycle
             </CurrentMonthButton>
           )}
         </CalendarWrapper>

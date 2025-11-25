@@ -448,18 +448,28 @@ const TasksGrid = styled.div`
   }
 `;
 
-const TaskCard = styled.div<{ priority?: string; isHighlighted?: boolean }>`
+const TaskCard = styled.div<{ priority?: string; isHighlighted?: boolean; isMyTask?: boolean }>`
   position: relative;
-  background: rgba(30, 41, 59, 0.6);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(71, 85, 105, 0.3);
-  border-radius: 12px;
-  padding: 12px 14px;
-  box-shadow: ${props => props.isHighlighted
-    ? `0 0 0 3px rgba(99, 102, 241, 0.2), 0 2px 8px rgba(0, 0, 0, 0.1)`
-    : `0 2px 8px rgba(0, 0, 0, 0.08)`};
-  transition: all 0.2s ease;
+  background: ${props => props.isMyTask
+    ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%)'
+    : 'rgba(30, 41, 59, 0.6)'};
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid ${props => props.isMyTask
+    ? 'rgba(99, 102, 241, 0.3)'
+    : 'rgba(71, 85, 105, 0.3)'};
+  border-radius: ${props => props.isMyTask ? '16px' : '12px'};
+  padding: ${props => props.isMyTask ? '16px 18px' : '12px 14px'};
+  box-shadow: ${props => {
+    if (props.isHighlighted) {
+      return '0 0 0 3px rgba(99, 102, 241, 0.2), 0 8px 24px rgba(99, 102, 241, 0.15)';
+    }
+    if (props.isMyTask) {
+      return '0 4px 20px rgba(99, 102, 241, 0.12), 0 0 0 1px rgba(99, 102, 241, 0.1) inset';
+    }
+    return '0 2px 8px rgba(0, 0, 0, 0.08)';
+  }};
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   overflow: hidden;
   animation: ${props => props.isHighlighted ? 'highlight 0.6s ease-in-out 3' : 'none'};
@@ -467,10 +477,12 @@ const TaskCard = styled.div<{ priority?: string; isHighlighted?: boolean }>`
 
   @keyframes highlight {
     0%, 100% {
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3), 0 2px 8px rgba(0, 0, 0, 0.1);
+      box-shadow: ${props => props.isMyTask
+        ? '0 4px 20px rgba(99, 102, 241, 0.12)'
+        : '0 0 0 3px rgba(99, 102, 241, 0.3), 0 2px 8px rgba(0, 0, 0, 0.1)'};
     }
     50% {
-      box-shadow: 0 0 0 5px rgba(99, 102, 241, 0.2), 0 4px 12px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 0 0 ${props => props.isMyTask ? '4px' : '5px'} rgba(99, 102, 241, 0.4), 0 8px 32px rgba(99, 102, 241, 0.3);
     }
   }
 
@@ -480,8 +492,11 @@ const TaskCard = styled.div<{ priority?: string; isHighlighted?: boolean }>`
     top: 0;
     left: 0;
     right: 0;
-    height: 2px;
+    height: ${props => props.isMyTask ? '3px' : '2px'};
     background: ${props => {
+      if (props.isMyTask) {
+        return 'linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #6366f1 100%)';
+      }
       switch (props.priority) {
         case 'CRITICAL':
           return props.theme.colors.error;
@@ -495,14 +510,32 @@ const TaskCard = styled.div<{ priority?: string; isHighlighted?: boolean }>`
           return 'rgba(148, 163, 184, 0.3)';
       }
     }};
-    opacity: 0.7;
+    opacity: ${props => props.isMyTask ? '1' : '0.7'};
+    box-shadow: ${props => props.isMyTask ? '0 2px 8px rgba(99, 102, 241, 0.3)' : 'none'};
   }
 
+  ${props => props.isMyTask && `
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at top right, rgba(139, 92, 246, 0.06) 0%, transparent 60%);
+      pointer-events: none;
+    }
+  `}
+
   &:hover {
-    background: rgba(30, 41, 59, 0.8);
-    border-color: rgba(99, 102, 241, 0.4);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    transform: translateY(-1px);
+    background: ${props => props.isMyTask
+      ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(139, 92, 246, 0.12) 100%)'
+      : 'rgba(30, 41, 59, 0.8)'};
+    border-color: ${props => props.isMyTask ? 'rgba(99, 102, 241, 0.5)' : 'rgba(99, 102, 241, 0.4)'};
+    box-shadow: ${props => props.isMyTask
+      ? '0 8px 32px rgba(99, 102, 241, 0.2), 0 0 0 1px rgba(99, 102, 241, 0.2) inset'
+      : '0 4px 12px rgba(0, 0, 0, 0.15)'};
+    transform: translateY(${props => props.isMyTask ? '-3px' : '-1px'});
   }
 
   &:active {
@@ -688,6 +721,36 @@ const SuggestedByContainer = styled.div`
   font-size: 0.6875rem;
   color: rgba(255, 255, 255, 0.8);
   border: 1px solid rgba(139, 92, 246, 0.2);
+`;
+
+const TaskMetadataSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(148, 163, 184, 0.15);
+`;
+
+const MetadataRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+`;
+
+const MetadataLabel = styled.span`
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.6875rem;
+  min-width: 70px;
+`;
+
+const MetadataValue = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.9);
 `;
 
 const SuggestedByAvatar = styled.div<{ src?: string }>`
@@ -1591,6 +1654,64 @@ const TeamMemberCard: React.FC<{
   );
 };
 
+// Task Metadata Component
+const TaskMetadata: React.FC<{
+  task: Task;
+  setSelectedProfileUserId: (id: string) => void;
+  getInitials: (name: string) => string;
+}> = ({ task, setSelectedProfileUserId, getInitials }) => (
+  <TaskMetadataSection>
+    {task.suggestedBy && (
+      <MetadataRow>
+        <MetadataLabel>Suggested by:</MetadataLabel>
+        <MetadataValue>
+          <SuggestedByAvatar src={task.suggestedBy.avatarUrl}>
+            {!task.suggestedBy.avatarUrl && task.suggestedBy.name.charAt(0).toUpperCase()}
+          </SuggestedByAvatar>
+          <ClickableUserName onClick={(e) => {
+            e.stopPropagation();
+            setSelectedProfileUserId(task.suggestedBy!.id);
+          }}>
+            {task.suggestedBy.name}
+          </ClickableUserName>
+        </MetadataValue>
+      </MetadataRow>
+    )}
+    <MetadataRow>
+      <MetadataLabel>Assigned to:</MetadataLabel>
+      {task.assignedTo ? (
+        <MetadataValue>
+          <UserAvatar src={task.assignedTo.avatarUrl}>
+            {!task.assignedTo.avatarUrl && getInitials(task.assignedTo.name)}
+          </UserAvatar>
+          <ClickableUserName onClick={(e) => {
+            e.stopPropagation();
+            setSelectedProfileUserId(task.assignedTo!.id);
+          }}>
+            {task.assignedTo.name}
+          </ClickableUserName>
+        </MetadataValue>
+      ) : (
+        <MetadataValue>
+          <UnassignedLabel>
+            <User size={10} />
+            Unassigned
+          </UnassignedLabel>
+        </MetadataValue>
+      )}
+    </MetadataRow>
+    {task.project && (
+      <MetadataRow>
+        <MetadataLabel>Project:</MetadataLabel>
+        <MetadataValue>
+          <Briefcase size={12} />
+          {task.project.name}
+        </MetadataValue>
+      </MetadataRow>
+    )}
+  </TaskMetadataSection>
+);
+
 export const Tasks: React.FC = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
@@ -1626,9 +1747,13 @@ export const Tasks: React.FC = () => {
   const { data: userData } = useQuery(ME);
   const [assignTask, { loading: assignLoading }] = useMutation(ASSIGN_TASK, {
     refetchQueries: ['AvailableTasks'],
-    onCompleted: () => {
+    onCompleted: (data) => {
       toast.success('Task assigned successfully!');
       setTaskToAssign(null);
+      // Check if the task was self-assigned
+      if (data.assignTask.assignedTo?.id === currentUserId) {
+        setActiveTab('myTasks');
+      }
     },
     onError: (error) => {
       toast.error(`Failed to assign task: ${error.message}`);
@@ -2235,12 +2360,14 @@ export const Tasks: React.FC = () => {
                 ) : (
                   <TasksGrid>
                     {myTasks.map((task) => (
-                      <TaskCard key={task.id} priority={task.priority}>
+                      <TaskCard key={task.id} priority={task.priority} isMyTask={true}>
+                      {/* Top Section: Title + Status Badge */}
                       <TaskHeader>
                         <TaskTitle>{task.title}</TaskTitle>
                         <Badge variant={task.status}>{task.status.replace(/_/g, ' ')}</Badge>
                       </TaskHeader>
 
+                      {/* Description */}
                       <TaskDescription isExpanded={expandedDescriptions.has(task.id)}>
                         {task.description}
                       </TaskDescription>
@@ -2259,7 +2386,15 @@ export const Tasks: React.FC = () => {
                         </ViewMoreButton>
                       )}
 
-                      <TaskMeta>
+                      {/* Badges Row: Priority, Category, Hours */}
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        marginTop: '12px',
+                        marginBottom: '12px',
+                        flexWrap: 'wrap'
+                      }}>
                         <Badge variant={task.priority}>
                           <AlertCircle size={10} />
                           {task.priority}
@@ -2271,78 +2406,20 @@ export const Tasks: React.FC = () => {
                           <Clock size={10} />
                           {task.estimatedHours}h
                         </Badge>
-                      </TaskMeta>
+                        {task.dueDate && (
+                          <Badge variant="info">
+                            <Calendar size={10} />
+                            Due {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </Badge>
+                        )}
+                      </div>
 
+                      {/* Metadata Section: Suggested by, Assigned to, Project */}
+                      <TaskMetadata task={task} setSelectedProfileUserId={setSelectedProfileUserId} getInitials={getInitials} />
+
+                      {/* Action Buttons Section */}
                       <TaskFooter>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            {task.assignedTo ? (
-                              <AssignedUserContainer>
-                                <UserAvatar src={task.assignedTo.avatarUrl}>
-                                  {!task.assignedTo.avatarUrl && getInitials(task.assignedTo.name)}
-                                </UserAvatar>
-                                <UserName>
-                                  <ClickableUserName onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedProfileUserId(task.assignedTo!.id);
-                                  }}>
-                                    {task.assignedTo.name}
-                                  </ClickableUserName>
-                                </UserName>
-                              </AssignedUserContainer>
-                            ) : canSelfApprove(task) ? (
-                              <AssignButton onClick={(e) => {
-                                e.stopPropagation();
-                                handleSelfApprove(task.id);
-                              }} disabled={selfApproveLoading}>
-                                <CheckCircle size={14} />
-                                Approve
-                              </AssignButton>
-                            ) : canSelfAssign(task) ? (
-                              <AssignButton onClick={(e) => {
-                                e.stopPropagation();
-                                handleSelfAssign(task);
-                              }}>
-                                <UserPlus size={14} />
-                                Assign to Myself
-                              </AssignButton>
-                            ) : (
-                              <UnassignedLabel>
-                                <User size={10} />
-                                Unassigned
-                              </UnassignedLabel>
-                            )}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-end' }}>
-                              {task.dueDate && (
-                                <TaskInfo>
-                                  <Calendar size={10} />
-                                  {new Date(task.dueDate).toLocaleDateString()}
-                                </TaskInfo>
-                              )}
-                              {task.startedDate && task.status === 'IN_PROGRESS' && (
-                                <TaskInfo style={{ color: 'inherit', opacity: 0.7 }}>
-                                  <Clock size={10} />
-                                  Started {new Date(task.startedDate).toLocaleDateString()}
-                                </TaskInfo>
-                              )}
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                            {task.project && (
-                              <TaskInfo>
-                                <Briefcase size={10} />
-                                {task.project.name}
-                              </TaskInfo>
-                            )}
-                            {task.suggestedBy && (
-                              <SuggestedByContainer>
-                                <SuggestedByAvatar src={task.suggestedBy.avatarUrl}>
-                                  {!task.suggestedBy.avatarUrl && task.suggestedBy.name.charAt(0).toUpperCase()}
-                                </SuggestedByAvatar>
-                                Suggested by {task.suggestedBy.name}
-                              </SuggestedByContainer>
-                            )}
-                          </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
                           <StatusButtonsContainer>
                             {/* Start Task Button (only show when APPROVED or not started) */}
                             {task.status === 'APPROVED' && (
@@ -2517,23 +2594,60 @@ export const Tasks: React.FC = () => {
                         </Badge>
                       </TaskMeta>
 
+                      <TaskMetadataSection>
+                        {task.suggestedBy && (
+                          <MetadataRow>
+                            <MetadataLabel>Suggested by:</MetadataLabel>
+                            <MetadataValue>
+                              <SuggestedByAvatar src={task.suggestedBy.avatarUrl}>
+                                {!task.suggestedBy.avatarUrl && task.suggestedBy.name.charAt(0).toUpperCase()}
+                              </SuggestedByAvatar>
+                              <ClickableUserName onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedProfileUserId(task.suggestedBy!.id);
+                              }}>
+                                {task.suggestedBy.name}
+                              </ClickableUserName>
+                            </MetadataValue>
+                          </MetadataRow>
+                        )}
+                        <MetadataRow>
+                          <MetadataLabel>Assigned to:</MetadataLabel>
+                          {task.assignedTo ? (
+                            <MetadataValue>
+                              <UserAvatar src={task.assignedTo.avatarUrl}>
+                                {!task.assignedTo.avatarUrl && getInitials(task.assignedTo.name)}
+                              </UserAvatar>
+                              <ClickableUserName onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedProfileUserId(task.assignedTo!.id);
+                              }}>
+                                {task.assignedTo.name}
+                              </ClickableUserName>
+                            </MetadataValue>
+                          ) : (
+                            <MetadataValue>
+                              <UnassignedLabel>
+                                <User size={10} />
+                                Unassigned
+                              </UnassignedLabel>
+                            </MetadataValue>
+                          )}
+                        </MetadataRow>
+                        {task.project && (
+                          <MetadataRow>
+                            <MetadataLabel>Project:</MetadataLabel>
+                            <MetadataValue>
+                              <Briefcase size={12} />
+                              {task.project.name}
+                            </MetadataValue>
+                          </MetadataRow>
+                        )}
+                      </TaskMetadataSection>
+
                       <TaskFooter>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                              {task.assignedTo ? (
-                                <AssignedUserContainer>
-                                  <UserAvatar src={task.assignedTo.avatarUrl}>
-                                    {!task.assignedTo.avatarUrl && getInitials(task.assignedTo.name)}
-                                  </UserAvatar>
-                                  <UserName>
-                                    <ClickableUserName onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedProfileUserId(task.assignedTo!.id);
-                                    }}>
-                                      {task.assignedTo.name}
-                                    </ClickableUserName>
-                                  </UserName>
-                                </AssignedUserContainer>
-                              ) : canSelfApprove(task) ? (
+                              {!task.assignedTo && canSelfApprove(task) ? (
                                 <AssignButton onClick={(e) => {
                                   e.stopPropagation();
                                   handleSelfApprove(task.id);
@@ -2541,7 +2655,7 @@ export const Tasks: React.FC = () => {
                                   <CheckCircle size={14} />
                                   Approve
                                 </AssignButton>
-                              ) : canSelfAssign(task) ? (
+                              ) : !task.assignedTo && canSelfAssign(task) ? (
                                 <AssignButton onClick={(e) => {
                                   e.stopPropagation();
                                   handleSelfAssign(task);
@@ -2549,28 +2663,7 @@ export const Tasks: React.FC = () => {
                                   <UserPlus size={14} />
                                   Assign to Myself
                                 </AssignButton>
-                              ) : (
-                                <UnassignedLabel>
-                                  <User size={10} />
-                                  Unassigned
-                                </UnassignedLabel>
-                              )}
-                              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                {task.project && (
-                                  <TaskInfo>
-                                    <Briefcase size={10} />
-                                    {task.project.name}
-                                  </TaskInfo>
-                                )}
-                                {task.suggestedBy && (
-                                  <SuggestedByContainer>
-                                    <SuggestedByAvatar src={task.suggestedBy.avatarUrl}>
-                                      {!task.suggestedBy.avatarUrl && task.suggestedBy.name.charAt(0).toUpperCase()}
-                                    </SuggestedByAvatar>
-                                    Suggested by {task.suggestedBy.name}
-                                  </SuggestedByContainer>
-                                )}
-                              </div>
+                              ) : null}
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-end' }}>
                               {task.dueDate && (
@@ -2659,38 +2752,9 @@ export const Tasks: React.FC = () => {
                             </Badge>
                           </TaskMeta>
 
+                          <TaskMetadata task={task} setSelectedProfileUserId={setSelectedProfileUserId} getInitials={getInitials} />
+
                           <TaskFooter>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                              <AssignedUserContainer>
-                                <UserAvatar src={task.assignedTo?.avatarUrl}>
-                                  {!task.assignedTo?.avatarUrl && task.assignedTo && getInitials(task.assignedTo.name)}
-                                </UserAvatar>
-                                <UserName>
-                                  <ClickableUserName onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedProfileUserId(task.assignedTo!.id);
-                                  }}>
-                                    {task.assignedTo?.name}
-                                  </ClickableUserName>
-                                </UserName>
-                              </AssignedUserContainer>
-                              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                {task.project && (
-                                  <TaskInfo>
-                                    <Briefcase size={10} />
-                                    {task.project.name}
-                                  </TaskInfo>
-                                )}
-                                {task.suggestedBy && (
-                                  <SuggestedByContainer>
-                                    <SuggestedByAvatar src={task.suggestedBy.avatarUrl}>
-                                      {!task.suggestedBy.avatarUrl && task.suggestedBy.name.charAt(0).toUpperCase()}
-                                    </SuggestedByAvatar>
-                                    Suggested by {task.suggestedBy.name}
-                                  </SuggestedByContainer>
-                                )}
-                              </div>
-                            </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-end' }}>
                               {task.dueDate && (
                                 <TaskInfo>
@@ -2781,40 +2845,19 @@ export const Tasks: React.FC = () => {
                         </Badge>
                       </TaskMeta>
 
+                      <TaskMetadata task={task} setSelectedProfileUserId={setSelectedProfileUserId} getInitials={getInitials} />
+
                       <TaskFooter>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            {canSelfApprove(task) ? (
-                              <AssignButton onClick={(e) => {
-                                e.stopPropagation();
-                                handleSelfApprove(task.id);
-                              }} disabled={selfApproveLoading}>
-                                <CheckCircle size={14} />
-                                Approve
-                              </AssignButton>
-                            ) : task.suggestedBy && (
-                              <SuggestedByContainer>
-                                <SuggestedByAvatar src={task.suggestedBy.avatarUrl}>
-                                  {!task.suggestedBy.avatarUrl && task.suggestedBy.name.charAt(0).toUpperCase()}
-                                </SuggestedByAvatar>
-                                Suggested by{' '}
-                                <ClickableUserName onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedProfileUserId(task.suggestedBy!.id);
-                                }}>
-                                  {task.suggestedBy.name}
-                                </ClickableUserName>
-                              </SuggestedByContainer>
-                            )}
-                          </div>
-                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                            {task.project && (
-                              <TaskInfo>
-                                <Briefcase size={10} />
-                                {task.project.name}
-                              </TaskInfo>
-                            )}
-                          </div>
+                          {canSelfApprove(task) && (
+                            <AssignButton onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelfApprove(task.id);
+                            }} disabled={selfApproveLoading}>
+                              <CheckCircle size={14} />
+                              Approve
+                            </AssignButton>
+                          )}
                         </div>
                       </TaskFooter>
                     </TaskCard>

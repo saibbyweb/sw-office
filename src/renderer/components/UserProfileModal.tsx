@@ -3,8 +3,7 @@ import styled from 'styled-components';
 import { useQuery } from '@apollo/client';
 import { X, User as UserIcon, Clock, CheckCircle, TrendingUp, Calendar as CalendarIcon, List } from 'react-feather';
 import { GET_USER_PROFILE, GET_USER_SESSION_DATES } from '../../graphql/queries';
-import { Calendar } from './common/Calendar';
-import { startOfMonth, endOfMonth } from 'date-fns';
+import { BillingCycleCalendar } from './common/BillingCycleCalendar';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -371,10 +370,35 @@ interface UserProfileModalProps {
   onClose: () => void;
 }
 
+// Helper function to get billing cycle start and end dates
+const getBillingCycle = (referenceDate: Date, billingDay: number = 19) => {
+  const year = referenceDate.getFullYear();
+  const month = referenceDate.getMonth();
+  const day = referenceDate.getDate();
+
+  let cycleStart: Date;
+  let cycleEnd: Date;
+
+  if (day >= billingDay) {
+    cycleStart = new Date(year, month, billingDay);
+    cycleEnd = new Date(year, month + 1, billingDay - 1);
+  } else {
+    cycleStart = new Date(year, month - 1, billingDay);
+    cycleEnd = new Date(year, month, billingDay - 1);
+  }
+
+  return { cycleStart, cycleEnd };
+};
+
 export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onClose }) => {
   const [currentTime, setCurrentTime] = React.useState(Date.now());
   const [activeTab, setActiveTab] = React.useState<'overview' | 'history'>('overview');
-  const [currentMonth, setCurrentMonth] = React.useState(new Date());
+  const [currentCycleDate, setCurrentCycleDate] = React.useState(new Date());
+
+  const { cycleStart, cycleEnd } = React.useMemo(() =>
+    getBillingCycle(currentCycleDate, 19),
+    [currentCycleDate]
+  );
 
   const { data, loading, error } = useQuery(GET_USER_PROFILE, {
     variables: { userId },
@@ -385,8 +409,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
     variables: {
       userId,
       input: {
-        startDate: new Date(startOfMonth(currentMonth).setHours(0, 0, 0, 0)),
-        endDate: new Date(endOfMonth(currentMonth).setHours(23, 59, 59, 999)),
+        startDate: new Date(cycleStart.setHours(0, 0, 0, 0)),
+        endDate: new Date(cycleEnd.setHours(23, 59, 59, 999)),
       },
     },
     skip: !userId || activeTab !== 'history',
@@ -491,8 +515,8 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
 
   const activeDates = sessionDatesData?.getUserSessionDates?.map((session: any) => new Date(session.startTime)) || [];
 
-  const handleMonthChange = (startDate: Date, endDate: Date) => {
-    setCurrentMonth(startDate);
+  const handleCycleChange = (startDate: Date, endDate: Date) => {
+    setCurrentCycleDate(startDate);
   };
 
   return (
@@ -643,10 +667,11 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
           {activeTab === 'history' && (
             <TabContent>
               <CalendarWrapper>
-                <Calendar
+                <BillingCycleCalendar
                   activeDates={activeDates}
-                  onMonthChange={handleMonthChange}
-                  currentDate={currentMonth}
+                  onCycleChange={handleCycleChange}
+                  currentDate={currentCycleDate}
+                  billingDayOfMonth={19}
                 />
               </CalendarWrapper>
             </TabContent>
