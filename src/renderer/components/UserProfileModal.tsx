@@ -366,6 +366,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
   }
 
   if (error || !data?.getUserProfile) {
+    console.error('User profile error:', error);
     return (
       <ModalOverlay onClick={onClose}>
         <ModalContainer onClick={(e) => e.stopPropagation()}>
@@ -379,6 +380,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
             <ErrorContainer>
               <UserIcon size={48} />
               <div>Failed to load user profile</div>
+              {error && <div style={{ fontSize: '0.85rem', marginTop: '8px' }}>{error.message}</div>}
             </ErrorContainer>
           </ModalContent>
         </ModalContainer>
@@ -410,17 +412,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
               <UserName>{user.name}</UserName>
               <UserEmail>{user.email}</UserEmail>
               <UserMeta>
-                <MetaBadge variant={user.isOnline ? 'online' : 'offline'}>
-                  <StatusDot isOnline={user.isOnline} />
-                  {user.isOnline ? 'Online' : 'Offline'}
-                </MetaBadge>
                 <MetaBadge variant="role">
                   <UserIcon size={14} />
                   {user.role}
-                </MetaBadge>
-                <MetaBadge>
-                  <Calendar size={14} />
-                  Joined {formatDate(user.createdAt)}
                 </MetaBadge>
               </UserMeta>
             </UserDetails>

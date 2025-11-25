@@ -96,6 +96,23 @@ const MemberItem = styled.div<{
   gap: 10px;
 `;
 
+const MemberAvatar = styled.div<{ src?: string }>`
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: ${props => props.src ? `url(${props.src})` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'};
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 13px;
+  flex-shrink: 0;
+  position: relative;
+`;
+
 const StatusDot = styled.div<{ isActive: boolean; isOnBreak: boolean }>`
   width: 10px;
   height: 10px;
@@ -105,7 +122,10 @@ const StatusDot = styled.div<{ isActive: boolean; isOnBreak: boolean }>`
     if (props.isActive) return '#4CAF50'; // Green for active
     return '#9E9E9E'; // Gray for inactive
   }};
-  margin-right: 5px;
+  position: absolute;
+  bottom: 0;
+  right: -2px;
+  border: 2px solid #1e2738;
   flex-shrink: 0;
 `;
 
@@ -1920,10 +1940,13 @@ export const VirtualOffice: React.FC = () => {
                   isOnBreak={!!isOnBreak}
                   onClick={() => handleMemberClick(user.id)}
                 >
-                  <StatusDot 
-                    isActive={!!user.activeSession} 
-                    isOnBreak={!!isOnBreak}
-                  />
+                  <MemberAvatar src={user.avatarUrl}>
+                    {!user.avatarUrl && user.name.charAt(0).toUpperCase()}
+                    <StatusDot
+                      isActive={!!user.activeSession}
+                      isOnBreak={!!isOnBreak}
+                    />
+                  </MemberAvatar>
                   {user.name}
                   {isConnected && (
                     <ConnectedIndicator title="User is online">

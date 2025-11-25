@@ -22,6 +22,9 @@ export class UsersService {
 
   async findAll(): Promise<User[]> {
     const users = await this.prisma.user.findMany({
+      where: {
+        archived: false,
+      },
       include: {
         sessions: {
           where: {

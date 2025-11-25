@@ -297,6 +297,7 @@ export const AVAILABLE_TASKS = gql`
           id
           name
           email
+          avatarUrl
         }
         project {
           id
@@ -305,10 +306,12 @@ export const AVAILABLE_TASKS = gql`
         suggestedBy {
           id
           name
+          avatarUrl
         }
         approvedBy {
           id
           name
+          avatarUrl
         }
       }
       total
@@ -343,6 +346,29 @@ export const CREATE_TASK = gql`
   }
 `;
 
+export const SUGGEST_TASK = gql`
+  mutation SuggestTask($input: CreateTaskInputType!) {
+    suggestTask(input: $input) {
+      id
+      title
+      description
+      status
+      priority
+      category
+      points
+      estimatedHours
+      project {
+        id
+        name
+      }
+      suggestedBy {
+        id
+        name
+      }
+    }
+  }
+`;
+
 export const ASSIGN_TASK = gql`
   mutation AssignTask($taskId: String!, $userId: String) {
     assignTask(taskId: $taskId, userId: $userId) {
@@ -353,6 +379,7 @@ export const ASSIGN_TASK = gql`
         id
         name
         email
+        avatarUrl
       }
     }
   }
@@ -370,6 +397,7 @@ export const UPDATE_TASK_STATUS = gql`
         id
         name
         email
+        avatarUrl
       }
     }
   }

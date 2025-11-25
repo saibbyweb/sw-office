@@ -3,6 +3,7 @@ import { PrismaService } from '../database/prisma.service';
 import { Task } from '../generated-nestjs-typegraphql';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { SocketManagerService } from '../notifications/socket-manager.service';
+import { SlackService } from '../slack/slack.service';
 
 export interface CreateTaskInput {
   title: string;
@@ -49,6 +50,7 @@ export class TaskService {
     private readonly prisma: PrismaService,
     private readonly notificationsGateway: NotificationsGateway,
     private readonly socketManager: SocketManagerService,
+    private readonly slackService: SlackService,
   ) {}
 
   async createTask(input: CreateTaskInput, userId?: string): Promise<Task> {
@@ -187,6 +189,8 @@ export class TaskService {
   }
 
   async assignTask(taskId: string, userId: string | null): Promise<Task> {
+    console.log(`[TaskService] assignTask called - taskId: ${taskId}, userId: ${userId}`);
+
     const task = await this.prisma.task.update({
       where: { id: taskId },
       data: {
@@ -199,6 +203,12 @@ export class TaskService {
         approvedBy: true,
       },
     });
+
+    console.log(`[TaskService] Task updated, assignedTo:`, task.assignedTo ? {
+      id: task.assignedTo.id,
+      name: task.assignedTo.name,
+      slackUserId: task.assignedTo.slackUserId
+    } : 'none');
 
     // Send real-time notification to the assigned user
     if (userId) {
@@ -213,7 +223,35 @@ export class TaskService {
           priority: task.priority,
         });
       } else {
-        console.log(`[TaskService] User ${userId} is not connected, skipping notification`);
+        console.log(`[TaskService] User ${userId} is not connected, skipping WebSocket notification`);
+      }
+
+      // Send Slack notification if user has Slack ID
+      if (task.assignedTo?.slackUserId) {
+        console.log(`[TaskService] User has Slack ID: ${task.assignedTo.slackUserId}, sending Slack notification`);
+        try {
+          const blocks = this.slackService.buildTaskAssignmentBlocks({
+            title: task.title,
+            description: task.description,
+            priority: task.priority,
+            points: task.points,
+            estimatedHours: task.estimatedHours,
+          });
+
+          await this.slackService.sendDirectMessage(
+            task.assignedTo.slackUserId,
+            `New task assigned: ${task.title}`, // Fallback text
+            blocks
+          );
+          console.log(`[TaskService] ✅ Successfully sent Slack notification to user ${userId}`);
+        } catch (error) {
+          console.error(`[TaskService] ❌ Failed to send Slack notification:`, error);
+          if (error.response) {
+            console.error(`[TaskService] Slack API response:`, error.response.data);
+          }
+        }
+      } else {
+        console.log(`[TaskService] User does not have Slack ID set, skipping Slack notification`);
       }
     }
 
@@ -250,6 +288,30 @@ export class TaskService {
         });
       } else {
         console.log(`[TaskService] User ${task.suggestedById} is not connected, skipping notification`);
+      }
+
+      // Send Slack notification if user has Slack ID
+      if (task.suggestedBy?.slackUserId) {
+        try {
+          const approverName = task.approvedBy?.name || 'Admin';
+          const blocks = this.slackService.buildTaskApprovalBlocks({
+            title: task.title,
+            description: task.description,
+            priority: task.priority,
+            points: task.points,
+            estimatedHours: task.estimatedHours,
+            approverName,
+          });
+
+          await this.slackService.sendDirectMessage(
+            task.suggestedBy.slackUserId,
+            `Task approved: ${task.title}`, // Fallback text
+            blocks
+          );
+          console.log(`[TaskService] Sent Slack notification to user ${task.suggestedById}`);
+        } catch (error) {
+          console.error(`[TaskService] Failed to send Slack notification:`, error);
+        }
       }
     }
 

@@ -162,7 +162,7 @@ export const Header: React.FC<HeaderProps> = ({
       <HeaderActions>
         <TeamsButton onClick={() => navigate('/teams')}>
           <Users size={18} />
-          Teams
+          Team
         </TeamsButton>
         <TeamsButton onClick={() => navigate('/history')}>
           <Clock size={18} />

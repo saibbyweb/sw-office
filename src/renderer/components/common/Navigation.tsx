@@ -39,7 +39,7 @@ export const Navigation: React.FC = () => {
       </NavLink>
       <NavLink to="/teams" active={location.pathname === '/teams'}>
         <Users size={18} />
-        Teams
+        Team
       </NavLink>
     </Nav>
   );

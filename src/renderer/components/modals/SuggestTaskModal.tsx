@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useMutation, useQuery } from '@apollo/client';
 import { X } from 'react-feather';
-import { CREATE_TASK, GET_PROJECTS, AVAILABLE_TASKS } from '../../../graphql/queries';
+import { SUGGEST_TASK, GET_PROJECTS, AVAILABLE_TASKS } from '../../../graphql/queries';
 import toast from 'react-hot-toast';
 
 const ModalOverlay = styled.div`
@@ -229,9 +229,10 @@ const HelpText = styled.span`
 
 interface SuggestTaskModalProps {
   onClose: () => void;
+  onTaskCreated?: (taskId: string) => void;
 }
 
-export const SuggestTaskModal: React.FC<SuggestTaskModalProps> = ({ onClose }) => {
+export const SuggestTaskModal: React.FC<SuggestTaskModalProps> = ({ onClose, onTaskCreated }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -242,11 +243,15 @@ export const SuggestTaskModal: React.FC<SuggestTaskModalProps> = ({ onClose }) =
   });
 
   const { data: projectsData } = useQuery(GET_PROJECTS);
-  const [createTask, { loading }] = useMutation(CREATE_TASK, {
+  const [suggestTask, { loading }] = useMutation(SUGGEST_TASK, {
     refetchQueries: ['AvailableTasks'],
-    onCompleted: () => {
+    onCompleted: (data) => {
+      const createdTaskId = data.suggestTask.id;
       toast.success('Task suggestion submitted successfully!');
       onClose();
+      if (onTaskCreated) {
+        onTaskCreated(createdTaskId);
+      }
     },
     onError: (error) => {
       toast.error(`Failed to submit task: ${error.message}`);
@@ -286,7 +291,7 @@ export const SuggestTaskModal: React.FC<SuggestTaskModalProps> = ({ onClose }) =
     }
 
     try {
-      await createTask({
+      await suggestTask({
         variables: {
           input: {
             title: formData.title.trim(),

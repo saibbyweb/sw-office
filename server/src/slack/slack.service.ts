@@ -112,9 +112,9 @@ export class SlackService {
   }
 
   /**
-   * Send a direct message to a Slack user
+   * Send a direct message to a Slack user with Block Kit UI
    */
-  async sendDirectMessage(slackUserId: string, message: string): Promise<void> {
+  async sendDirectMessage(slackUserId: string, message: string, blocks?: any[]): Promise<void> {
     if (!this.slackToken) {
       throw new Error('Slack token not configured');
     }
@@ -138,12 +138,13 @@ export class SlackService {
 
       const channelId = dmResponse.data.channel.id;
 
-      // Send the message
+      // Send the message with blocks if provided
       const messageResponse = await axios.post<any>(
         `${this.slackApiUrl}/chat.postMessage`,
         {
           channel: channelId,
-          text: message,
+          text: message, // Fallback text for notifications
+          ...(blocks && { blocks }),
         },
         {
           headers: {
@@ -162,5 +163,143 @@ export class SlackService {
       this.logger.error(`Error sending DM to ${slackUserId}:`, error);
       throw error;
     }
+  }
+
+  /**
+   * Build Slack Block Kit message for task assignment
+   */
+  buildTaskAssignmentBlocks(task: {
+    title: string;
+    description: string;
+    priority: string;
+    points: number;
+    estimatedHours: number;
+  }): any[] {
+    const priorityEmoji = {
+      LOW: '🔵',
+      MEDIUM: '🟡',
+      HIGH: '🟠',
+      CRITICAL: '🔴',
+    }[task.priority] || '⚪';
+
+    return [
+      {
+        type: 'header',
+        text: {
+          type: 'plain_text',
+          text: '📋 New Task Assigned',
+          emoji: true,
+        },
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `*${task.title}*\n${task.description}`,
+        },
+      },
+      {
+        type: 'section',
+        fields: [
+          {
+            type: 'mrkdwn',
+            text: `${priorityEmoji} *Priority*\n${task.priority}`,
+          },
+          {
+            type: 'mrkdwn',
+            text: `⭐ *Points*\n${task.points}`,
+          },
+          {
+            type: 'mrkdwn',
+            text: `⏱️ *Est. Hours*\n${task.estimatedHours}h`,
+          },
+        ],
+      },
+      {
+        type: 'divider',
+      },
+      {
+        type: 'context',
+        elements: [
+          {
+            type: 'mrkdwn',
+            text: '💡 _Check your task dashboard for more details_',
+          },
+        ],
+      },
+    ];
+  }
+
+  /**
+   * Build Slack Block Kit message for task approval
+   */
+  buildTaskApprovalBlocks(task: {
+    title: string;
+    description: string;
+    priority: string;
+    points: number;
+    estimatedHours: number;
+    approverName: string;
+  }): any[] {
+    const priorityEmoji = {
+      LOW: '🔵',
+      MEDIUM: '🟡',
+      HIGH: '🟠',
+      CRITICAL: '🔴',
+    }[task.priority] || '⚪';
+
+    return [
+      {
+        type: 'header',
+        text: {
+          type: 'plain_text',
+          text: '🎉 Task Approved',
+          emoji: true,
+        },
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `Your task has been approved by *${task.approverName}*`,
+        },
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `*${task.title}*\n${task.description}`,
+        },
+      },
+      {
+        type: 'section',
+        fields: [
+          {
+            type: 'mrkdwn',
+            text: `${priorityEmoji} *Priority*\n${task.priority}`,
+          },
+          {
+            type: 'mrkdwn',
+            text: `⭐ *Points*\n${task.points}`,
+          },
+          {
+            type: 'mrkdwn',
+            text: `⏱️ *Est. Hours*\n${task.estimatedHours}h`,
+          },
+        ],
+      },
+      {
+        type: 'divider',
+      },
+      {
+        type: 'context',
+        elements: [
+          {
+            type: 'mrkdwn',
+            text: '✅ _Your task is now ready to be worked on!_',
+          },
+        ],
+      },
+    ];
   }
 }

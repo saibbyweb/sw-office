@@ -14,9 +14,8 @@ import toast from 'react-hot-toast';
 
 const Container = styled.div`
   min-height: 100vh;
-  background: ${props => props.theme.colors.background};
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: ${props => props.theme.colors.text};
+  background: #f8f9fa;
+  color: #1a1a1a;
   display: flex;
   flex-direction: column;
 `;
@@ -434,43 +433,47 @@ const SuggestTaskButton = styled.button`
 `;
 
 const TasksGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-  width: 100%;
+  column-count: 3;
+  column-gap: ${props => props.theme.spacing.md};
 
-  @media (max-width: 1200px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  @media (max-width: 1400px) {
+    column-count: 2;
   }
 
   @media (max-width: 768px) {
-    grid-template-columns: 1fr;
+    column-count: 1;
   }
 `;
 
 const TaskCard = styled.div<{ priority?: string; isHighlighted?: boolean }>`
   position: relative;
-  background: rgba(30, 41, 59, 0.6);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(71, 85, 105, 0.3);
+  background: #ffffff;
+  border: 1px solid #e8e8e8;
   border-radius: 12px;
-  padding: 12px 14px;
+  padding: 20px;
   box-shadow: ${props => props.isHighlighted
-    ? `0 0 0 3px rgba(99, 102, 241, 0.2), 0 2px 8px rgba(0, 0, 0, 0.1)`
-    : `0 2px 8px rgba(0, 0, 0, 0.08)`};
+    ? `0 0 0 3px #6366f140, 0 2px 8px rgba(0, 0, 0, 0.08)`
+    : `0 2px 8px rgba(0, 0, 0, 0.04)`};
   transition: all 0.2s ease;
   cursor: pointer;
   overflow: hidden;
   animation: ${props => props.isHighlighted ? 'highlight 0.6s ease-in-out 3' : 'none'};
+  break-inside: avoid;
+  margin-bottom: 16px;
+  display: inline-block;
   width: 100%;
+
+  &:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+  }
 
   @keyframes highlight {
     0%, 100% {
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3), 0 2px 8px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 0 0 3px #6366f140, 0 2px 8px rgba(0, 0, 0, 0.08);
     }
     50% {
-      box-shadow: 0 0 0 5px rgba(99, 102, 241, 0.2), 0 4px 12px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 0 0 6px #6366f130, 0 4px 16px rgba(0, 0, 0, 0.12);
     }
   }
 
@@ -481,32 +484,40 @@ const TaskCard = styled.div<{ priority?: string; isHighlighted?: boolean }>`
     left: 0;
     right: 0;
     height: 2px;
-    background: ${props => {
-      switch (props.priority) {
-        case 'CRITICAL':
-          return props.theme.colors.error;
-        case 'HIGH':
-          return props.theme.colors.warning;
-        case 'MEDIUM':
-          return props.theme.colors.primary;
-        case 'LOW':
-          return 'rgba(148, 163, 184, 0.5)';
-        default:
-          return 'rgba(148, 163, 184, 0.3)';
-      }
-    }};
-    opacity: 0.7;
+    background: linear-gradient(90deg,
+      ${props => {
+        switch (props.priority) {
+          case 'CRITICAL':
+            return props.theme.colors.error;
+          case 'HIGH':
+            return props.theme.colors.warning;
+          case 'MEDIUM':
+            return props.theme.colors.primary;
+          case 'LOW':
+            return props.theme.colors.text + '60';
+          default:
+            return props.theme.colors.text + '40';
+        }
+      }} 0%,
+      transparent 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
   }
 
   &:hover {
-    background: rgba(30, 41, 59, 0.8);
-    border-color: rgba(99, 102, 241, 0.4);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    transform: translateY(-1px);
+    transform: translateY(-4px);
+    box-shadow: 0 20px 60px ${props => props.theme.colors.text}15,
+                0 8px 20px ${props => props.theme.colors.text}10;
+    border-color: ${props => props.theme.colors.primary}30;
+    background: linear-gradient(135deg, ${props => props.theme.colors.background}70 0%, ${props => props.theme.colors.background}50 100%);
+
+    &::before {
+      opacity: 1;
+    }
   }
 
   &:active {
-    transform: translateY(0);
+    transform: translateY(-2px);
   }
 `;
 
@@ -514,27 +525,25 @@ const TaskHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 6px;
-  gap: 8px;
+  margin-bottom: ${props => props.theme.spacing.sm};
+  gap: ${props => props.theme.spacing.sm};
 `;
 
 const TaskTitle = styled.h3`
   margin: 0;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.95);
+  color: #1a1a1a;
   flex: 1;
-  line-height: 1.4;
+  line-height: 1.5;
   letter-spacing: -0.005em;
-  font-family: 'Inter', sans-serif;
-  transition: color 0.2s ease;
 `;
 
 const TaskDescription = styled.p<{ isExpanded?: boolean }>`
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.75rem;
-  margin: 4px 0 0 0;
-  line-height: 1.5;
+  color: #6b7280;
+  font-size: 0.8125rem;
+  margin: 8px 0 0 0;
+  line-height: 1.6;
   ${props => !props.isExpanded && `
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -547,19 +556,19 @@ const TaskDescription = styled.p<{ isExpanded?: boolean }>`
 const ViewMoreButton = styled.button`
   background: none;
   border: none;
-  color: rgba(99, 102, 241, 0.9);
-  font-size: 0.7rem;
+  color: #6366f1;
+  font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
-  padding: 3px 0;
-  margin-top: 4px;
+  padding: 4px 0;
+  margin-top: 6px;
   transition: all 0.2s;
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
 
   &:hover {
-    color: rgba(99, 102, 241, 1);
+    color: #4f46e5;
     text-decoration: underline;
   }
 `;
@@ -568,7 +577,7 @@ const TaskMeta = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  margin-top: 8px;
+  margin-top: ${props => props.theme.spacing.sm};
 `;
 
 const Badge = styled.span<{ variant?: string }>`
@@ -665,9 +674,9 @@ const TaskFooter = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(71, 85, 105, 0.3);
+  margin-top: ${props => props.theme.spacing.md};
+  padding-top: ${props => props.theme.spacing.md};
+  border-top: 1px solid ${props => props.theme.colors.text}08;
 `;
 
 const TaskInfo = styled.div`
@@ -675,35 +684,7 @@ const TaskInfo = styled.div`
   align-items: center;
   gap: 3px;
   font-size: 0.6875rem;
-  color: rgba(255, 255, 255, 0.6);
-`;
-
-const SuggestedByContainer = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  background: rgba(139, 92, 246, 0.1);
-  border-radius: 6px;
-  font-size: 0.6875rem;
-  color: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(139, 92, 246, 0.2);
-`;
-
-const SuggestedByAvatar = styled.div<{ src?: string }>`
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: ${props => props.src ? `url(${props.src})` : 'linear-gradient(135deg, #8b5cf6, #a78bfa)'};
-  background-size: cover;
-  background-position: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.5rem;
-  font-weight: 600;
-  color: white;
-  flex-shrink: 0;
+  color: ${props => props.theme.colors.text}80;
 `;
 
 const AssignedUserContainer = styled.div`
@@ -717,13 +698,11 @@ const AssignedUserContainer = styled.div`
   box-shadow: 0 2px 4px ${props => props.theme.colors.text}05;
 `;
 
-const UserAvatar = styled.div<{ src?: string }>`
+const UserAvatar = styled.div`
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: ${props => props.src ? `url(${props.src})` : `linear-gradient(135deg, ${props.theme.colors.primary}40 0%, ${props.theme.colors.primary}60 100%)`};
-  background-size: cover;
-  background-position: center;
+  background: linear-gradient(135deg, ${props => props.theme.colors.primary}40 0%, ${props => props.theme.colors.primary}60 100%);
   color: ${props => props.theme.colors.primary};
   display: flex;
   align-items: center;
@@ -814,7 +793,7 @@ const LoadingOverlay = styled.div`
 const SkeletonCard = styled.div`
   background: linear-gradient(135deg, ${props => props.theme.colors.background}60 0%, ${props => props.theme.colors.background}40 100%);
   border: 1px solid ${props => props.theme.colors.text}15;
-  border-radius: 20px;
+  border-radius: 12px;
   padding: ${props => props.theme.spacing.lg};
   backdrop-filter: blur(20px);
   box-shadow: 0 8px 32px ${props => props.theme.colors.text}08;
@@ -1189,127 +1168,32 @@ const TeamViewContainer = styled.div`
 const UserCard = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 12px 14px;
-  background: rgba(30, 41, 59, 0.5);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  gap: 12px;
+  padding: 16px;
+  background: ${props => props.theme.colors.cardBackground};
   border-radius: 12px;
-  border: 1px solid rgba(71, 85, 105, 0.3);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid ${props => props.theme.colors.border};
   transition: all 0.2s ease;
 
   &:hover {
-    background: rgba(30, 41, 59, 0.7);
-    border-color: rgba(99, 102, 241, 0.3);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border-color: ${props => props.theme.colors.primary}40;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
   }
 `;
 
 const UserInfoHeader = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(71, 85, 105, 0.3);
-`;
-
-const TaskStatsRow = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  gap: 12px;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(71, 85, 105, 0.3);
+  border-bottom: 1px solid ${props => props.theme.colors.border};
 `;
 
-const StatCard = styled.div<{ clickable?: boolean }>`
-  background: rgba(15, 23, 42, 0.5);
-  border: 1px solid rgba(71, 85, 105, 0.3);
-  border-radius: 8px;
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  transition: all 0.2s ease;
-  cursor: ${props => props.clickable ? 'pointer' : 'default'};
-
-  ${props => props.clickable && `
-    &:hover {
-      background: rgba(15, 23, 42, 0.7);
-      border-color: rgba(99, 102, 241, 0.4);
-      transform: translateY(-1px);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    }
-  `}
-`;
-
-const StatLabel = styled.div`
-  font-size: 0.688rem;
-  color: rgba(255, 255, 255, 0.6);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-`;
-
-const StatValue = styled.div<{ variant?: 'success' | 'primary' | 'warning' }>`
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: ${props => {
-    switch (props.variant) {
-      case 'success':
-        return '#10b981';
-      case 'warning':
-        return '#f59e0b';
-      case 'primary':
-      default:
-        return 'rgba(255, 255, 255, 0.95)';
-    }
-  }};
-`;
-
-const TaskSection = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-`;
-
-const TaskSectionHeader = styled.div<{ clickable?: boolean }>`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.8);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  padding: 6px 0;
-  cursor: ${props => props.clickable ? 'pointer' : 'default'};
-  transition: color 0.2s ease;
-
-  ${props => props.clickable && `
-    &:hover {
-      color: rgba(99, 102, 241, 0.9);
-    }
-  `}
-
-  svg {
-    transition: transform 0.2s ease;
-  }
-`;
-
-const TaskSectionContent = styled.div<{ isCollapsed?: boolean }>`
-  display: ${props => props.isCollapsed ? 'none' : 'flex'};
-  flex-direction: column;
-  gap: 6px;
-`;
-
-const UserAvatarCompact = styled.div<{ src?: string }>`
+const UserAvatarCompact = styled.div`
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: ${props => props.src ? `url(${props.src})` : `linear-gradient(135deg, ${props.theme.colors.primary}, ${props.theme.colors.secondary})`};
-  background-size: cover;
-  background-position: center;
+  background: linear-gradient(135deg, ${props => props.theme.colors.primary}, ${props => props.theme.colors.secondary});
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1348,147 +1232,71 @@ const ClickableUserName = styled.span`
 `;
 
 const UserTaskCount = styled.div`
-  font-size: 0.625rem;
-  color: rgba(255, 255, 255, 0.6);
-  font-weight: 500;
+  font-size: 0.688rem;
+  color: ${props => props.theme.colors.secondary};
 `;
 
 const TaskChipsContainer = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 `;
 
 const TaskChip = styled.div<{ priority: string; status: string }>`
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 6px 8px;
-  background: ${props => {
-    // Completed or partially completed tasks - show success green with more opacity
-    if (props.status === 'COMPLETED' || props.status === 'PARTIALLY_COMPLETED') {
-      return 'rgba(16, 185, 129, 0.15)';
-    }
-    // Active tasks - darker slate
-    return 'rgba(15, 23, 42, 0.6)';
-  }};
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  border-radius: 8px;
-  border: 1px solid ${props => {
-    if (props.status === 'COMPLETED' || props.status === 'PARTIALLY_COMPLETED') {
-      return 'rgba(16, 185, 129, 0.3)';
-    }
-    return 'rgba(71, 85, 105, 0.4)';
-  }};
-  border-left: 3px solid ${props => {
-    if (props.status === 'COMPLETED' || props.status === 'PARTIALLY_COMPLETED') {
-      return '#10b981';
-    }
-    switch (props.priority) {
-      case 'CRITICAL':
-        return '#ef4444';
-      case 'HIGH':
-        return '#f59e0b';
-      case 'MEDIUM':
-        return '#6366f1';
-      case 'LOW':
-        return '#94a3b8';
-      default:
-        return '#6366f1';
-    }
-  }};
+  gap: 6px;
+  padding: 10px;
+  background: ${props => props.theme.colors.background};
+  border-radius: 6px;
+  border: 1px solid ${props => props.theme.colors.border};
+  border-left: 3px solid ${props =>
+    props.priority === 'HIGH' ? '#ef4444' :
+    props.priority === 'MEDIUM' ? '#f59e0b' :
+    '#10b981'};
   cursor: pointer;
   transition: all 0.2s ease;
-  position: relative;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-
-  ${props => (props.status === 'COMPLETED' || props.status === 'PARTIALLY_COMPLETED') && `
-    &::after {
-      content: '✓ Today';
-      position: absolute;
-      top: 6px;
-      right: 6px;
-      font-size: 0.563rem;
-      font-weight: 600;
-      color: #10b981;
-      background: rgba(16, 185, 129, 0.15);
-      padding: 2px 5px;
-      border-radius: 3px;
-      border: 1px solid rgba(16, 185, 129, 0.3);
-    }
-  `}
 
   &:hover {
-    transform: translateX(3px);
-    border-color: ${props => {
-      if (props.status === 'COMPLETED' || props.status === 'PARTIALLY_COMPLETED') {
-        return 'rgba(16, 185, 129, 0.5)';
-      }
-      return 'rgba(99, 102, 241, 0.4)';
-    }};
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+    transform: translateX(2px);
+    border-color: ${props => props.theme.colors.primary}40;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   }
 `;
 
 const TaskChipTitle = styled.div`
-  font-size: 0.75rem;
+  font-size: 0.813rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.95);
+  color: ${props => props.theme.colors.text};
   line-height: 1.3;
   display: -webkit-box;
-  -webkit-line-clamp: 1;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  padding-right: 50px;
 `;
 
 const TaskChipMeta = styled.div`
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   flex-wrap: wrap;
-  font-size: 0.625rem;
-  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.688rem;
+  color: ${props => props.theme.colors.secondary};
 `;
 
 const TaskChipStatus = styled.span<{ status: string }>`
-  padding: 2px 5px;
-  border-radius: 3px;
-  font-size: 0.563rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.625rem;
   font-weight: 600;
-  background: ${props => {
-    switch (props.status) {
-      case 'COMPLETED':
-        return 'rgba(16, 185, 129, 0.2)';
-      case 'PARTIALLY_COMPLETED':
-        return 'rgba(16, 185, 129, 0.15)';
-      case 'IN_PROGRESS':
-        return 'rgba(59, 130, 246, 0.2)';
-      case 'BLOCKED':
-        return 'rgba(239, 68, 68, 0.2)';
-      case 'APPROVED':
-        return 'rgba(99, 102, 241, 0.2)';
-      default:
-        return 'rgba(148, 163, 184, 0.2)';
-    }
-  }};
-  color: ${props => {
-    switch (props.status) {
-      case 'COMPLETED':
-        return '#10b981';
-      case 'PARTIALLY_COMPLETED':
-        return '#34d399';
-      case 'IN_PROGRESS':
-        return '#3b82f6';
-      case 'BLOCKED':
-        return '#ef4444';
-      case 'APPROVED':
-        return '#6366f1';
-      default:
-        return '#94a3b8';
-    }
-  }};
+  background: ${props =>
+    props.status === 'IN_PROGRESS' ? '#3b82f615' :
+    props.status === 'BLOCKED' ? '#ef444415' :
+    '#10b98115'};
+  color: ${props =>
+    props.status === 'IN_PROGRESS' ? '#3b82f6' :
+    props.status === 'BLOCKED' ? '#ef4444' :
+    '#10b981'};
 `;
 
 interface Task {
@@ -1527,67 +1335,6 @@ const formatCategory = (category: string): string => {
   return category.replace(/_/g, ' ');
 };
 
-// Team member card component to avoid hooks in map
-const TeamMemberCard: React.FC<{
-  user: any;
-  tasks: Task[];
-  getInitials: (name: string) => string;
-  setSelectedProfileUserId: (id: string) => void;
-}> = ({ user, tasks, getInitials, setSelectedProfileUserId }) => {
-  const completedToday = tasks.filter(t => t.status === 'COMPLETED' || t.status === 'PARTIALLY_COMPLETED');
-  const activeTasks = tasks.filter(t => t.status !== 'COMPLETED' && t.status !== 'PARTIALLY_COMPLETED');
-
-  return (
-    <UserCard>
-      <UserInfoHeader>
-        <UserAvatarCompact src={user.avatarUrl}>
-          {!user.avatarUrl && getInitials(user.name)}
-        </UserAvatarCompact>
-        <UserInfo>
-          <UserNameLabel>
-            <ClickableUserName onClick={() => setSelectedProfileUserId(user.id)}>
-              {user.name}
-            </ClickableUserName>
-          </UserNameLabel>
-          <UserTaskCount>
-            {completedToday.length} completed today • {activeTasks.length} active
-          </UserTaskCount>
-        </UserInfo>
-      </UserInfoHeader>
-
-      <TaskChipsContainer>
-        {tasks.map(task => (
-          <TaskChip
-            key={task.id}
-            priority={task.priority}
-            status={task.status}
-          >
-            <TaskChipTitle title={task.title}>
-              {task.title}
-            </TaskChipTitle>
-            <TaskChipMeta>
-              <TaskChipStatus status={task.status}>
-                {task.status.replace(/_/g, ' ')}
-              </TaskChipStatus>
-              <span>•</span>
-              <span>
-                <Clock size={9} style={{ display: 'inline', marginRight: '2px' }} />
-                {task.estimatedHours}h
-              </span>
-              {task.project && (
-                <>
-                  <span>•</span>
-                  <span>{task.project.name}</span>
-                </>
-              )}
-            </TaskChipMeta>
-          </TaskChip>
-        ))}
-      </TaskChipsContainer>
-    </UserCard>
-  );
-};
-
 export const Tasks: React.FC = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
@@ -1603,12 +1350,10 @@ export const Tasks: React.FC = () => {
   const [taskToComplete, setTaskToComplete] = useState<{ task: Task; type: 'COMPLETED' | 'PARTIALLY_COMPLETED' } | null>(null);
   const [myTasksTab, setMyTasksTab] = useState<'current' | 'history'>('current');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [activeTasksView, setActiveTasksView] = useState<'task' | 'team'>('team');
+  const [activeTasksView, setActiveTasksView] = useState<'task' | 'team'>('task');
   const [selectedProfileUserId, setSelectedProfileUserId] = useState<string | null>(null);
   const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
   const [expandedDescriptions, setExpandedDescriptions] = useState<Set<string>>(new Set());
-  const initialLoadRef = React.useRef(true);
-  const userSwitchedTabRef = React.useRef(false);
   const tasksPerPage = 50;
 
   // Debounce search query
@@ -1752,30 +1497,12 @@ export const Tasks: React.FC = () => {
   // Tasks assigned to others (only shown within Task Pool tab)
   const tasksAssignedToOthers = useMemo(() => {
     if (activeTab === 'available') {
-      // Get APPROVED, IN_PROGRESS, BLOCKED tasks, plus COMPLETED/PARTIALLY_COMPLETED from today
-      return tasks.filter(task => {
-        if (!task.assignedTo || task.assignedTo.id === currentUserId) {
-          return false;
-        }
-
-        // Include active statuses
-        if (task.status === 'APPROVED' || task.status === 'IN_PROGRESS' || task.status === 'BLOCKED') {
-          return true;
-        }
-
-        // Include completed tasks from today
-        if (task.status === 'COMPLETED' || task.status === 'PARTIALLY_COMPLETED') {
-          const completedDate = task.completedDate ? new Date(task.completedDate) : null;
-          if (completedDate) {
-            completedDate.setHours(0, 0, 0, 0);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            return completedDate.getTime() === today.getTime();
-          }
-        }
-
-        return false;
-      });
+      // Get APPROVED, IN_PROGRESS, or BLOCKED tasks assigned to others
+      return tasks.filter(task =>
+        task.assignedTo &&
+        task.assignedTo.id !== currentUserId &&
+        (task.status === 'APPROVED' || task.status === 'IN_PROGRESS' || task.status === 'BLOCKED')
+      );
     }
     return [];
   }, [tasks, currentUserId, activeTab]);
@@ -1820,7 +1547,6 @@ export const Tasks: React.FC = () => {
 
   const handleTabClick = (tab: 'my' | 'available' | 'suggested') => {
     // Toggle: if clicking the same tab, remove filter (show all)
-    userSwitchedTabRef.current = true;
     setActiveTab(activeTab === tab ? null : tab);
     setPage(1); // Reset to first page when changing tabs
   };
@@ -1838,16 +1564,6 @@ export const Tasks: React.FC = () => {
   React.useEffect(() => {
     setPage(1);
   }, [debouncedSearchQuery, selectedProject, selectedStatus, selectedPriority]);
-
-  // Auto-switch to Task Pool if My Tasks is empty on initial load
-  React.useEffect(() => {
-    if (initialLoadRef.current && !loading && activeTab === 'my' && myTasksCount === 0 && !userSwitchedTabRef.current) {
-      setActiveTab('available');
-      initialLoadRef.current = false;
-    } else if (!loading && initialLoadRef.current) {
-      initialLoadRef.current = false;
-    }
-  }, [loading, activeTab, myTasksCount]);
 
   const hasActiveFilters = searchQuery || selectedProject || selectedStatus || selectedPriority || activeTab !== null;
 
@@ -2275,9 +1991,7 @@ export const Tasks: React.FC = () => {
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             {task.assignedTo ? (
                               <AssignedUserContainer>
-                                <UserAvatar src={task.assignedTo.avatarUrl}>
-                                  {!task.assignedTo.avatarUrl && getInitials(task.assignedTo.name)}
-                                </UserAvatar>
+                                <UserAvatar>{getInitials(task.assignedTo.name)}</UserAvatar>
                                 <UserName>
                                   <ClickableUserName onClick={(e) => {
                                     e.stopPropagation();
@@ -2324,22 +2038,12 @@ export const Tasks: React.FC = () => {
                               )}
                             </div>
                           </div>
-                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                            {task.project && (
-                              <TaskInfo>
-                                <Briefcase size={10} />
-                                {task.project.name}
-                              </TaskInfo>
-                            )}
-                            {task.suggestedBy && (
-                              <SuggestedByContainer>
-                                <SuggestedByAvatar src={task.suggestedBy.avatarUrl}>
-                                  {!task.suggestedBy.avatarUrl && task.suggestedBy.name.charAt(0).toUpperCase()}
-                                </SuggestedByAvatar>
-                                Suggested by {task.suggestedBy.name}
-                              </SuggestedByContainer>
-                            )}
-                          </div>
+                          {task.project && (
+                            <TaskInfo>
+                              <Briefcase size={10} />
+                              {task.project.name}
+                            </TaskInfo>
+                          )}
                           <StatusButtonsContainer>
                             {/* Start Task Button (only show when APPROVED or not started) */}
                             {task.status === 'APPROVED' && (
@@ -2518,9 +2222,7 @@ export const Tasks: React.FC = () => {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                               {task.assignedTo ? (
                                 <AssignedUserContainer>
-                                  <UserAvatar src={task.assignedTo.avatarUrl}>
-                                    {!task.assignedTo.avatarUrl && getInitials(task.assignedTo.name)}
-                                  </UserAvatar>
+                                  <UserAvatar>{getInitials(task.assignedTo.name)}</UserAvatar>
                                   <UserName>
                                     <ClickableUserName onClick={(e) => {
                                       e.stopPropagation();
@@ -2552,22 +2254,12 @@ export const Tasks: React.FC = () => {
                                   Unassigned
                                 </UnassignedLabel>
                               )}
-                              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                {task.project && (
-                                  <TaskInfo>
-                                    <Briefcase size={10} />
-                                    {task.project.name}
-                                  </TaskInfo>
-                                )}
-                                {task.suggestedBy && (
-                                  <SuggestedByContainer>
-                                    <SuggestedByAvatar src={task.suggestedBy.avatarUrl}>
-                                      {!task.suggestedBy.avatarUrl && task.suggestedBy.name.charAt(0).toUpperCase()}
-                                    </SuggestedByAvatar>
-                                    Suggested by {task.suggestedBy.name}
-                                  </SuggestedByContainer>
-                                )}
-                              </div>
+                              {task.project && (
+                                <TaskInfo>
+                                  <Briefcase size={10} />
+                                  {task.project.name}
+                                </TaskInfo>
+                              )}
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-end' }}>
                               {task.dueDate && (
@@ -2659,9 +2351,7 @@ export const Tasks: React.FC = () => {
                           <TaskFooter>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                               <AssignedUserContainer>
-                                <UserAvatar src={task.assignedTo.avatarUrl}>
-                                  {!task.assignedTo.avatarUrl && getInitials(task.assignedTo.name)}
-                                </UserAvatar>
+                                <UserAvatar>{getInitials(task.assignedTo.name)}</UserAvatar>
                                 <UserName>
                                   <ClickableUserName onClick={(e) => {
                                     e.stopPropagation();
@@ -2671,22 +2361,12 @@ export const Tasks: React.FC = () => {
                                   </ClickableUserName>
                                 </UserName>
                               </AssignedUserContainer>
-                              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                {task.project && (
-                                  <TaskInfo>
-                                    <Briefcase size={10} />
-                                    {task.project.name}
-                                  </TaskInfo>
-                                )}
-                                {task.suggestedBy && (
-                                  <SuggestedByContainer>
-                                    <SuggestedByAvatar src={task.suggestedBy.avatarUrl}>
-                                      {!task.suggestedBy.avatarUrl && task.suggestedBy.name.charAt(0).toUpperCase()}
-                                    </SuggestedByAvatar>
-                                    Suggested by {task.suggestedBy.name}
-                                  </SuggestedByContainer>
-                                )}
-                              </div>
+                              {task.project && (
+                                <TaskInfo>
+                                  <Briefcase size={10} />
+                                  {task.project.name}
+                                </TaskInfo>
+                              )}
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-end' }}>
                               {task.dueDate && (
@@ -2709,13 +2389,52 @@ export const Tasks: React.FC = () => {
                     ) : (
                       <TeamViewContainer>
                         {tasksByUser.map(({ user, tasks }) => (
-                          <TeamMemberCard
-                            key={user.id}
-                            user={user}
-                            tasks={tasks}
-                            getInitials={getInitials}
-                            setSelectedProfileUserId={setSelectedProfileUserId}
-                          />
+                          <UserCard key={user.id}>
+                            <UserInfoHeader>
+                              <UserAvatarCompact>
+                                {getInitials(user.name)}
+                              </UserAvatarCompact>
+                              <UserInfo>
+                                <UserNameLabel>
+                                  <ClickableUserName onClick={() => setSelectedProfileUserId(user.id)}>
+                                    {user.name}
+                                  </ClickableUserName>
+                                </UserNameLabel>
+                                <UserTaskCount>
+                                  {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
+                                </UserTaskCount>
+                              </UserInfo>
+                            </UserInfoHeader>
+                            <TaskChipsContainer>
+                              {tasks.map(task => (
+                                <TaskChip
+                                  key={task.id}
+                                  priority={task.priority}
+                                  status={task.status}
+                                >
+                                  <TaskChipTitle title={task.title}>
+                                    {task.title}
+                                  </TaskChipTitle>
+                                  <TaskChipMeta>
+                                    <TaskChipStatus status={task.status}>
+                                      {task.status.replace(/_/g, ' ')}
+                                    </TaskChipStatus>
+                                    <span>•</span>
+                                    <span>
+                                      <Clock size={10} style={{ display: 'inline', marginRight: '2px' }} />
+                                      {task.estimatedHours}h
+                                    </span>
+                                    {task.project && (
+                                      <>
+                                        <span>•</span>
+                                        <span>{task.project.name}</span>
+                                      </>
+                                    )}
+                                  </TaskChipMeta>
+                                </TaskChip>
+                              ))}
+                            </TaskChipsContainer>
+                          </UserCard>
                         ))}
                       </TeamViewContainer>
                     )}
@@ -2790,10 +2509,8 @@ export const Tasks: React.FC = () => {
                                 Approve
                               </AssignButton>
                             ) : task.suggestedBy && (
-                              <SuggestedByContainer>
-                                <SuggestedByAvatar src={task.suggestedBy.avatarUrl}>
-                                  {!task.suggestedBy.avatarUrl && task.suggestedBy.name.charAt(0).toUpperCase()}
-                                </SuggestedByAvatar>
+                              <TaskInfo>
+                                <User size={10} />
                                 Suggested by{' '}
                                 <ClickableUserName onClick={(e) => {
                                   e.stopPropagation();
@@ -2801,17 +2518,15 @@ export const Tasks: React.FC = () => {
                                 }}>
                                   {task.suggestedBy.name}
                                 </ClickableUserName>
-                              </SuggestedByContainer>
-                            )}
-                          </div>
-                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                            {task.project && (
-                              <TaskInfo>
-                                <Briefcase size={10} />
-                                {task.project.name}
                               </TaskInfo>
                             )}
                           </div>
+                          {task.project && (
+                            <TaskInfo>
+                              <Briefcase size={10} />
+                              {task.project.name}
+                            </TaskInfo>
+                          )}
                         </div>
                       </TaskFooter>
                     </TaskCard>

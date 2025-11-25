@@ -127,6 +127,23 @@ export class TaskResolver {
   }
 
   @Mutation(() => Task)
+  @UseGuards(JwtGuard)
+  async suggestTask(
+    @Args('input') input: CreateTaskInputType,
+    @Context() context: GraphQLContext,
+  ): Promise<Task> {
+    const userId = context.req.user?.id;
+    console.log('[TaskResolver] Suggesting task, user from context:', context.req.user);
+    console.log('[TaskResolver] User ID:', userId);
+
+    if (!userId) {
+      throw new Error('User not authenticated - suggestedById cannot be derived');
+    }
+
+    return this.taskService.createTask(input, userId);
+  }
+
+  @Mutation(() => Task)
   async assignTask(
     @Args('taskId') taskId: string,
     @Args('userId', { type: () => String, nullable: true }) userId: string | null,

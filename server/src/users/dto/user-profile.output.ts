@@ -30,8 +30,8 @@ export class UserProfile {
   @Field({ nullable: true })
   avatarUrl?: string;
 
-  @Field()
-  isOnline: boolean;
+  @Field({ nullable: true })
+  isOnline?: boolean;
 
   @Field({ nullable: true })
   currentStatus?: string;

@@ -138,6 +138,7 @@ type Mutation {
   selfApproveTask(taskId: String!): Task!
   startBreak(input: StartBreakInput!): Break!
   startSession(input: StartSessionInput!): Session!
+  suggestTask(input: CreateTaskInputType!): Task!
   switchProject(input: SwitchProjectInput!): Session!
   syncAllSlackUserIds: [User!]!
   syncSlackUserIds: String!
@@ -491,7 +492,7 @@ type UserProfile {
   currentStatus: String
   email: String!
   id: String!
-  isOnline: Boolean!
+  isOnline: Boolean
   name: String!
   role: String!
   sessions: [Session!]
