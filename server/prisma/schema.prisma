@@ -53,6 +53,7 @@ model User {
   isOnline      Boolean   @default(false)
   currentStatus String?
   slackUserId   String?
+  salaryINR     Int?
   sessions      Session[]
   breaks        Break[]
   workLogs      WorkLog[]

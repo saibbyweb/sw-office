@@ -116,6 +116,7 @@ type Mutation {
   addWorkLog(input: AddWorkLogInput!): WorkLog!
   adminArchiveUser(archived: Boolean!, userId: ID!): User!
   adminUpdateUserPassword(newPassword: String!, userId: ID!): User!
+  adminUpdateUserSalary(salaryINR: Int, userId: ID!): User!
   adminUpdateUserSlackId(avatarUrl: String, slackUserId: String, userId: ID!): User!
   approveTask(approvedById: String!, taskId: String!): Task!
   assignTask(taskId: String!, userId: String): Task!
@@ -221,6 +222,7 @@ type Query {
   getUserMeetingHistory(endDate: String!, startDate: String!, userId: String!): [MeetingHistoryItem!]!
   getUserMeetings(userId: String!): [OrganizationMeeting!]!
   getUserProfile(userId: String!): UserProfile!
+  getUserSessionDates(input: GetSessionDatesInput!, userId: String!): [SessionDate!]!
   getUsers: [User!]!
   getWorkLogNotificationConfig: NotificationConfig!
   hello: String!
@@ -240,6 +242,7 @@ input RegisterInput {
   email: String!
   name: String!
   password: String!
+  salaryINR: Int
   slackUserId: String
 }
 
@@ -468,6 +471,7 @@ type User {
   name: String!
   password: String!
   role: UserRole!
+  salaryINR: Int
   sessions: [Session!]
   slackUserId: String
   taskApprovals: [Task!]
@@ -487,6 +491,7 @@ type UserCount {
 }
 
 type UserProfile {
+  activeSession: Session
   avatarUrl: String
   createdAt: DateTime!
   currentStatus: String

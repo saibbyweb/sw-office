@@ -89,13 +89,22 @@ export class UsersService {
         sessions: {
           where: {
             status: 'ACTIVE',
-            endTime: null,
+            endTime: {
+              isSet: false,
+            },
           },
           include: {
             project: true,
             breaks: {
               where: {
-                endTime: null,
+                endTime: {
+                  isSet: false,
+                },
+              },
+            },
+            segments: {
+              orderBy: {
+                startTime: 'asc',
               },
             },
           },
@@ -128,6 +137,7 @@ export class UsersService {
       createdAt: user.createdAt,
       taskAssignments: user.taskAssignments,
       sessions: user.sessions,
+      activeSession: user.sessions?.[0] || undefined,
       statistics: {
         allottedTasks,
         completedTasks,

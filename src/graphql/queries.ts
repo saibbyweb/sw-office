@@ -440,6 +440,23 @@ export const GET_USER_PROFILE = gql`
         completedTasks
         inProgressTasks
       }
+      activeSession {
+        id
+        startTime
+        totalDuration
+        totalBreakTime
+        project {
+          id
+          name
+        }
+        segments {
+          id
+          type
+          startTime
+          endTime
+          duration
+        }
+      }
       taskAssignments {
         id
         title
@@ -452,14 +469,15 @@ export const GET_USER_PROFILE = gql`
           name
         }
       }
-      sessions {
-        id
-        startTime
-        project {
-          id
-          name
-        }
-      }
+    }
+  }
+`;
+
+export const GET_USER_SESSION_DATES = gql`
+  query GetUserSessionDates($userId: String!, $input: GetSessionDatesInput!) {
+    getUserSessionDates(userId: $userId, input: $input) {
+      startTime
+      id
     }
   }
 `; 

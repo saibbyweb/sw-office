@@ -1,4 +1,4 @@
-import { InputType, Field } from '@nestjs/graphql';
+import { InputType, Field, Int } from '@nestjs/graphql';
 import { IsEmail, MinLength } from 'class-validator';
 
 @InputType()
@@ -20,4 +20,7 @@ export class RegisterInput extends LoginInput {
 
   @Field({ nullable: true })
   slackUserId?: string;
+
+  @Field(() => Int, { nullable: true })
+  salaryINR?: number;
 }

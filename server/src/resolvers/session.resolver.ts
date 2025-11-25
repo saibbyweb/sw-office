@@ -101,6 +101,22 @@ export class SessionResolver {
     }));
   }
 
+  @Query(() => [SessionDate])
+  @UseGuards(JwtGuard)
+  async getUserSessionDates(
+    @Args('userId') userId: string,
+    @Args('input') input: GetSessionDatesInput,
+  ): Promise<SessionDate[]> {
+    const sessions = await this.sessionService.getUserSessions(userId, {
+      startDate: input.startDate,
+      endDate: input.endDate,
+    });
+    return sessions.map((session) => ({
+      startTime: session.startTime,
+      id: session.id,
+    }));
+  }
+
   @Query(() => Session, { nullable: true })
   @UseGuards(JwtGuard)
   async session(

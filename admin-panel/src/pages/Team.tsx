@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from '@apollo/client';
 import { useState } from 'react';
-import { FiUser, FiArrowLeft, FiPlus, FiX, FiMail, FiLock, FiUserPlus, FiArchive, FiKey, FiMoreVertical, FiHash, FiSearch, FiCheck } from 'react-icons/fi';
+import { FiUser, FiArrowLeft, FiPlus, FiX, FiMail, FiLock, FiUserPlus, FiArchive, FiKey, FiMoreVertical, FiHash, FiSearch, FiCheck, FiDollarSign } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { ADMIN_USERS_QUERY } from '../graphql/admin.queries';
 import { LIST_SLACK_USERS_QUERY } from '../graphql/slack.queries';
@@ -40,6 +40,7 @@ const REGISTER_MUTATION = gql`
         id
         name
         email
+        salaryINR
       }
     }
   }
@@ -75,11 +76,22 @@ const UPDATE_SLACK_ID_MUTATION = gql`
   }
 `;
 
+const UPDATE_SALARY_MUTATION = gql`
+  mutation AdminUpdateUserSalary($userId: ID!, $salaryINR: Int) {
+    adminUpdateUserSalary(userId: $userId, salaryINR: $salaryINR) {
+      id
+      name
+      salaryINR
+    }
+  }
+`;
+
 export default function Team() {
   const navigate = useNavigate();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showSlackIdModal, setShowSlackIdModal] = useState(false);
+  const [showSalaryModal, setShowSalaryModal] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [confirmAction, setConfirmAction] = useState<'archive' | 'unarchive' | null>(null);
@@ -91,6 +103,7 @@ export default function Team() {
     email: '',
     password: '',
     slackUserId: '',
+    salaryINR: '',
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -103,23 +116,30 @@ export default function Team() {
     avatarUrl: '',
   });
 
+  const [salaryData, setSalaryData] = useState('');
+
   const { data, loading, refetch } = useQuery<AdminUsersData>(ADMIN_USERS_QUERY);
   const [register, { loading: registerLoading }] = useMutation(REGISTER_MUTATION);
   const [updatePassword, { loading: updatePasswordLoading }] = useMutation(UPDATE_PASSWORD_MUTATION);
   const [updateSlackId, { loading: updateSlackIdLoading }] = useMutation(UPDATE_SLACK_ID_MUTATION);
+  const [updateSalary, { loading: updateSalaryLoading }] = useMutation(UPDATE_SALARY_MUTATION);
   const [archiveUser, { loading: archiveLoading }] = useMutation(ARCHIVE_USER_MUTATION);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const toastId = toast.loading('Adding team member...');
     try {
+      const inputData = {
+        ...formData,
+        salaryINR: formData.salaryINR ? parseInt(formData.salaryINR) : undefined,
+      };
       await register({
         variables: {
-          input: formData,
+          input: inputData,
         },
       });
       setShowAddModal(false);
-      setFormData({ name: '', email: '', password: '', slackUserId: '' });
+      setFormData({ name: '', email: '', password: '', slackUserId: '', salaryINR: '' });
       refetch();
       toast.success('Team member added successfully!', { id: toastId });
     } catch (error: any) {
@@ -225,6 +245,36 @@ export default function Team() {
     setSlackIdData({ slackUserId: user.slackUserId || '', avatarUrl: user.avatarUrl || '' });
     setShowSlackIdModal(true);
     setOpenMenuId(null);
+  };
+
+  const openSalaryDialog = (user: AdminUser) => {
+    setSelectedUser(user);
+    setSalaryData(user.salaryINR?.toString() || '');
+    setShowSalaryModal(true);
+    setOpenMenuId(null);
+  };
+
+  const handleSalaryChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const toastId = toast.loading('Updating salary...');
+    try {
+      const salaryValue = salaryData.trim() === '' ? null : parseInt(salaryData);
+      await updateSalary({
+        variables: {
+          userId: selectedUser!.id,
+          salaryINR: salaryValue,
+        },
+      });
+      setShowSalaryModal(false);
+      setSalaryData('');
+      setSelectedUser(null);
+      refetch();
+      toast.success('Salary updated successfully!', { id: toastId });
+    } catch (error: any) {
+      console.error('Salary update error:', error);
+      toast.error(error.message || 'Failed to update salary', { id: toastId });
+    }
   };
 
   const filteredUsers = data?.adminUsers.filter(user =>
@@ -337,6 +387,13 @@ export default function Team() {
                         >
                           <FiHash className="w-4 h-4" />
                           Edit Slack ID
+                        </button>
+                        <button
+                          onClick={() => openSalaryDialog(user)}
+                          className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2 text-gray-700"
+                        >
+                          <FiDollarSign className="w-4 h-4" />
+                          Edit Salary
                         </button>
                         <button
                           onClick={() => openArchiveDialog(user, user.archived ? 'unarchive' : 'archive')}
@@ -509,6 +566,26 @@ export default function Team() {
                 </p>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Salary (INR) <span className="text-gray-400 text-xs">(Optional)</span>
+                </label>
+                <div className="relative">
+                  <FiDollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="number"
+                    value={formData.salaryINR}
+                    onChange={(e) => setFormData({ ...formData, salaryINR: e.target.value })}
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition-all"
+                    placeholder="50000"
+                    min="0"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Monthly salary in Indian Rupees
+                </p>
+              </div>
+
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
@@ -649,6 +726,75 @@ export default function Team() {
               }}
               loading={updateSlackIdLoading}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Edit Salary Modal */}
+      {showSalaryModal && selectedUser && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
+            <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold">Edit Salary</h2>
+                  <p className="text-sm text-green-100 mt-1">{selectedUser.name}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowSalaryModal(false);
+                    setSalaryData('');
+                    setSelectedUser(null);
+                  }}
+                  className="p-1 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <FiX className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleSalaryChange} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Salary (INR) <span className="text-gray-400 text-xs">(Optional)</span>
+                </label>
+                <div className="relative">
+                  <FiDollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="number"
+                    value={salaryData}
+                    onChange={(e) => setSalaryData(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
+                    placeholder="50000"
+                    min="0"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Monthly salary in Indian Rupees. Leave empty to clear.
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSalaryModal(false);
+                    setSalaryData('');
+                    setSelectedUser(null);
+                  }}
+                  className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updateSalaryLoading}
+                  className="flex-1 px-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {updateSalaryLoading ? 'Updating...' : 'Update Salary'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

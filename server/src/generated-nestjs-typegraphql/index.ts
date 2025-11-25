@@ -26,6 +26,7 @@ export enum UserScalarFieldEnum {
     isOnline = "isOnline",
     currentStatus = "currentStatus",
     slackUserId = "slackUserId",
+    salaryINR = "salaryINR",
     archived = "archived",
     createdAt = "createdAt",
     updatedAt = "updatedAt"
@@ -452,6 +453,8 @@ export class User {
     currentStatus!: string | null;
     @Field(() => String, {nullable:true})
     slackUserId!: string | null;
+    @Field(() => Int, {nullable:true})
+    salaryINR!: number | null;
     @Field(() => Boolean, {defaultValue:false,nullable:false})
     archived!: boolean;
     @Field(() => Date, {nullable:false})

@@ -50,4 +50,7 @@ export class UserProfile {
 
   @Field(() => [Session], { nullable: true })
   sessions?: Session[];
+
+  @Field(() => Session, { nullable: true })
+  activeSession?: Session;
 }

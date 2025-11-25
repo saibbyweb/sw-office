@@ -7,6 +7,7 @@ export interface AdminUser {
   currentStatus: string;
   archived: boolean;
   slackUserId?: string;
+  salaryINR?: number;
 }
 
 export interface Project {

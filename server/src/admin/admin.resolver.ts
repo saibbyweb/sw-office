@@ -1,4 +1,4 @@
-import { Resolver, Query, Args, ID, Mutation } from '@nestjs/graphql';
+import { Resolver, Query, Args, ID, Mutation, Int } from '@nestjs/graphql';
 import { Session, User, WorkLog } from '../generated-nestjs-typegraphql';
 import { GetSessionsInput } from '../types/session.types';
 import { SessionService } from '../services/session.service';
@@ -93,6 +93,17 @@ export class AdminResolver {
         slackUserId,
         ...(avatarUrl && { avatarUrl }),
       },
+    });
+  }
+
+  @Mutation(() => User)
+  async adminUpdateUserSalary(
+    @Args('userId', { type: () => ID }) userId: string,
+    @Args('salaryINR', { type: () => Int, nullable: true }) salaryINR: number | null,
+  ): Promise<User> {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { salaryINR },
     });
   }
 }

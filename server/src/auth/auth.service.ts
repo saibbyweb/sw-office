@@ -79,6 +79,7 @@ export class AuthService {
         name: input.name,
         role: UserRole.USER,
         slackUserId: input.slackUserId,
+        salaryINR: input.salaryINR,
       },
     });
 

@@ -1,8 +1,10 @@
 import React from 'react';
 import styled from 'styled-components';
 import { useQuery } from '@apollo/client';
-import { X, User as UserIcon, Clock, CheckCircle, TrendingUp, Calendar, List } from 'react-feather';
-import { GET_USER_PROFILE } from '../../graphql/queries';
+import { X, User as UserIcon, Clock, CheckCircle, TrendingUp, Calendar as CalendarIcon, List } from 'react-feather';
+import { GET_USER_PROFILE, GET_USER_SESSION_DATES } from '../../graphql/queries';
+import { Calendar } from './common/Calendar';
+import { startOfMonth, endOfMonth } from 'date-fns';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -87,6 +89,51 @@ const CloseButton = styled.button`
 
 const ModalContent = styled.div`
   padding: 24px;
+`;
+
+const TabsContainer = styled.div`
+  display: flex;
+  gap: 16px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  margin-bottom: 24px;
+`;
+
+const Tab = styled.button<{ active: boolean }>`
+  padding: 8px 16px;
+  background: none;
+  border: none;
+  color: ${props => props.active ? props.theme.colors.primary : props.theme.colors.textLight};
+  font-size: 0.95rem;
+  font-weight: ${props => props.active ? '600' : '400'};
+  cursor: pointer;
+  border-bottom: 2px solid ${props => props.active ? props.theme.colors.primary : 'transparent'};
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &:hover {
+    color: ${props => props.theme.colors.primary};
+  }
+`;
+
+const TabContent = styled.div`
+  animation: fadeIn 0.3s ease;
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+`;
+
+const CalendarWrapper = styled.div`
+  margin-top: 16px;
 `;
 
 const ProfileSection = styled.div`
@@ -325,10 +372,34 @@ interface UserProfileModalProps {
 }
 
 export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onClose }) => {
+  const [currentTime, setCurrentTime] = React.useState(Date.now());
+  const [activeTab, setActiveTab] = React.useState<'overview' | 'history'>('overview');
+  const [currentMonth, setCurrentMonth] = React.useState(new Date());
+
   const { data, loading, error } = useQuery(GET_USER_PROFILE, {
     variables: { userId },
     skip: !userId,
   });
+
+  const { data: sessionDatesData, loading: datesLoading } = useQuery(GET_USER_SESSION_DATES, {
+    variables: {
+      userId,
+      input: {
+        startDate: new Date(startOfMonth(currentMonth).setHours(0, 0, 0, 0)),
+        endDate: new Date(endOfMonth(currentMonth).setHours(23, 59, 59, 999)),
+      },
+    },
+    skip: !userId || activeTab !== 'history',
+    fetchPolicy: 'network-only',
+  });
+
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const getInitials = (name: string) => {
     return name
@@ -345,6 +416,34 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
       month: 'short',
       day: 'numeric'
     });
+  };
+
+  const formatDuration = (ms: number): string => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${seconds}s`;
+    }
+  };
+
+  const calculateTotalDuration = (segments: any[], type: 'WORK' | 'BREAK'): number => {
+    if (!segments) return 0;
+    return segments
+      .filter(segment => segment.type === type)
+      .reduce((total: number, segment: any) => {
+        if (segment.endTime) {
+          return total + segment.duration;
+        }
+        const startTime = new Date(segment.startTime).getTime();
+        return total + Math.floor((currentTime - startTime) / 1000);
+      }, 0);
   };
 
   if (loading) {
@@ -390,6 +489,12 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
 
   const user = data.getUserProfile;
 
+  const activeDates = sessionDatesData?.getUserSessionDates?.map((session: any) => new Date(session.startTime)) || [];
+
+  const handleMonthChange = (startDate: Date, endDate: Date) => {
+    setCurrentMonth(startDate);
+  };
+
   return (
     <ModalOverlay onClick={onClose}>
       <ModalContainer onClick={(e) => e.stopPropagation()}>
@@ -419,6 +524,50 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
               </UserMeta>
             </UserDetails>
           </ProfileSection>
+
+          <TabsContainer>
+            <Tab active={activeTab === 'overview'} onClick={() => setActiveTab('overview')}>
+              <List size={16} />
+              Overview
+            </Tab>
+            <Tab active={activeTab === 'history'} onClick={() => setActiveTab('history')}>
+              <CalendarIcon size={16} />
+              History
+            </Tab>
+          </TabsContainer>
+
+          {activeTab === 'overview' && (
+            <TabContent>
+              {user.activeSession && user.activeSession.segments && (
+            <>
+              <Section>
+                <SectionTitle>
+                  <Clock size={18} />
+                  Current Session
+                </SectionTitle>
+                <StatsGrid>
+                  <StatCard>
+                    <StatIcon color="#3b82f6">
+                      <TrendingUp size={20} />
+                    </StatIcon>
+                    <StatInfo>
+                      <StatLabel>Active Time</StatLabel>
+                      <StatValue>{formatDuration(calculateTotalDuration(user.activeSession.segments, 'WORK') * 1000)}</StatValue>
+                    </StatInfo>
+                  </StatCard>
+                  <StatCard>
+                    <StatIcon color="#f59e0b">
+                      <Clock size={20} />
+                    </StatIcon>
+                    <StatInfo>
+                      <StatLabel>Break Time</StatLabel>
+                      <StatValue>{formatDuration(calculateTotalDuration(user.activeSession.segments, 'BREAK') * 1000)}</StatValue>
+                    </StatInfo>
+                  </StatCard>
+                </StatsGrid>
+              </Section>
+            </>
+          )}
 
           {user.statistics && (
             <StatsGrid>
@@ -488,6 +637,20 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
               )}
             </TaskList>
           </Section>
+            </TabContent>
+          )}
+
+          {activeTab === 'history' && (
+            <TabContent>
+              <CalendarWrapper>
+                <Calendar
+                  activeDates={activeDates}
+                  onMonthChange={handleMonthChange}
+                  currentDate={currentMonth}
+                />
+              </CalendarWrapper>
+            </TabContent>
+          )}
         </ModalContent>
       </ModalContainer>
     </ModalOverlay>
