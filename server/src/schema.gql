@@ -122,7 +122,7 @@ type Mutation {
   cleanupInconsistentBreaks: String!
   completeTask(taskId: String!): Task!
   createOnlineMeeting(endTime: String!, startTime: String!, subject: String!, userId: String!): OnlineMeeting!
-  createTask(input: CreateTaskInputType!): Task!
+  createTask(input: CreateTaskInputType!, userId: String): Task!
   deleteWorkLog(id: ID!): Boolean!
   endBreak(breakId: ID!): Break!
   endCall(callId: String!): Call!
@@ -134,6 +134,7 @@ type Mutation {
   logout: Boolean!
   register(input: RegisterInput!): AuthPayload!
   registerSeedUser: AuthPayload!
+  selfApproveTask(taskId: String!): Task!
   startBreak(input: StartBreakInput!): Break!
   startSession(input: StartSessionInput!): Session!
   switchProject(input: SwitchProjectInput!): Session!

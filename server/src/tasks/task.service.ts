@@ -134,8 +134,13 @@ export class TaskService {
 
     // Get counts for tabs (always calculated regardless of filters)
     const [myTasksCount, availableTasksCount, suggestedTasksCount] = await Promise.all([
-      // My tasks count
-      userId ? this.prisma.task.count({ where: { assignedToId: userId } }) : 0,
+      // My tasks count (excluding completed/partially completed)
+      userId ? this.prisma.task.count({
+        where: {
+          assignedToId: userId,
+          status: { notIn: ['COMPLETED', 'PARTIALLY_COMPLETED'] }
+        }
+      }) : 0,
       // Available tasks count (approved and unassigned)
       this.prisma.task.count({ where: { status: 'APPROVED', assignedToId: { isSet: false } } }),
       // Suggested tasks count
@@ -266,6 +271,44 @@ export class TaskService {
         approvedBy: true,
       },
     });
+  }
+
+  async selfApproveTask(taskId: string, userId: string): Promise<Task> {
+    // First, fetch the task to verify the user is the one who suggested it
+    const task = await this.prisma.task.findUnique({
+      where: { id: taskId },
+      select: { suggestedById: true, status: true },
+    });
+
+    if (!task) {
+      throw new Error('Task not found');
+    }
+
+    if (task.suggestedById !== userId) {
+      throw new Error('You can only self-approve tasks you suggested');
+    }
+
+    if (task.status !== 'SUGGESTED') {
+      throw new Error('Task must be in SUGGESTED status to self-approve');
+    }
+
+    // Approve the task with the same user as both suggester and approver
+    const approvedTask = await this.prisma.task.update({
+      where: { id: taskId },
+      data: {
+        status: 'APPROVED',
+        approvedById: userId,
+        approvedDate: new Date(),
+      },
+      include: {
+        project: true,
+        suggestedBy: true,
+        assignedTo: true,
+        approvedBy: true,
+      },
+    });
+
+    return approvedTask;
   }
 
   async updateTask(taskId: string, input: UpdateTaskInput): Promise<Task> {

@@ -7,8 +7,8 @@ import { Loader } from '../components/common/Loader';
 import { SuggestTaskModal } from '../components/modals/SuggestTaskModal';
 import { SelfAssignConfirmModal } from '../components/modals/SelfAssignConfirmModal';
 import { TaskCompletionConfirmModal } from '../components/modals/TaskCompletionConfirmModal';
-import { ME, AVAILABLE_TASKS, GET_PROJECTS, ASSIGN_TASK, UPDATE_TASK_STATUS } from '../../graphql/queries';
-import { CheckSquare, Clock, User, Calendar, AlertCircle, Briefcase, Search, Filter, X, Plus, UserPlus, Play, Check, Slash, AlertTriangle, ArrowLeft, RotateCcw, RefreshCw } from 'react-feather';
+import { ME, AVAILABLE_TASKS, GET_PROJECTS, ASSIGN_TASK, UPDATE_TASK_STATUS, SELF_APPROVE_TASK } from '../../graphql/queries';
+import { CheckSquare, Clock, User, Calendar, AlertCircle, Briefcase, Search, Filter, X, Plus, UserPlus, Play, Check, Slash, AlertTriangle, ArrowLeft, RotateCcw, RefreshCw, CheckCircle } from 'react-feather';
 import toast from 'react-hot-toast';
 
 const Container = styled.div`
@@ -1189,6 +1189,17 @@ export const Tasks: React.FC = () => {
       toast.error(`Failed to update task status: ${error.message}`);
     },
   });
+
+  const [selfApproveTask, { loading: selfApproveLoading }] = useMutation(SELF_APPROVE_TASK, {
+    refetchQueries: ['AvailableTasks'],
+    onCompleted: () => {
+      toast.success('Task approved! You can now assign it to yourself.');
+    },
+    onError: (error) => {
+      toast.error(`Failed to approve task: ${error.message}`);
+    },
+  });
+
   // Build filters object
   const filters = useMemo(() => {
     const filterObj: any = {};
@@ -1285,21 +1296,22 @@ export const Tasks: React.FC = () => {
   }, [otherTasks, currentUserId, activeTab]);
 
   // Calculate current tasks count (excluding completed/partially completed)
+  // This is used for the "Current" tab within My Tasks
   const currentTasksCount = useMemo(() => {
     return allMyTasks.filter(task =>
       task.status !== 'COMPLETED' && task.status !== 'PARTIALLY_COMPLETED'
     ).length;
   }, [allMyTasks]);
 
-  // Task statistics - using counts from server
+  // Task statistics - using counts from server (always correct regardless of active tab)
   const taskStats = useMemo(() => {
     return {
-      myTotal: currentTasksCount,
+      myTotal: myTasksCount, // Use server count, not filtered count
       myInProgress: 0, // Would need separate query
       availableTotal: availableTasksCount,
       suggestedTotal: suggestedTasksCount,
     };
-  }, [currentTasksCount, availableTasksCount, suggestedTasksCount]);
+  }, [myTasksCount, availableTasksCount, suggestedTasksCount]);
 
   const handleTabClick = (tab: 'my' | 'available' | 'suggested') => {
     // Toggle: if clicking the same tab, remove filter (show all)
@@ -1353,6 +1365,20 @@ export const Tasks: React.FC = () => {
 
   const canSelfAssign = (task: Task): boolean => {
     return task.status === 'APPROVED' && !task.assignedTo;
+  };
+
+  const canSelfApprove = (task: Task): boolean => {
+    return task.status === 'SUGGESTED' && task.suggestedBy?.id === currentUserId;
+  };
+
+  const handleSelfApprove = async (taskId: string) => {
+    try {
+      await selfApproveTask({
+        variables: { taskId },
+      });
+    } catch (error) {
+      console.error('Error self-approving task:', error);
+    }
   };
 
   const handleStatusUpdate = async (taskId: string, newStatus: string) => {
@@ -1692,6 +1718,14 @@ export const Tasks: React.FC = () => {
                                 <UserAvatar>{getInitials(task.assignedTo.name)}</UserAvatar>
                                 <UserName>{task.assignedTo.name}</UserName>
                               </AssignedUserContainer>
+                            ) : canSelfApprove(task) ? (
+                              <AssignButton onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelfApprove(task.id);
+                              }} disabled={selfApproveLoading}>
+                                <CheckCircle size={14} />
+                                Approve & Assign
+                              </AssignButton>
                             ) : canSelfAssign(task) ? (
                               <AssignButton onClick={(e) => {
                                 e.stopPropagation();
@@ -1889,6 +1923,14 @@ export const Tasks: React.FC = () => {
                                   <UserAvatar>{getInitials(task.assignedTo.name)}</UserAvatar>
                                   <UserName>{task.assignedTo.name}</UserName>
                                 </AssignedUserContainer>
+                              ) : canSelfApprove(task) ? (
+                                <AssignButton onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSelfApprove(task.id);
+                                }} disabled={selfApproveLoading}>
+                                  <CheckCircle size={14} />
+                                  Approve & Assign
+                                </AssignButton>
                               ) : canSelfAssign(task) ? (
                                 <AssignButton onClick={(e) => {
                                   e.stopPropagation();

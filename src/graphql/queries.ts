@@ -373,4 +373,25 @@ export const UPDATE_TASK_STATUS = gql`
       }
     }
   }
+`;
+
+export const SELF_APPROVE_TASK = gql`
+  mutation SelfApproveTask($taskId: String!) {
+    selfApproveTask(taskId: $taskId) {
+      id
+      title
+      status
+      approvedDate
+      approvedBy {
+        id
+        name
+        email
+      }
+      suggestedBy {
+        id
+        name
+        email
+      }
+    }
+  }
 `; 
