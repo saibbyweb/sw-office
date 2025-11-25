@@ -12,6 +12,7 @@ import { JwtGuard } from 'src/auth/guards/jwt.guard';
 import { User, Session } from 'src/generated-nestjs-typegraphql';
 import { UsersService } from './users.service';
 import { UpdateProfileInput } from './dto/update-profile.input';
+import { UserProfile } from './dto/user-profile.output';
 
 interface RequestWithUser {
   user: {
@@ -41,6 +42,11 @@ export class UsersResolver {
   @UseGuards(JwtGuard)
   getUsers(): Promise<User[]> {
     return this.usersService.findAll();
+  }
+  @Query(() => UserProfile)
+  @UseGuards(JwtGuard)
+  async getUserProfile(@Args('userId') userId: string): Promise<UserProfile> {
+    return this.usersService.getUserProfile(userId);
   }
   @Mutation(() => User)
   @UseGuards(JwtGuard)

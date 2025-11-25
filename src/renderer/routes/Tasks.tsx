@@ -7,6 +7,7 @@ import { Loader } from '../components/common/Loader';
 import { SuggestTaskModal } from '../components/modals/SuggestTaskModal';
 import { SelfAssignConfirmModal } from '../components/modals/SelfAssignConfirmModal';
 import { TaskCompletionConfirmModal } from '../components/modals/TaskCompletionConfirmModal';
+import { UserProfileModal } from '../components/UserProfileModal';
 import { ME, AVAILABLE_TASKS, GET_PROJECTS, ASSIGN_TASK, UPDATE_TASK_STATUS, SELF_APPROVE_TASK } from '../../graphql/queries';
 import { CheckSquare, Clock, User, Calendar, AlertCircle, Briefcase, Search, Filter, X, Plus, UserPlus, Play, Check, Slash, AlertTriangle, ArrowLeft, RotateCcw, RefreshCw, CheckCircle } from 'react-feather';
 import toast from 'react-hot-toast';
@@ -1095,6 +1096,171 @@ const CancelButton = styled.button`
   }
 `;
 
+const ViewToggle = styled.div`
+  display: flex;
+  gap: 8px;
+  background: ${props => props.theme.colors.cardBackground};
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid ${props => props.theme.colors.border};
+`;
+
+const ViewToggleButton = styled.button<{ isActive: boolean }>`
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: ${props => props.isActive ? props.theme.colors.primary : 'transparent'};
+  color: ${props => props.isActive ? 'white' : props.theme.colors.text};
+
+  &:hover {
+    background: ${props => props.isActive ? props.theme.colors.primary : props.theme.colors.hover};
+  }
+`;
+
+const TeamViewContainer = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+`;
+
+const UserCard = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: ${props => props.theme.colors.cardBackground};
+  border-radius: 12px;
+  border: 1px solid ${props => props.theme.colors.border};
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: ${props => props.theme.colors.primary}40;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  }
+`;
+
+const UserInfoHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid ${props => props.theme.colors.border};
+`;
+
+const UserAvatarCompact = styled.div`
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, ${props => props.theme.colors.primary}, ${props => props.theme.colors.secondary});
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+`;
+
+const UserInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+`;
+
+const UserNameLabel = styled.div`
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: ${props => props.theme.colors.text};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const ClickableUserName = styled.span`
+  cursor: pointer;
+  color: ${props => props.theme.colors.primary};
+  transition: all 0.2s;
+
+  &:hover {
+    text-decoration: underline;
+    opacity: 0.8;
+  }
+`;
+
+const UserTaskCount = styled.div`
+  font-size: 0.688rem;
+  color: ${props => props.theme.colors.secondary};
+`;
+
+const TaskChipsContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const TaskChip = styled.div<{ priority: string; status: string }>`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  background: ${props => props.theme.colors.background};
+  border-radius: 6px;
+  border: 1px solid ${props => props.theme.colors.border};
+  border-left: 3px solid ${props =>
+    props.priority === 'HIGH' ? '#ef4444' :
+    props.priority === 'MEDIUM' ? '#f59e0b' :
+    '#10b981'};
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateX(2px);
+    border-color: ${props => props.theme.colors.primary}40;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+`;
+
+const TaskChipTitle = styled.div`
+  font-size: 0.813rem;
+  font-weight: 600;
+  color: ${props => props.theme.colors.text};
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+`;
+
+const TaskChipMeta = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 0.688rem;
+  color: ${props => props.theme.colors.secondary};
+`;
+
+const TaskChipStatus = styled.span<{ status: string }>`
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.625rem;
+  font-weight: 600;
+  background: ${props =>
+    props.status === 'IN_PROGRESS' ? '#3b82f615' :
+    props.status === 'BLOCKED' ? '#ef444415' :
+    '#10b98115'};
+  color: ${props =>
+    props.status === 'IN_PROGRESS' ? '#3b82f6' :
+    props.status === 'BLOCKED' ? '#ef4444' :
+    '#10b981'};
+`;
+
 interface Task {
   id: string;
   title: string;
@@ -1146,6 +1312,8 @@ export const Tasks: React.FC = () => {
   const [taskToComplete, setTaskToComplete] = useState<{ task: Task; type: 'COMPLETED' | 'PARTIALLY_COMPLETED' } | null>(null);
   const [myTasksTab, setMyTasksTab] = useState<'current' | 'history'>('current');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [activeTasksView, setActiveTasksView] = useState<'task' | 'team'>('task');
+  const [selectedProfileUserId, setSelectedProfileUserId] = useState<string | null>(null);
   const tasksPerPage = 50;
 
   // Debounce search query
@@ -1213,9 +1381,9 @@ export const Tasks: React.FC = () => {
     if (activeTab === 'my') {
       filterObj.myTasksUserId = userData?.me?.id;
     } else if (activeTab === 'available') {
-      // Task Pool: unassigned + approved tasks
-      filterObj.status = 'APPROVED';
-      filterObj.unassignedOnly = true;
+      // Task Pool: fetch APPROVED, IN_PROGRESS, and BLOCKED tasks (we'll filter on frontend)
+      // Note: We can't pass multiple statuses, so we'll remove status filter and filter on frontend
+      // Or we need to modify backend to support multiple statuses
     } else if (activeTab === 'suggested') {
       filterObj.status = 'SUGGESTED';
     }
@@ -1266,34 +1434,49 @@ export const Tasks: React.FC = () => {
     }
   }, [allMyTasks, myTasksTab]);
 
-  const otherTasks = useMemo(() => {
-    // When Task Pool tab is active, backend already filtered to unassigned APPROVED tasks
+  // Task Pool: unassigned tasks with APPROVED, IN_PROGRESS, or BLOCKED status (only when Task Pool tab is active)
+  const taskPoolTasks = useMemo(() => {
     if (activeTab === 'available') {
-      return tasks;
+      return tasks.filter(task =>
+        !task.assignedTo &&
+        (task.status === 'APPROVED' || task.status === 'IN_PROGRESS' || task.status === 'BLOCKED')
+      );
     }
+    return [];
+  }, [tasks, activeTab]);
 
-    // Otherwise, filter out tasks assigned to current user
-    return tasks.filter(task => !task.assignedTo || task.assignedTo.id !== currentUserId);
+  // Tasks assigned to others (only shown within Task Pool tab)
+  const tasksAssignedToOthers = useMemo(() => {
+    if (activeTab === 'available') {
+      // Get APPROVED, IN_PROGRESS, or BLOCKED tasks assigned to others
+      return tasks.filter(task =>
+        task.assignedTo &&
+        task.assignedTo.id !== currentUserId &&
+        (task.status === 'APPROVED' || task.status === 'IN_PROGRESS' || task.status === 'BLOCKED')
+      );
+    }
+    return [];
   }, [tasks, currentUserId, activeTab]);
 
-  // Determine the section title based on content
-  const otherTasksTitle = useMemo(() => {
-    // When Task Pool is active, always show "Task Pool"
-    if (activeTab === 'available') {
-      return 'Task Pool';
-    }
+  // Group tasks by user for team view
+  const tasksByUser = useMemo(() => {
+    const grouped = new Map<string, { user: any; tasks: Task[] }>();
 
-    const hasAssignedToOthers = otherTasks.some(task => task.assignedTo && task.assignedTo.id !== currentUserId);
-    const hasUnassigned = otherTasks.some(task => !task.assignedTo);
+    tasksAssignedToOthers.forEach(task => {
+      if (task.assignedTo) {
+        const userId = task.assignedTo.id;
+        if (!grouped.has(userId)) {
+          grouped.set(userId, {
+            user: task.assignedTo,
+            tasks: []
+          });
+        }
+        grouped.get(userId)!.tasks.push(task);
+      }
+    });
 
-    if (hasAssignedToOthers && hasUnassigned) {
-      return 'Other Tasks';
-    } else if (hasAssignedToOthers) {
-      return 'Active Tasks (Assigned to Others)';
-    } else {
-      return 'Available Tasks';
-    }
-  }, [otherTasks, currentUserId, activeTab]);
+    return Array.from(grouped.values());
+  }, [tasksAssignedToOthers]);
 
   // Calculate current tasks count (excluding completed/partially completed)
   // This is used for the "Current" tab within My Tasks
@@ -1716,7 +1899,14 @@ export const Tasks: React.FC = () => {
                             {task.assignedTo ? (
                               <AssignedUserContainer>
                                 <UserAvatar>{getInitials(task.assignedTo.name)}</UserAvatar>
-                                <UserName>{task.assignedTo.name}</UserName>
+                                <UserName>
+                                  <ClickableUserName onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedProfileUserId(task.assignedTo!.id);
+                                  }}>
+                                    {task.assignedTo.name}
+                                  </ClickableUserName>
+                                </UserName>
                               </AssignedUserContainer>
                             ) : canSelfApprove(task) ? (
                               <AssignButton onClick={(e) => {
@@ -1882,18 +2072,21 @@ export const Tasks: React.FC = () => {
               </>
             )}
 
-            {/* Other Tasks Section */}
-            {otherTasks.length > 0 && (
+            {/* Task Pool Section - Only shown when Task Pool tab is active */}
+            {activeTab === 'available' && (
               <>
-                <SectionHeader>
-                  <SectionTitle>
-                    <CheckSquare size={20} />
-                    {otherTasksTitle}
-                    <SectionCount>({otherTasks.length})</SectionCount>
-                  </SectionTitle>
-                </SectionHeader>
-                <TasksGrid>
-                  {otherTasks.map((task) => (
+                {/* Unassigned Tasks in Task Pool */}
+                {taskPoolTasks.length > 0 && (
+                  <>
+                    <SectionHeader>
+                      <SectionTitle>
+                        <CheckSquare size={20} />
+                        Task Pool
+                        <SectionCount>({taskPoolTasks.length})</SectionCount>
+                      </SectionTitle>
+                    </SectionHeader>
+                    <TasksGrid>
+                      {taskPoolTasks.map((task) => (
                     <TaskCard key={task.id} priority={task.priority}>
                       <TaskHeader>
                         <TaskTitle>{task.title}</TaskTitle>
@@ -1921,7 +2114,14 @@ export const Tasks: React.FC = () => {
                               {task.assignedTo ? (
                                 <AssignedUserContainer>
                                   <UserAvatar>{getInitials(task.assignedTo.name)}</UserAvatar>
-                                  <UserName>{task.assignedTo.name}</UserName>
+                                  <UserName>
+                                    <ClickableUserName onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedProfileUserId(task.assignedTo!.id);
+                                    }}>
+                                      {task.assignedTo.name}
+                                    </ClickableUserName>
+                                  </UserName>
                                 </AssignedUserContainer>
                               ) : canSelfApprove(task) ? (
                                 <AssignButton onClick={(e) => {
@@ -1969,7 +2169,152 @@ export const Tasks: React.FC = () => {
                           </TaskFooter>
                         </TaskCard>
                       ))}
-                </TasksGrid>
+                    </TasksGrid>
+                  </>
+                )}
+
+                {/* Tasks Assigned to Others - shown within Task Pool tab */}
+                {tasksAssignedToOthers.length > 0 && (
+                  <>
+                    <SectionHeader>
+                      <SectionTitle>
+                        <User size={20} />
+                        Active Tasks (Assigned to Others)
+                        <SectionCount>({tasksAssignedToOthers.length})</SectionCount>
+                      </SectionTitle>
+                      <ViewToggle>
+                        <ViewToggleButton
+                          isActive={activeTasksView === 'task'}
+                          onClick={() => setActiveTasksView('task')}
+                        >
+                          Task View
+                        </ViewToggleButton>
+                        <ViewToggleButton
+                          isActive={activeTasksView === 'team'}
+                          onClick={() => setActiveTasksView('team')}
+                        >
+                          Team View
+                        </ViewToggleButton>
+                      </ViewToggle>
+                    </SectionHeader>
+
+                    {activeTasksView === 'task' ? (
+                      <TasksGrid>
+                        {tasksAssignedToOthers.map((task) => (
+                        <TaskCard key={task.id} priority={task.priority}>
+                          <TaskHeader>
+                            <TaskTitle>{task.title}</TaskTitle>
+                            <Badge variant={task.status}>{task.status.replace(/_/g, ' ')}</Badge>
+                          </TaskHeader>
+
+                          <TaskDescription>{task.description}</TaskDescription>
+
+                          <TaskMeta>
+                            <Badge variant={task.priority}>
+                              <AlertCircle size={10} />
+                              {task.priority}
+                            </Badge>
+                            <CategoryBadge>
+                              {formatCategory(task.category)}
+                            </CategoryBadge>
+                            <Badge>
+                              <Clock size={10} />
+                              {task.estimatedHours}h
+                            </Badge>
+                          </TaskMeta>
+
+                          <TaskFooter>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <AssignedUserContainer>
+                                <UserAvatar>{getInitials(task.assignedTo.name)}</UserAvatar>
+                                <UserName>
+                                  <ClickableUserName onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedProfileUserId(task.assignedTo!.id);
+                                  }}>
+                                    {task.assignedTo.name}
+                                  </ClickableUserName>
+                                </UserName>
+                              </AssignedUserContainer>
+                              {task.project && (
+                                <TaskInfo>
+                                  <Briefcase size={10} />
+                                  {task.project.name}
+                                </TaskInfo>
+                              )}
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', alignItems: 'flex-end' }}>
+                              {task.dueDate && (
+                                <TaskInfo>
+                                  <Calendar size={10} />
+                                  {new Date(task.dueDate).toLocaleDateString()}
+                                </TaskInfo>
+                              )}
+                              {task.startedDate && task.status === 'IN_PROGRESS' && (
+                                <TaskInfo style={{ color: 'inherit', opacity: 0.7 }}>
+                                  <Clock size={10} />
+                                  Started {new Date(task.startedDate).toLocaleDateString()}
+                                </TaskInfo>
+                              )}
+                            </div>
+                          </TaskFooter>
+                        </TaskCard>
+                      ))}
+                    </TasksGrid>
+                    ) : (
+                      <TeamViewContainer>
+                        {tasksByUser.map(({ user, tasks }) => (
+                          <UserCard key={user.id}>
+                            <UserInfoHeader>
+                              <UserAvatarCompact>
+                                {getInitials(user.name)}
+                              </UserAvatarCompact>
+                              <UserInfo>
+                                <UserNameLabel>
+                                  <ClickableUserName onClick={() => setSelectedProfileUserId(user.id)}>
+                                    {user.name}
+                                  </ClickableUserName>
+                                </UserNameLabel>
+                                <UserTaskCount>
+                                  {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}
+                                </UserTaskCount>
+                              </UserInfo>
+                            </UserInfoHeader>
+                            <TaskChipsContainer>
+                              {tasks.map(task => (
+                                <TaskChip
+                                  key={task.id}
+                                  priority={task.priority}
+                                  status={task.status}
+                                >
+                                  <TaskChipTitle title={task.title}>
+                                    {task.title}
+                                  </TaskChipTitle>
+                                  <TaskChipMeta>
+                                    <TaskChipStatus status={task.status}>
+                                      {task.status.replace(/_/g, ' ')}
+                                    </TaskChipStatus>
+                                    <span>•</span>
+                                    <span>
+                                      <Clock size={10} style={{ display: 'inline', marginRight: '2px' }} />
+                                      {task.estimatedHours}h
+                                    </span>
+                                    {task.project && (
+                                      <>
+                                        <span>•</span>
+                                        <span>{task.project.name}</span>
+                                      </>
+                                    )}
+                                  </TaskChipMeta>
+                                </TaskChip>
+                              ))}
+                            </TaskChipsContainer>
+                          </UserCard>
+                        ))}
+                      </TeamViewContainer>
+                    )}
+                  </>
+                )}
               </>
             )}
           </>
@@ -2031,6 +2376,13 @@ export const Tasks: React.FC = () => {
           onConfirm={confirmTaskCompletion}
           onCancel={() => setTaskToComplete(null)}
           loading={updateStatusLoading}
+        />
+      )}
+
+      {selectedProfileUserId && (
+        <UserProfileModal
+          userId={selectedProfileUserId}
+          onClose={() => setSelectedProfileUserId(null)}
         />
       )}
     </Container>

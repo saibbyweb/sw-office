@@ -394,4 +394,44 @@ export const SELF_APPROVE_TASK = gql`
       }
     }
   }
+`;
+
+export const GET_USER_PROFILE = gql`
+  query GetUserProfile($userId: String!) {
+    getUserProfile(userId: $userId) {
+      id
+      name
+      email
+      role
+      avatarUrl
+      isOnline
+      currentStatus
+      createdAt
+      statistics {
+        allottedTasks
+        completedTasks
+        inProgressTasks
+      }
+      taskAssignments {
+        id
+        title
+        status
+        priority
+        createdAt
+        completedDate
+        project {
+          id
+          name
+        }
+      }
+      sessions {
+        id
+        startTime
+        project {
+          id
+          name
+        }
+      }
+    }
+  }
 `; 

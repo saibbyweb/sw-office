@@ -216,6 +216,7 @@ type Query {
   getBreakNotificationConfig: NotificationConfig!
   getUserMeetingHistory(endDate: String!, startDate: String!, userId: String!): [MeetingHistoryItem!]!
   getUserMeetings(userId: String!): [OrganizationMeeting!]!
+  getUserProfile(userId: String!): UserProfile!
   getUsers: [User!]!
   getWorkLogNotificationConfig: NotificationConfig!
   hello: String!
@@ -456,9 +457,30 @@ type UserCount {
   workLogs: Int!
 }
 
+type UserProfile {
+  avatarUrl: String
+  createdAt: DateTime!
+  currentStatus: String
+  email: String!
+  id: String!
+  isOnline: Boolean!
+  name: String!
+  role: String!
+  sessions: [Session!]
+  statistics: UserStatistics
+  taskAssignments: [Task!]
+  taskSuggestions: [Task!]
+}
+
 enum UserRole {
   ADMIN
   USER
+}
+
+type UserStatistics {
+  allottedTasks: Int!
+  completedTasks: Int!
+  inProgressTasks: Int!
 }
 
 type WorkLog {
