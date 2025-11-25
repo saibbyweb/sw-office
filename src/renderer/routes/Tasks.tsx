@@ -1752,7 +1752,7 @@ export const Tasks: React.FC = () => {
       setTaskToAssign(null);
       // Check if the task was self-assigned
       if (data.assignTask.assignedTo?.id === currentUserId) {
-        setActiveTab('myTasks');
+        setActiveTab('my');
       }
     },
     onError: (error) => {
