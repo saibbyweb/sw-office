@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useMutation, useQuery } from '@apollo/client';
-import { X } from 'react-feather';
-import { SUGGEST_TASK, GET_PROJECTS, AVAILABLE_TASKS } from '../../../graphql/queries';
+import { X, Zap, Loader } from 'react-feather';
+import { SUGGEST_TASK, GET_PROJECTS, AVAILABLE_TASKS, PARSE_TASK_FROM_NATURAL_LANGUAGE } from '../../../graphql/queries';
 import toast from 'react-hot-toast';
 
 const ModalOverlay = styled.div`
@@ -83,10 +83,29 @@ const CloseButton = styled.button`
   }
 `;
 
-const Form = styled.form`
+const Form = styled.form<{ $showAnimation?: boolean }>`
   display: flex;
   flex-direction: column;
   gap: ${props => props.theme.spacing.lg};
+
+  ${props => props.$showAnimation && `
+    animation: successPulse 0.6s ease-in-out;
+
+    @keyframes successPulse {
+      0% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(1.02);
+        box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+  `}
 `;
 
 const FormGroup = styled.div`
@@ -227,12 +246,113 @@ const HelpText = styled.span`
   font-style: italic;
 `;
 
+const AISection = styled.div`
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 12px;
+  padding: ${props => props.theme.spacing.lg};
+  margin-bottom: ${props => props.theme.spacing.lg};
+`;
+
+const AIHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.sm};
+  margin-bottom: ${props => props.theme.spacing.md};
+  color: ${props => props.theme.colors.primary};
+  font-weight: 600;
+`;
+
+const AITextarea = styled.textarea`
+  width: 100%;
+  min-height: 80px;
+  padding: ${props => props.theme.spacing.md};
+  background: ${props => props.theme.colors.background}80;
+  border: 1px solid ${props => props.theme.colors.text}20;
+  border-radius: 8px;
+  color: ${props => props.theme.colors.text};
+  font-size: 0.875rem;
+  font-family: inherit;
+  resize: vertical;
+  transition: all 0.2s ease;
+
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.colors.primary};
+    background: ${props => props.theme.colors.background};
+  }
+
+  &::placeholder {
+    color: ${props => props.theme.colors.text}50;
+  }
+`;
+
+const AIButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${props => props.theme.spacing.sm};
+  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: ${props => props.theme.spacing.sm};
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  svg {
+    animation: ${props => props.disabled ? 'spin 1s linear infinite' : 'none'};
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+`;
+
+const Divider = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${props => props.theme.spacing.md};
+  margin: ${props => props.theme.spacing.lg} 0;
+  color: ${props => props.theme.colors.text}40;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: ${props => props.theme.colors.text}20;
+  }
+`;
+
 interface SuggestTaskModalProps {
   onClose: () => void;
   onTaskCreated?: (taskId: string) => void;
 }
 
 export const SuggestTaskModal: React.FC<SuggestTaskModalProps> = ({ onClose, onTaskCreated }) => {
+  const [naturalLanguageInput, setNaturalLanguageInput] = useState('');
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -241,8 +361,39 @@ export const SuggestTaskModal: React.FC<SuggestTaskModalProps> = ({ onClose, onT
     estimatedHours: '',
     projectId: '',
   });
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+  const formRef = React.useRef<HTMLFormElement>(null);
 
   const { data: projectsData } = useQuery(GET_PROJECTS);
+
+  const [parseTask, { loading: parsingLoading }] = useMutation(PARSE_TASK_FROM_NATURAL_LANGUAGE, {
+    onCompleted: (data) => {
+      const parsed = data.parseTaskFromNaturalLanguage;
+      setFormData({
+        title: parsed.title,
+        description: parsed.description,
+        category: parsed.category,
+        priority: parsed.priority,
+        estimatedHours: '', // Leave empty for user to decide
+        projectId: parsed.projectId || '',
+      });
+
+      // Show success animation
+      setShowSuccessAnimation(true);
+      setTimeout(() => setShowSuccessAnimation(false), 1000);
+
+      // Scroll to form
+      setTimeout(() => {
+        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+
+      toast.success('Form auto-filled! Please review and add estimated hours.');
+    },
+    onError: (error) => {
+      toast.error(`Failed to parse task: ${error.message}`);
+    },
+  });
+
   const [suggestTask, { loading }] = useMutation(SUGGEST_TASK, {
     refetchQueries: ['AvailableTasks'],
     onCompleted: (data) => {
@@ -263,6 +414,21 @@ export const SuggestTaskModal: React.FC<SuggestTaskModalProps> = ({ onClose, onT
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleAIParse = async () => {
+    if (!naturalLanguageInput.trim()) {
+      toast.error('Please describe the task you want to create');
+      return;
+    }
+
+    await parseTask({
+      variables: {
+        input: {
+          naturalLanguageInput: naturalLanguageInput.trim(),
+        },
+      },
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -325,7 +491,26 @@ export const SuggestTaskModal: React.FC<SuggestTaskModalProps> = ({ onClose, onT
           </CloseButton>
         </ModalHeader>
 
-        <Form onSubmit={handleSubmit}>
+        <AISection>
+          <AIHeader>
+            <Zap size={18} />
+            AI Task Assistant
+          </AIHeader>
+          <AITextarea
+            value={naturalLanguageInput}
+            onChange={(e) => setNaturalLanguageInput(e.target.value)}
+            placeholder="Describe your task in plain English... e.g., 'I need to add a login page to the mobile app with email and password fields. It's urgent and should take about 4 hours. Use the main project.'"
+            rows={3}
+          />
+          <AIButton onClick={handleAIParse} disabled={parsingLoading} type="button">
+            {parsingLoading ? <Loader size={16} /> : <Zap size={16} />}
+            {parsingLoading ? 'Parsing...' : 'Auto-Fill Form with AI'}
+          </AIButton>
+        </AISection>
+
+        <Divider>or fill manually</Divider>
+
+        <Form ref={formRef} onSubmit={handleSubmit} $showAnimation={showSuccessAnimation}>
           <FormGroup>
             <Label>
               Task Title<Required>*</Required>

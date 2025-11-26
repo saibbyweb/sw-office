@@ -396,6 +396,75 @@ export class TaskService {
     });
   }
 
+  async editSuggestedTask(taskId: string, input: UpdateTaskInput, userId: string): Promise<Task> {
+    // First check if the task exists and was suggested by this user
+    const existingTask = await this.prisma.task.findUnique({
+      where: { id: taskId },
+      select: { suggestedById: true, status: true },
+    });
+
+    if (!existingTask) {
+      throw new Error('Task not found');
+    }
+
+    if (existingTask.suggestedById !== userId) {
+      throw new Error('You can only edit tasks that you suggested');
+    }
+
+    // Only allow editing if task is not yet assigned or approved
+    if (existingTask.status !== 'SUGGESTED') {
+      throw new Error('Cannot edit task that has been assigned or approved');
+    }
+
+    const updateData: any = {};
+
+    if (input.title !== undefined) updateData.title = input.title;
+    if (input.description !== undefined) updateData.description = input.description;
+    if (input.category !== undefined) updateData.category = input.category as any;
+    if (input.priority !== undefined) updateData.priority = input.priority as any;
+    if (input.points !== undefined) updateData.points = input.points;
+    if (input.estimatedHours !== undefined) updateData.estimatedHours = input.estimatedHours;
+    if (input.projectId !== undefined) updateData.projectId = input.projectId || null;
+
+    return this.prisma.task.update({
+      where: { id: taskId },
+      data: updateData,
+      include: {
+        project: true,
+        suggestedBy: true,
+        assignedTo: true,
+        approvedBy: true,
+      },
+    });
+  }
+
+  async deleteSuggestedTask(taskId: string, userId: string): Promise<boolean> {
+    // First check if the task exists and was suggested by this user
+    const existingTask = await this.prisma.task.findUnique({
+      where: { id: taskId },
+      select: { suggestedById: true, status: true },
+    });
+
+    if (!existingTask) {
+      throw new Error('Task not found');
+    }
+
+    if (existingTask.suggestedById !== userId) {
+      throw new Error('You can only delete tasks that you suggested');
+    }
+
+    // Only allow deletion if task is not yet assigned or approved
+    if (existingTask.status !== 'SUGGESTED') {
+      throw new Error('Cannot delete task that has been assigned or approved');
+    }
+
+    await this.prisma.task.delete({
+      where: { id: taskId },
+    });
+
+    return true;
+  }
+
   async completeTask(taskId: string): Promise<Task> {
     return this.prisma.task.update({
       where: { id: taskId },

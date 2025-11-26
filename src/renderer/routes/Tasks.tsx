@@ -7,10 +7,13 @@ import { Loader } from '../components/common/Loader';
 import { SuggestTaskModal } from '../components/modals/SuggestTaskModal';
 import { SelfAssignConfirmModal } from '../components/modals/SelfAssignConfirmModal';
 import { TaskCompletionConfirmModal } from '../components/modals/TaskCompletionConfirmModal';
+import { EditTaskModal } from '../components/modals/EditTaskModal';
 import { UserProfileModal } from '../components/UserProfileModal';
-import { ME, AVAILABLE_TASKS, GET_PROJECTS, ASSIGN_TASK, UPDATE_TASK_STATUS, SELF_APPROVE_TASK } from '../../graphql/queries';
-import { CheckSquare, Clock, User, Calendar, AlertCircle, Briefcase, Search, Filter, X, Plus, UserPlus, Play, Check, Slash, AlertTriangle, ArrowLeft, RotateCcw, RefreshCw, CheckCircle, ChevronDown, ChevronUp } from 'react-feather';
+import { TeamMembersList } from '../components/TeamMembersList';
+import { ME, AVAILABLE_TASKS, GET_PROJECTS, ASSIGN_TASK, UPDATE_TASK_STATUS, SELF_APPROVE_TASK, TEAM_USERS_QUERY, EDIT_SUGGESTED_TASK, DELETE_SUGGESTED_TASK } from '../../graphql/queries';
+import { CheckSquare, Clock, User, Calendar, AlertCircle, Briefcase, Search, Filter, X, Plus, UserPlus, Play, Check, Slash, AlertTriangle, ArrowLeft, RotateCcw, RefreshCw, CheckCircle, ChevronDown, ChevronUp, Edit2, Trash2 } from 'react-feather';
 import toast from 'react-hot-toast';
+import { useConnectedUsers } from '../../contexts/ConnectedUsersContext';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -21,12 +24,76 @@ const Container = styled.div`
   flex-direction: column;
 `;
 
+const MainLayout = styled.div`
+  display: flex;
+  height: calc(100vh - 60px);
+  flex: 1;
+`;
+
+const Sidebar = styled.div`
+  width: 280px;
+  height: 100%;
+  background-color: rgba(30, 39, 56, 0.95);
+  padding: 16px 0;
+  overflow-y: auto;
+  flex-shrink: 0;
+  z-index: 10;
+  box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+`;
+
+const SidebarHeader = styled.div`
+  padding: 0 16px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  margin-bottom: 16px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
 const MainContent = styled.div`
   flex: 1;
   padding: 32px 48px;
   padding-bottom: 150px;
   overflow-y: auto;
   max-height: calc(100vh - 60px);
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
 `;
 
 const FiltersBar = styled.div`
@@ -549,6 +616,41 @@ const TaskHeader = styled.div`
   align-items: flex-start;
   margin-bottom: 6px;
   gap: 8px;
+`;
+
+const TaskHeaderActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+`;
+
+const IconButton = styled.button`
+  background: none;
+  border: none;
+  color: ${props => props.theme.colors.text}80;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: ${props => props.theme.colors.text}10;
+    color: ${props => props.theme.colors.text};
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+`;
+
+const DeleteButton = styled(IconButton)`
+  &:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+  }
 `;
 
 const TaskTitle = styled.h3`
@@ -1731,6 +1833,7 @@ export const Tasks: React.FC = () => {
   const [selectedProfileUserId, setSelectedProfileUserId] = useState<string | null>(null);
   const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
   const [expandedDescriptions, setExpandedDescriptions] = useState<Set<string>>(new Set());
+  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const initialLoadRef = React.useRef(true);
   const userSwitchedTabRef = React.useRef(false);
   const tasksPerPage = 50;
@@ -1745,6 +1848,7 @@ export const Tasks: React.FC = () => {
   }, [searchQuery]);
 
   const { data: userData } = useQuery(ME);
+  const { data: teamData } = useQuery(TEAM_USERS_QUERY);
   const [assignTask, { loading: assignLoading }] = useMutation(ASSIGN_TASK, {
     refetchQueries: ['AvailableTasks'],
     onCompleted: (data) => {
@@ -1797,6 +1901,16 @@ export const Tasks: React.FC = () => {
     },
     onError: (error) => {
       toast.error(`Failed to approve task: ${error.message}`);
+    },
+  });
+
+  const [deleteTask] = useMutation(DELETE_SUGGESTED_TASK, {
+    refetchQueries: ['AvailableTasks'],
+    onCompleted: () => {
+      toast.success('Task deleted successfully!');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to delete task');
     },
   });
 
@@ -2036,6 +2150,24 @@ export const Tasks: React.FC = () => {
     }, 3000);
   };
 
+  const handleEditTask = (task: Task, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setTaskToEdit(task);
+  };
+
+  const handleDeleteTask = async (taskId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm('Are you sure you want to delete this task?')) {
+      try {
+        await deleteTask({
+          variables: { taskId },
+        });
+      } catch (error) {
+        console.error('Error deleting task:', error);
+      }
+    }
+  };
+
   const toggleDescriptionExpansion = (taskId: string) => {
     setExpandedDescriptions(prev => {
       const newSet = new Set(prev);
@@ -2139,6 +2271,9 @@ export const Tasks: React.FC = () => {
     return pages;
   };
 
+  const { connectedUsers } = useConnectedUsers();
+  const teamMembers = teamData?.getUsers || [];
+
   return (
     <Container>
       <Header
@@ -2150,7 +2285,20 @@ export const Tasks: React.FC = () => {
         onBack={() => navigate('/')}
         screenName="Tasks"
       />
-      <MainContent>
+      <MainLayout>
+        <Sidebar>
+          <SidebarHeader>
+            <User size={18} />
+            Team Members ({teamMembers.length})
+          </SidebarHeader>
+          <TeamMembersList
+            users={teamMembers}
+            connectedUsers={connectedUsers}
+            currentUserId={userData?.me?.id}
+            onMemberClick={(userId) => setSelectedProfileUserId(userId)}
+          />
+        </Sidebar>
+        <MainContent>
         <FiltersBar>
           <SearchContainer>
             <SearchIcon size={18} />
@@ -2806,11 +2954,31 @@ export const Tasks: React.FC = () => {
                   </SectionTitle>
                 </SectionHeader>
                 <TasksGrid>
-                  {tasks.map((task) => (
+                  {tasks.map((task) => {
+                    const canEditDelete = task.suggestedById === currentUserId && task.status === 'SUGGESTED';
+                    return (
                     <TaskCard key={task.id} priority={task.priority} isHighlighted={task.id === highlightedTaskId}>
                       <TaskHeader>
                         <TaskTitle>{task.title}</TaskTitle>
-                        <Badge variant={task.status}>{task.status.replace(/_/g, ' ')}</Badge>
+                        <TaskHeaderActions>
+                          {canEditDelete && (
+                            <>
+                              <IconButton
+                                onClick={(e) => handleEditTask(task, e)}
+                                title="Edit task"
+                              >
+                                <Edit2 size={14} />
+                              </IconButton>
+                              <DeleteButton
+                                onClick={(e) => handleDeleteTask(task.id, e)}
+                                title="Delete task"
+                              >
+                                <Trash2 size={14} />
+                              </DeleteButton>
+                            </>
+                          )}
+                          <Badge variant={task.status}>{task.status.replace(/_/g, ' ')}</Badge>
+                        </TaskHeaderActions>
                       </TaskHeader>
 
                       <TaskDescription isExpanded={expandedDescriptions.has(task.id)}>
@@ -2861,7 +3029,8 @@ export const Tasks: React.FC = () => {
                         </div>
                       </TaskFooter>
                     </TaskCard>
-                  ))}
+                    );
+                  })}
                 </TasksGrid>
               </>
             ) : (
@@ -2907,12 +3076,21 @@ export const Tasks: React.FC = () => {
             </PaginationButton>
           </PaginationContainer>
         )}
-      </MainContent>
+        </MainContent>
+      </MainLayout>
 
       {showSuggestModal && (
         <SuggestTaskModal
           onClose={() => setShowSuggestModal(false)}
           onTaskCreated={handleTaskCreated}
+        />
+      )}
+
+      {taskToEdit && (
+        <EditTaskModal
+          isOpen={!!taskToEdit}
+          onClose={() => setTaskToEdit(null)}
+          task={taskToEdit}
         />
       )}
 

@@ -131,7 +131,9 @@ type Mutation {
   completeTask(taskId: String!): Task!
   createOnlineMeeting(endTime: String!, startTime: String!, subject: String!, userId: String!): OnlineMeeting!
   createTask(input: CreateTaskInputType!, userId: String): Task!
+  deleteSuggestedTask(taskId: String!): Boolean!
   deleteWorkLog(id: ID!): Boolean!
+  editSuggestedTask(input: UpdateTaskInputType!, taskId: String!): Task!
   endBreak(breakId: ID!): Break!
   endCall(callId: String!): Call!
   endSession(id: ID!): Session!
@@ -140,6 +142,7 @@ type Mutation {
   initiateCall(receiverId: String!): Call!
   login(input: LoginInput!): AuthPayload!
   logout: Boolean!
+  parseTaskFromNaturalLanguage(input: ParseTaskInput!): ParsedTaskOutput!
   register(input: RegisterInput!): AuthPayload!
   registerSeedUser: AuthPayload!
   selfApproveTask(taskId: String!): Task!
@@ -189,6 +192,19 @@ type PaginatedTasksResponse {
   suggestedTasksCount: Int!
   tasks: [Task!]!
   total: Int!
+}
+
+input ParseTaskInput {
+  naturalLanguageInput: String!
+}
+
+type ParsedTaskOutput {
+  category: String!
+  description: String!
+  estimatedHours: Float!
+  priority: String!
+  projectId: String
+  title: String!
 }
 
 type Project {

@@ -293,6 +293,7 @@ export const AVAILABLE_TASKS = gql`
         dueDate
         startedDate
         completedDate
+        suggestedById
         assignedTo {
           id
           name
@@ -479,5 +480,53 @@ export const GET_USER_SESSION_DATES = gql`
       startTime
       id
     }
+  }
+`;
+
+export const PARSE_TASK_FROM_NATURAL_LANGUAGE = gql`
+  mutation ParseTaskFromNaturalLanguage($input: ParseTaskInput!) {
+    parseTaskFromNaturalLanguage(input: $input) {
+      title
+      description
+      category
+      priority
+      estimatedHours
+      projectId
+    }
+  }
+`;
+
+export const EDIT_SUGGESTED_TASK = gql`
+  mutation EditSuggestedTask($taskId: String!, $input: UpdateTaskInputType!) {
+    editSuggestedTask(taskId: $taskId, input: $input) {
+      id
+      title
+      description
+      category
+      priority
+      points
+      estimatedHours
+      status
+      project {
+        id
+        name
+      }
+      suggestedBy {
+        id
+        name
+        avatarUrl
+      }
+      assignedTo {
+        id
+        name
+        avatarUrl
+      }
+    }
+  }
+`;
+
+export const DELETE_SUGGESTED_TASK = gql`
+  mutation DeleteSuggestedTask($taskId: String!) {
+    deleteSuggestedTask(taskId: $taskId)
   }
 `; 

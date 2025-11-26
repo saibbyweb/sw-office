@@ -5,6 +5,10 @@ import { TaskService, CreateTaskInput, UpdateTaskInput } from './task.service';
 import { InputType, Field, Float, Int } from '@nestjs/graphql';
 import { GraphQLContext } from '../users/users.resolver';
 import { JwtGuard } from '../auth/guards/jwt.guard';
+import { OpenAIService } from '../services/openai.service';
+import { ParseTaskInput } from './dto/parse-task.input';
+import { ParsedTaskOutput } from './dto/parsed-task.output';
+import { PrismaService } from '../database/prisma.service';
 
 @ObjectType()
 class ActivityStats {
@@ -113,7 +117,11 @@ class TaskFiltersInput {
 
 @Resolver(() => Task)
 export class TaskResolver {
-  constructor(private readonly taskService: TaskService) {}
+  constructor(
+    private readonly taskService: TaskService,
+    private readonly openAIService: OpenAIService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Query(() => PaginatedTasksResponse)
   async tasks(
@@ -136,6 +144,43 @@ export class TaskResolver {
     @Args('userId', { type: () => String, nullable: true }) userId?: string,
   ): Promise<Task> {
     return this.taskService.createTask(input, userId);
+  }
+
+  @Mutation(() => ParsedTaskOutput)
+  @UseGuards(JwtGuard)
+  async parseTaskFromNaturalLanguage(
+    @Args('input') input: ParseTaskInput,
+  ): Promise<ParsedTaskOutput> {
+    // Fetch available projects
+    const projects = await this.prisma.project.findMany({
+      select: { id: true, name: true },
+    });
+
+    // Define available categories and priorities
+    const availableCategories = [
+      'WEB_FRONTEND',
+      'WEB_BACKEND',
+      'MOBILE_ANDROID',
+      'MOBILE_IOS',
+      'DESIGN',
+      'DEVOPS',
+      'QA_TESTING',
+      'DOCUMENTATION',
+      'RESEARCH',
+      'OTHER',
+    ];
+
+    const availablePriorities = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+
+    // Use OpenAI to parse the task
+    const parsedData = await this.openAIService.parseTaskFromNaturalLanguage(
+      input.naturalLanguageInput,
+      projects,
+      availableCategories,
+      availablePriorities,
+    );
+
+    return parsedData;
   }
 
   @Mutation(() => Task)
@@ -201,6 +246,37 @@ export class TaskResolver {
     @Args('input') input: UpdateTaskInputType,
   ): Promise<Task> {
     return this.taskService.updateTask(taskId, input);
+  }
+
+  @Mutation(() => Task)
+  @UseGuards(JwtGuard)
+  async editSuggestedTask(
+    @Args('taskId') taskId: string,
+    @Args('input') input: UpdateTaskInputType,
+    @Context() context: GraphQLContext,
+  ): Promise<Task> {
+    const userId = context.req.user?.id;
+
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
+    return this.taskService.editSuggestedTask(taskId, input, userId);
+  }
+
+  @Mutation(() => Boolean)
+  @UseGuards(JwtGuard)
+  async deleteSuggestedTask(
+    @Args('taskId') taskId: string,
+    @Context() context: GraphQLContext,
+  ): Promise<boolean> {
+    const userId = context.req.user?.id;
+
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
+    return this.taskService.deleteSuggestedTask(taskId, userId);
   }
 
   @Mutation(() => Task)

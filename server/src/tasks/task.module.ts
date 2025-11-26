@@ -5,10 +5,11 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { AuthModule } from '../auth/auth.module';
 import { SlackModule } from '../slack/slack.module';
+import { OpenAIService } from '../services/openai.service';
 
 @Module({
   imports: [PrismaModule, NotificationsModule, AuthModule, SlackModule],
-  providers: [TaskResolver, TaskService],
+  providers: [TaskResolver, TaskService, OpenAIService],
   exports: [TaskService],
 })
 export class TaskModule {}
