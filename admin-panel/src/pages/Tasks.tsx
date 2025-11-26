@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@apollo/client';
-import { FiArrowLeft, FiPlus, FiX, FiAlertCircle, FiCheckCircle, FiClock, FiTarget, FiZap, FiAward, FiUser, FiUserPlus, FiCheck, FiCornerUpLeft, FiEdit2, FiCalendar, FiActivity, FiFilter } from 'react-icons/fi';
+import { FiArrowLeft, FiPlus, FiX, FiAlertCircle, FiCheckCircle, FiClock, FiTarget, FiZap, FiAward, FiUser, FiUserPlus, FiCheck, FiCornerUpLeft, FiEdit2, FiCalendar, FiActivity, FiFilter, FiUsers, FiGrid } from 'react-icons/fi';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import Select from 'react-select';
 import { PROJECTS_QUERY } from '../graphql/projects.queries';
-import { CREATE_TASK_MUTATION, TASKS_QUERY, ASSIGN_TASK_MUTATION, APPROVE_TASK_MUTATION, UNAPPROVE_TASK_MUTATION, UPDATE_TASK_MUTATION, COMPLETE_TASK_MUTATION, UNCOMPLETE_TASK_MUTATION, COMPLETED_TASKS_QUERY } from '../graphql/tasks.mutations';
+import { CREATE_TASK_MUTATION, TASKS_QUERY, ASSIGN_TASK_MUTATION, APPROVE_TASK_MUTATION, UNAPPROVE_TASK_MUTATION, UPDATE_TASK_MUTATION, COMPLETE_TASK_MUTATION, UNCOMPLETE_TASK_MUTATION, COMPLETED_TASKS_QUERY, ACTIVITY_STATS_QUERY } from '../graphql/tasks.mutations';
 import { ADMIN_USERS_QUERY } from '../graphql/admin.queries';
 
 interface Project {
@@ -94,25 +94,70 @@ interface CompletedTasksData {
   completedTasks: Task[];
 }
 
+interface ActivityStatsData {
+  activityStats: {
+    totalTasks: number;
+    totalProjects: number;
+    totalUniqueUsers: number;
+  };
+}
+
 export default function Tasks() {
   const navigate = useNavigate();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [assignModalTask, setAssignModalTask] = useState<string | null>(null);
   const [editModalTask, setEditModalTask] = useState<Task | null>(null);
   const [activeView, setActiveView] = useState<'tasks' | 'activity'>('tasks');
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [leftColumnStatuses, setLeftColumnStatuses] = useState<string[]>(['SUGGESTED']);
-  const [rightColumnStatuses, setRightColumnStatuses] = useState<string[]>(['APPROVED', 'IN_PROGRESS', 'BLOCKED']);
+  const [dateFilter, setDateFilter] = useState<'today' | 'yesterday' | 'lastWeek' | 'custom'>('today');
+  const [startDate, setStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [compareMode, setCompareMode] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
   const { data: tasksData, loading: tasksLoading, refetch } = useQuery<TasksData>(TASKS_QUERY);
   const { data: usersData, loading: usersLoading } = useQuery<UsersData>(ADMIN_USERS_QUERY);
 
+  // Apply date filter preset
+  const applyDateFilter = (filter: 'today' | 'yesterday' | 'lastWeek' | 'custom') => {
+    setDateFilter(filter);
+    const today = new Date();
+
+    switch (filter) {
+      case 'today': {
+        const todayStr = today.toISOString().split('T')[0];
+        setStartDate(todayStr);
+        setEndDate(todayStr);
+        break;
+      }
+      case 'yesterday': {
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        setStartDate(yesterdayStr);
+        setEndDate(yesterdayStr);
+        break;
+      }
+      case 'lastWeek': {
+        const lastWeek = new Date(today);
+        lastWeek.setDate(lastWeek.getDate() - 7);
+        const lastWeekStr = lastWeek.toISOString().split('T')[0];
+        setStartDate(lastWeekStr);
+        setEndDate(lastWeekStr);
+        break;
+      }
+      case 'custom':
+        // Don't change dates, user will set them manually
+        break;
+    }
+  };
+
   // Get date range for completed tasks query
   const getDateRange = () => {
-    if (selectedDate) {
-      const date = new Date(selectedDate);
-      const startOfDay = new Date(date.setHours(0, 0, 0, 0));
-      const endOfDay = new Date(date.setHours(23, 59, 59, 999));
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const startOfDay = new Date(start.setHours(0, 0, 0, 0));
+      const endOfDay = new Date(end.setHours(23, 59, 59, 999));
       return { startDate: startOfDay.toISOString(), endDate: endOfDay.toISOString() };
     }
     return {};
@@ -120,6 +165,14 @@ export default function Tasks() {
 
   const { data: completedTasksData, loading: completedLoading } = useQuery<CompletedTasksData>(
     COMPLETED_TASKS_QUERY,
+    {
+      variables: getDateRange(),
+      skip: activeView !== 'activity',
+    }
+  );
+
+  const { data: statsData, loading: statsLoading } = useQuery<ActivityStatsData>(
+    ACTIVITY_STATS_QUERY,
     {
       variables: getDateRange(),
       skip: activeView !== 'activity',
@@ -226,80 +279,84 @@ export default function Tasks() {
     }
   };
 
-  const toggleStatusInColumn = (column: 'left' | 'right', status: string) => {
-    if (column === 'left') {
-      setLeftColumnStatuses(prev =>
-        prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]
-      );
-    } else {
-      setRightColumnStatuses(prev =>
-        prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]
-      );
-    }
-  };
-
-  const availableStatuses = Object.keys(statusConfig);
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 via-fuchsia-50 to-pink-50">
       <Toaster position="top-right" />
 
       {/* Header */}
       <div className="bg-white/60 backdrop-blur-md border-b border-white/20 sticky top-0 z-10">
-        <div className="px-6 py-4">
+        <div className="px-6 py-2">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <button
                 onClick={() => navigate('/')}
-                className="p-2 hover:bg-white/60 rounded-lg transition-colors"
+                className="p-1.5 hover:bg-white/60 rounded-lg transition-colors"
                 title="Back to Home"
               >
-                <FiArrowLeft className="w-5 h-5 text-gray-700" />
+                <FiArrowLeft className="w-4 h-4 text-gray-700" />
               </button>
               <div>
-                <h1 className="text-3xl font-bold font-outfit text-transparent bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600 bg-clip-text">
+                <h1 className="text-lg font-bold font-outfit text-transparent bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600 bg-clip-text">
                   Task Manager
                 </h1>
-                <p className="text-sm text-gray-600 mt-1">
-                  Manage tasks, track progress, and celebrate wins
-                </p>
+              </div>
+              {/* View Tabs - Inline */}
+              <div className="flex gap-1 ml-4">
+                <button
+                  onClick={() => setActiveView('tasks')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    activeView === 'tasks'
+                      ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-md'
+                      : 'bg-white/60 text-gray-700 hover:bg-white/80'
+                  }`}
+                >
+                  <FiTarget className="w-3.5 h-3.5" />
+                  Tasks
+                </button>
+                <button
+                  onClick={() => setActiveView('activity')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    activeView === 'activity'
+                      ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-md'
+                      : 'bg-white/60 text-gray-700 hover:bg-white/80'
+                  }`}
+                >
+                  <FiActivity className="w-3.5 h-3.5" />
+                  Activity
+                </button>
               </div>
             </div>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleCreateTask}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-xl hover:from-violet-700 hover:to-fuchsia-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              <FiPlus className="w-5 h-5" />
-              <span className="font-medium">Create Task</span>
-            </motion.button>
-          </div>
-
-          {/* View Tabs */}
-          <div className="mt-4 flex gap-2">
-            <button
-              onClick={() => setActiveView('tasks')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                activeView === 'tasks'
-                  ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-md'
-                  : 'bg-white/60 text-gray-700 hover:bg-white/80'
-              }`}
-            >
-              <FiTarget className="w-4 h-4" />
-              Tasks
-            </button>
-            <button
-              onClick={() => setActiveView('activity')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                activeView === 'activity'
-                  ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-md'
-                  : 'bg-white/60 text-gray-700 hover:bg-white/80'
-              }`}
-            >
-              <FiActivity className="w-4 h-4" />
-              Activity
-            </button>
+            <div className="flex gap-2">
+              {activeView === 'activity' && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    setCompareMode(!compareMode);
+                    if (!compareMode) {
+                      setSelectedUsers([]);
+                    }
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all ${
+                    compareMode
+                      ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white'
+                      : 'bg-white text-gray-700 border border-gray-200 hover:border-blue-400'
+                  }`}
+                >
+                  <FiUsers className="w-3.5 h-3.5" />
+                  <span className="font-medium">{compareMode ? 'Exit Compare' : 'Compare'}</span>
+                </motion.button>
+              )}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleCreateTask}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-lg hover:from-violet-700 hover:to-fuchsia-700 transition-all text-sm font-medium"
+              >
+                <FiPlus className="w-3.5 h-3.5" />
+                Create
+              </motion.button>
+            </div>
           </div>
         </div>
       </div>
@@ -318,174 +375,244 @@ export default function Tasks() {
               <p className="text-gray-400 text-sm">Create your first task to get started!</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Left Column */}
-            <div>
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-1 bg-gradient-to-b from-gray-400 to-gray-600 rounded-full" />
-                    <div>
-                      <h2 className="text-xl font-bold text-gray-800">Column 1</h2>
-                      <p className="text-sm text-gray-500">
-                        {tasksData?.tasks.tasks.filter(t => leftColumnStatuses.includes(t.status)).length} tasks
-                      </p>
-                    </div>
-                  </div>
-                  <div className="relative group">
-                    <button className="p-2 hover:bg-white/60 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium text-gray-700">
-                      <FiFilter className="w-4 h-4" />
-                      Filter
-                    </button>
-                    <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-gray-200 p-3 min-w-[200px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
-                      <p className="text-xs font-semibold text-gray-500 mb-2 uppercase">Show Status</p>
-                      {availableStatuses.map(status => (
-                        <label key={status} className="flex items-center gap-2 py-1.5 px-2 hover:bg-gray-50 rounded cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={leftColumnStatuses.includes(status)}
-                            onChange={() => toggleStatusInColumn('left', status)}
-                            className="w-4 h-4 text-violet-600 rounded focus:ring-violet-500"
-                          />
-                          <span className={`text-sm px-2 py-0.5 rounded ${statusConfig[status as keyof typeof statusConfig].bg} ${statusConfig[status as keyof typeof statusConfig].color}`}>
-                            {statusConfig[status as keyof typeof statusConfig].label}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-4">
-                {tasksData?.tasks.tasks.filter(t => leftColumnStatuses.includes(t.status)).length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-48 text-center bg-white/60 backdrop-blur-md rounded-2xl border-2 border-dashed border-gray-300">
-                    <FiCheckCircle className="w-12 h-12 text-gray-300 mb-2" />
-                    <p className="text-gray-400 text-sm">No tasks matching selected filters</p>
-                  </div>
-                ) : (
-                  tasksData?.tasks.tasks.filter(t => leftColumnStatuses.includes(t.status)).map((task, index) => {
-                    const PriorityIcon = priorityConfig[task.priority as keyof typeof priorityConfig].icon;
-                    const categoryGradient = categoryColors[task.category as keyof typeof categoryColors];
+            /* Grid View */
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {tasksData?.tasks.tasks.map((task, index) => {
+                const PriorityIcon = priorityConfig[task.priority as keyof typeof priorityConfig].icon;
+                const categoryGradient = categoryColors[task.category as keyof typeof categoryColors];
 
-                    return (
-                      <TaskCard
-                        key={task.id}
-                        task={task}
-                        index={index}
-                        PriorityIcon={PriorityIcon}
-                        categoryGradient={categoryGradient}
-                        onAssign={setAssignModalTask}
-                        onApprove={handleApproveTask}
-                        onUnapprove={handleUnapproveTask}
-                        onEdit={setEditModalTask}
-                        onComplete={handleCompleteTask}
-                        onUncomplete={handleUncompleteTask}
-                      />
-                    );
-                  })
-                )}
-              </div>
+                return (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    index={index}
+                    PriorityIcon={PriorityIcon}
+                    categoryGradient={categoryGradient}
+                    onAssign={setAssignModalTask}
+                    onApprove={handleApproveTask}
+                    onUnapprove={handleUnapproveTask}
+                    onEdit={setEditModalTask}
+                    onComplete={handleCompleteTask}
+                    onUncomplete={handleUncompleteTask}
+                  />
+                );
+              })}
             </div>
-
-            {/* Right Column */}
-            <div>
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-1 bg-gradient-to-b from-violet-500 to-fuchsia-600 rounded-full" />
-                    <div>
-                      <h2 className="text-xl font-bold text-gray-800">Column 2</h2>
-                      <p className="text-sm text-gray-500">
-                        {tasksData?.tasks.tasks.filter(t => rightColumnStatuses.includes(t.status)).length} tasks
-                      </p>
-                    </div>
-                  </div>
-                  <div className="relative group">
-                    <button className="p-2 hover:bg-white/60 rounded-lg transition-colors flex items-center gap-2 text-sm font-medium text-gray-700">
-                      <FiFilter className="w-4 h-4" />
-                      Filter
-                    </button>
-                    <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-gray-200 p-3 min-w-[200px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
-                      <p className="text-xs font-semibold text-gray-500 mb-2 uppercase">Show Status</p>
-                      {availableStatuses.map(status => (
-                        <label key={status} className="flex items-center gap-2 py-1.5 px-2 hover:bg-gray-50 rounded cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={rightColumnStatuses.includes(status)}
-                            onChange={() => toggleStatusInColumn('right', status)}
-                            className="w-4 h-4 text-violet-600 rounded focus:ring-violet-500"
-                          />
-                          <span className={`text-sm px-2 py-0.5 rounded ${statusConfig[status as keyof typeof statusConfig].bg} ${statusConfig[status as keyof typeof statusConfig].color}`}>
-                            {statusConfig[status as keyof typeof statusConfig].label}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-4">
-                {tasksData?.tasks.tasks.filter(t => rightColumnStatuses.includes(t.status)).length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-48 text-center bg-white/60 backdrop-blur-md rounded-2xl border-2 border-dashed border-gray-300">
-                    <FiCheckCircle className="w-12 h-12 text-gray-300 mb-2" />
-                    <p className="text-gray-400 text-sm">No tasks matching selected filters</p>
-                  </div>
-                ) : (
-                  tasksData?.tasks.tasks.filter(t => rightColumnStatuses.includes(t.status)).map((task, index) => {
-                    const PriorityIcon = priorityConfig[task.priority as keyof typeof priorityConfig].icon;
-                    const categoryGradient = categoryColors[task.category as keyof typeof categoryColors];
-
-                    return (
-                      <TaskCard
-                        key={task.id}
-                        task={task}
-                        index={index}
-                        PriorityIcon={PriorityIcon}
-                        categoryGradient={categoryGradient}
-                        onAssign={setAssignModalTask}
-                        onApprove={handleApproveTask}
-                        onUnapprove={handleUnapproveTask}
-                        onEdit={setEditModalTask}
-                        onComplete={handleCompleteTask}
-                        onUncomplete={handleUncompleteTask}
-                      />
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          </div>
-        )
+          )
         ) : (
           /* Activity View */
           <div>
-            {/* Date Filter */}
-            <div className="mb-6 bg-white/60 backdrop-blur-md rounded-2xl p-6 border border-white/40">
-              <div className="flex items-center gap-4">
-                <FiCalendar className="w-5 h-5 text-violet-600" />
-                <div className="flex-1">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Filter by Date
-                  </label>
-                  <input
-                    type="date"
-                    value={selectedDate || ''}
-                    onChange={(e) => setSelectedDate(e.target.value || null)}
-                    className="px-4 py-2 rounded-lg border-2 border-gray-200 focus:border-violet-500 focus:ring-4 focus:ring-violet-100 transition-all outline-none"
-                  />
+            {/* Compact Filters & Stats Row */}
+            <div className={`bg-white/60 backdrop-blur-md ${compareMode ? 'rounded-t-xl border-t border-l border-r' : 'rounded-xl border mb-6'} p-4 border-white/40`}>
+              <div className="flex items-center justify-between gap-6">
+                {/* Date Filters - Left Side */}
+                <div className="flex items-center gap-3 flex-1">
+                  <FiCalendar className="w-4 h-4 text-violet-600" />
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => applyDateFilter('today')}
+                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                        dateFilter === 'today'
+                          ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white'
+                          : 'bg-white/60 text-gray-700 hover:bg-white border border-gray-200'
+                      }`}
+                    >
+                      Today
+                    </button>
+                    <button
+                      onClick={() => applyDateFilter('yesterday')}
+                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                        dateFilter === 'yesterday'
+                          ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white'
+                          : 'bg-white/60 text-gray-700 hover:bg-white border border-gray-200'
+                      }`}
+                    >
+                      Yesterday
+                    </button>
+                    <button
+                      onClick={() => applyDateFilter('lastWeek')}
+                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                        dateFilter === 'lastWeek'
+                          ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white'
+                          : 'bg-white/60 text-gray-700 hover:bg-white border border-gray-200'
+                      }`}
+                    >
+                      Last Week
+                    </button>
+                    <button
+                      onClick={() => applyDateFilter('custom')}
+                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                        dateFilter === 'custom'
+                          ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white'
+                          : 'bg-white/60 text-gray-700 hover:bg-white border border-gray-200'
+                      }`}
+                    >
+                      Custom
+                    </button>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => {
+                        setStartDate(e.target.value);
+                        setDateFilter('custom');
+                      }}
+                      className="px-2 py-1 text-xs rounded-lg border border-gray-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-100 outline-none"
+                    />
+                    <span className="text-gray-400">-</span>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => {
+                        setEndDate(e.target.value);
+                        setDateFilter('custom');
+                      }}
+                      className="px-2 py-1 text-xs rounded-lg border border-gray-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-100 outline-none"
+                    />
+                  </div>
                 </div>
-                {selectedDate && (
-                  <button
-                    onClick={() => setSelectedDate(null)}
-                    className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 font-medium"
-                  >
-                    Clear
-                  </button>
-                )}
+
+                {/* Stats - Right Side */}
+                {statsLoading ? (
+                  <div className="flex gap-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="bg-white/60 rounded-lg px-4 py-2 border border-white/40 animate-pulse">
+                        <div className="h-3 bg-gray-200 rounded w-16 mb-1" />
+                        <div className="h-5 bg-gray-200 rounded w-8" />
+                      </div>
+                    ))}
+                  </div>
+                ) : statsData?.activityStats ? (
+                  <div className="flex gap-4">
+                    <div className="bg-gradient-to-br from-violet-50 to-fuchsia-50 rounded-lg px-4 py-2 border border-violet-200">
+                      <div className="flex items-center gap-2">
+                        <FiCheckCircle className="w-3.5 h-3.5 text-violet-600" />
+                        <p className="text-xs font-medium text-violet-700">Tasks</p>
+                      </div>
+                      <p className="text-xl font-bold text-violet-900">{statsData.activityStats.totalTasks}</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg px-4 py-2 border border-blue-200">
+                      <div className="flex items-center gap-2">
+                        <FiTarget className="w-3.5 h-3.5 text-blue-600" />
+                        <p className="text-xs font-medium text-blue-700">Projects</p>
+                      </div>
+                      <p className="text-xl font-bold text-blue-900">{statsData.activityStats.totalProjects}</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-lg px-4 py-2 border border-emerald-200">
+                      <div className="flex items-center gap-2">
+                        <FiUser className="w-3.5 h-3.5 text-emerald-600" />
+                        <p className="text-xs font-medium text-emerald-700">Users</p>
+                      </div>
+                      <p className="text-xl font-bold text-emerald-900">{statsData.activityStats.totalUniqueUsers}</p>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
 
-            {/* Completed Tasks */}
+            {compareMode ? (
+            /* Compare Mode */
+            <div>
+              {/* User Selector - Attached to header */}
+              <div className="mb-6 bg-white/60 backdrop-blur-md rounded-b-xl p-3 border-b border-l border-r border-white/40 border-t-0">
+                <div className="flex items-center gap-3">
+                  <FiUsers className="w-4 h-4 text-blue-600" />
+                  <span className="text-xs font-semibold text-gray-700 whitespace-nowrap">Select Users:</span>
+                  <div className="flex flex-wrap gap-1.5 flex-1">
+                    {usersData?.adminUsers.filter(u => !u.archived).map(user => (
+                      <button
+                        key={user.id}
+                        onClick={() => {
+                          if (selectedUsers.includes(user.id)) {
+                            setSelectedUsers(selectedUsers.filter(id => id !== user.id));
+                          } else {
+                            setSelectedUsers([...selectedUsers, user.id]);
+                          }
+                        }}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                          selectedUsers.includes(user.id)
+                            ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white'
+                            : 'bg-white/60 text-gray-700 hover:bg-white border border-gray-200'
+                        }`}
+                      >
+                        {user.name}
+                      </button>
+                    ))}
+                  </div>
+                  {selectedUsers.length > 0 && (
+                    <span className="text-xs text-gray-500 whitespace-nowrap">
+                      ({selectedUsers.length} selected)
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* User Comparison Grid */}
+              {selectedUsers.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-64 text-center bg-white/60 backdrop-blur-md rounded-2xl border-2 border-dashed border-gray-300">
+                  <FiUsers className="w-16 h-16 text-gray-300 mb-4" />
+                  <p className="text-gray-500 text-lg">No users selected</p>
+                  <p className="text-gray-400 text-sm">Select users above to compare their completed tasks</p>
+                </div>
+              ) : (
+                <div className={`grid gap-6 ${selectedUsers.length === 1 ? 'grid-cols-1' : selectedUsers.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                  {selectedUsers.map(userId => {
+                    const user = usersData?.adminUsers.find(u => u.id === userId);
+                    const userTasks = completedTasksData?.completedTasks.filter(t => t.assignedTo?.id === userId) || [];
+
+                    return (
+                      <div key={userId}>
+                        <div className="mb-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-4 border border-blue-200">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold">
+                              {user?.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <h3 className="font-bold text-gray-800">{user?.name}</h3>
+                              <p className="text-xs text-gray-600">{userTasks.length} completed task{userTasks.length !== 1 ? 's' : ''}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 gap-3">
+                          {userTasks.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-32 text-center bg-white/60 backdrop-blur-md rounded-xl border border-gray-200">
+                              <FiCheckCircle className="w-8 h-8 text-gray-300 mb-2" />
+                              <p className="text-gray-400 text-xs">No completed tasks</p>
+                            </div>
+                          ) : (
+                            userTasks.map((task, index) => {
+                              const PriorityIcon = priorityConfig[task.priority as keyof typeof priorityConfig].icon;
+                              const categoryGradient = categoryColors[task.category as keyof typeof categoryColors];
+
+                              return (
+                                <TaskCard
+                                  key={task.id}
+                                  task={task}
+                                  index={index}
+                                  PriorityIcon={PriorityIcon}
+                                  categoryGradient={categoryGradient}
+                                  onAssign={setAssignModalTask}
+                                  onApprove={handleApproveTask}
+                                  onUnapprove={handleUnapproveTask}
+                                  onEdit={setEditModalTask}
+                                  onComplete={handleCompleteTask}
+                                  onUncomplete={handleUncompleteTask}
+                                  isCompleted={true}
+                                />
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Completed Tasks */
+            <div>
             {completedLoading ? (
               <div className="flex items-center justify-center h-64">
                 <div className="text-gray-500">Loading completed tasks...</div>
@@ -495,7 +622,7 @@ export default function Tasks() {
                 <FiCheckCircle className="w-16 h-16 text-gray-300 mb-4" />
                 <p className="text-gray-500 text-lg">No completed tasks</p>
                 <p className="text-gray-400 text-sm">
-                  {selectedDate ? 'No tasks were completed on this date' : 'Complete some tasks to see activity here'}
+                  No tasks were completed in the selected date range
                 </p>
               </div>
             ) : (
@@ -504,14 +631,25 @@ export default function Tasks() {
                   <div className="h-10 w-1 bg-gradient-to-b from-green-500 to-emerald-600 rounded-full" />
                   <div>
                     <h2 className="text-xl font-bold text-gray-800">
-                      {selectedDate ? `Completed on ${new Date(selectedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}` : 'All Completed Tasks'}
+                      Completed Tasks
+                      {startDate === endDate && (
+                        <span className="ml-2 text-base font-normal text-gray-600">
+                          on {new Date(startDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                        </span>
+                      )}
+                      {startDate !== endDate && (
+                        <span className="ml-2 text-base font-normal text-gray-600">
+                          {new Date(startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </span>
+                      )}
                     </h2>
                     <p className="text-sm text-gray-500">
                       {completedTasksData.completedTasks.length} task{completedTasksData.completedTasks.length !== 1 ? 's' : ''}
                     </p>
                   </div>
                 </div>
-                <div className="space-y-4">
+                {/* Grid View for Completed Tasks */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {completedTasksData.completedTasks.map((task, index) => {
                     const PriorityIcon = priorityConfig[task.priority as keyof typeof priorityConfig].icon;
                     const categoryGradient = categoryColors[task.category as keyof typeof categoryColors];
@@ -536,6 +674,8 @@ export default function Tasks() {
                 </div>
               </div>
             )}
+            </div>
+          )}
           </div>
         )}
       </div>

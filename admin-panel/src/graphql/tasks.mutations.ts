@@ -172,3 +172,13 @@ export const COMPLETED_TASKS_QUERY = gql`
     }
   }
 `;
+
+export const ACTIVITY_STATS_QUERY = gql`
+  query ActivityStats($startDate: String, $endDate: String) {
+    activityStats(startDate: $startDate, endDate: $endDate) {
+      totalTasks
+      totalProjects
+      totalUniqueUsers
+    }
+  }
+`;

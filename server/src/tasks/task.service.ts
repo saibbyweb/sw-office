@@ -511,4 +511,38 @@ export class TaskService {
       },
     });
   }
+
+  async getActivityStats(startDate?: Date, endDate?: Date) {
+    const whereClause: any = {
+      status: 'COMPLETED',
+      completedDate: { not: null },
+    };
+
+    if (startDate || endDate) {
+      whereClause.completedDate = {};
+      if (startDate) whereClause.completedDate.gte = startDate;
+      if (endDate) whereClause.completedDate.lte = endDate;
+    }
+
+    // Get all completed tasks in date range
+    const tasks = await this.prisma.task.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        projectId: true,
+        assignedToId: true,
+      },
+    });
+
+    // Calculate stats
+    const totalTasks = tasks.length;
+    const uniqueProjects = new Set(tasks.map(t => t.projectId).filter(Boolean));
+    const uniqueUsers = new Set(tasks.map(t => t.assignedToId).filter(Boolean));
+
+    return {
+      totalTasks,
+      totalProjects: uniqueProjects.size,
+      totalUniqueUsers: uniqueUsers.size,
+    };
+  }
 }

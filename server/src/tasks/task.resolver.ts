@@ -7,6 +7,18 @@ import { GraphQLContext } from '../users/users.resolver';
 import { JwtGuard } from '../auth/guards/jwt.guard';
 
 @ObjectType()
+class ActivityStats {
+  @Field(() => Int)
+  totalTasks: number;
+
+  @Field(() => Int)
+  totalProjects: number;
+
+  @Field(() => Int)
+  totalUniqueUsers: number;
+}
+
+@ObjectType()
 class PaginatedTasksResponse {
   @Field(() => [Task])
   tasks: Task[];
@@ -222,5 +234,15 @@ export class TaskResolver {
     const start = startDate ? new Date(startDate) : undefined;
     const end = endDate ? new Date(endDate) : undefined;
     return this.taskService.getCompletedTasks(start, end);
+  }
+
+  @Query(() => ActivityStats)
+  async activityStats(
+    @Args('startDate', { nullable: true }) startDate?: string,
+    @Args('endDate', { nullable: true }) endDate?: string,
+  ): Promise<ActivityStats> {
+    const start = startDate ? new Date(startDate) : undefined;
+    const end = endDate ? new Date(endDate) : undefined;
+    return this.taskService.getActivityStats(start, end);
   }
 }

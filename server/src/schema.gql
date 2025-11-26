@@ -2,6 +2,12 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+type ActivityStats {
+  totalProjects: Int!
+  totalTasks: Int!
+  totalUniqueUsers: Int!
+}
+
 input AddWorkLogInput {
   content: String!
   links: [String!]! = []
@@ -208,6 +214,7 @@ type ProjectCount {
 
 type Query {
   activeSession: Session
+  activityStats(endDate: String, startDate: String): ActivityStats!
   adminSession(sessionId: ID!): Session
   adminSessionWorkLogs(sessionId: ID!): [WorkLog!]!
   adminUserSessions(input: GetSessionsInput!, userId: ID!): [Session!]!
