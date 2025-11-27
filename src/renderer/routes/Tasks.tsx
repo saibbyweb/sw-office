@@ -1669,6 +1669,7 @@ interface Task {
   dueDate?: string;
   startedDate?: string;
   completedDate?: string;
+  suggestedById?: string;
   assignedTo?: {
     id: string;
     name: string;

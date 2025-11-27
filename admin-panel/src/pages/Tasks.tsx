@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@apollo/client';
-import { FiArrowLeft, FiPlus, FiX, FiAlertCircle, FiCheckCircle, FiClock, FiTarget, FiZap, FiAward, FiUser, FiUserPlus, FiCheck, FiCornerUpLeft, FiEdit2, FiCalendar, FiActivity, FiFilter, FiUsers, FiGrid } from 'react-icons/fi';
+import { FiArrowLeft, FiPlus, FiX, FiAlertCircle, FiCheckCircle, FiClock, FiTarget, FiZap, FiAward, FiUser, FiUserPlus, FiCheck, FiCornerUpLeft, FiEdit2, FiCalendar, FiActivity, FiUsers } from 'react-icons/fi';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import Select from 'react-select';
