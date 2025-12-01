@@ -1,4 +1,4 @@
-import { FiUsers, FiGitBranch, FiBarChart2, FiUserPlus, FiCheckSquare } from 'react-icons/fi';
+import { FiUsers, FiGitBranch, FiBarChart2, FiUserPlus, FiCheckSquare, FiCalendar } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 
 const pages = [
@@ -25,6 +25,14 @@ const pages = [
     icon: FiCheckSquare,
     gradient: 'from-amber-600 to-orange-600',
     bgGradient: 'from-amber-500/20 to-orange-500/20',
+  },
+  {
+    title: 'Work Exceptions',
+    description: 'Track leaves, late arrivals, and other exceptions',
+    path: '/work-exceptions',
+    icon: FiCalendar,
+    gradient: 'from-rose-600 to-pink-600',
+    bgGradient: 'from-rose-500/20 to-pink-500/20',
   },
   {
     title: 'Workflow View',

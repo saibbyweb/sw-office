@@ -63,6 +63,7 @@ model User {
   taskSuggestions Task[] @relation("TaskSuggestedBy")
   taskAssignments Task[] @relation("TaskAssignedTo")
   taskApprovals Task[] @relation("TaskApprovedBy")
+  workExceptions WorkException[] @relation("UserWorkExceptions")
 
   @@map("users")
 }
@@ -187,6 +188,37 @@ enum TaskPriority {
   MEDIUM
   HIGH
   CRITICAL
+}
+
+enum ExceptionType {
+  FULL_DAY_LEAVE
+  HALF_DAY_LEAVE
+  LATE_ARRIVAL
+  EARLY_EXIT
+  WORK_FROM_HOME
+  SICK_LEAVE
+  EMERGENCY_LEAVE
+}
+
+model WorkException {
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String        @db.ObjectId
+  user          User          @relation("UserWorkExceptions", fields: [userId], references: [id])
+
+  type          ExceptionType
+  date          DateTime      // The date this happened
+
+  // Only for late arrival / early exit
+  scheduledTime DateTime?
+  actualTime    DateTime?
+
+  reason        String?
+  notes         String?       // Admin notes if needed
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("work_exceptions")
 }
 
 model Task {

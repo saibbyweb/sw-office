@@ -17,6 +17,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { UploadModule } from './upload/upload.module';
 import { TaskModule } from './tasks/task.module';
 import { SlackModule } from './slack/slack.module';
+import { WorkExceptionModule } from './work-exceptions/work-exception.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { SlackModule } from './slack/slack.module';
     UploadModule,
     TaskModule,
     SlackModule,
+    WorkExceptionModule,
   ],
 })
 export class AppModule {}

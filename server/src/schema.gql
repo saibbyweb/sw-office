@@ -80,6 +80,16 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
+enum ExceptionType {
+  EARLY_EXIT
+  EMERGENCY_LEAVE
+  FULL_DAY_LEAVE
+  HALF_DAY_LEAVE
+  LATE_ARRIVAL
+  SICK_LEAVE
+  WORK_FROM_HOME
+}
+
 input GetSessionDatesInput {
   endDate: DateTime!
   startDate: DateTime!
@@ -131,7 +141,9 @@ type Mutation {
   completeTask(taskId: String!): Task!
   createOnlineMeeting(endTime: String!, startTime: String!, subject: String!, userId: String!): OnlineMeeting!
   createTask(input: CreateTaskInputType!, userId: String): Task!
+  createWorkException(actualTime: String, date: String!, notes: String, reason: String, scheduledTime: String, type: ExceptionType!, userId: String!): WorkException!
   deleteSuggestedTask(taskId: String!): Boolean!
+  deleteWorkException(id: String!): WorkException!
   deleteWorkLog(id: ID!): Boolean!
   editSuggestedTask(input: UpdateTaskInputType!, taskId: String!): Task!
   endBreak(breakId: ID!): Break!
@@ -158,6 +170,7 @@ type Mutation {
   updateProfile(input: UpdateProfileInput!): User!
   updateTask(input: UpdateTaskInputType!, taskId: String!): Task!
   updateTaskStatus(status: String!, taskId: String!, userId: String!): Task!
+  updateWorkException(actualTime: String, date: String, id: String!, notes: String, reason: String, scheduledTime: String, type: ExceptionType): WorkException!
   updateWorkLog(input: UpdateWorkLogInput!): WorkLog!
 }
 
@@ -259,6 +272,9 @@ type Query {
   testSlackConnection: String!
   userSessionDates(input: GetSessionDatesInput!): [SessionDate!]!
   userSessions(input: GetSessionsInput!): [Session!]!
+  workException(id: String!): WorkException
+  workExceptionStats(endDate: String, startDate: String, userId: String): WorkExceptionStats!
+  workExceptions(endDate: String, startDate: String, type: ExceptionType, userId: String): [WorkException!]!
 }
 
 input RegisterInput {
@@ -501,6 +517,7 @@ type User {
   taskAssignments: [Task!]
   taskSuggestions: [Task!]
   updatedAt: DateTime!
+  workExceptions: [WorkException!]
   workLogs: [WorkLog!]
 }
 
@@ -510,6 +527,7 @@ type UserCount {
   taskApprovals: Int!
   taskAssignments: Int!
   taskSuggestions: Int!
+  workExceptions: Int!
   workLogs: Int!
 }
 
@@ -538,6 +556,31 @@ type UserStatistics {
   allottedTasks: Int!
   completedTasks: Int!
   inProgressTasks: Int!
+}
+
+type WorkException {
+  actualTime: DateTime
+  createdAt: DateTime!
+  date: DateTime!
+  id: ID!
+  notes: String
+  reason: String
+  scheduledTime: DateTime
+  type: ExceptionType!
+  updatedAt: DateTime!
+  user: User!
+  userId: String!
+}
+
+type WorkExceptionStats {
+  earlyExits: Int!
+  emergencyLeaves: Int!
+  fullDayLeaves: Int!
+  halfDayLeaves: Int!
+  lateArrivals: Int!
+  sickLeaves: Int!
+  total: Int!
+  workFromHome: Int!
 }
 
 type WorkLog {

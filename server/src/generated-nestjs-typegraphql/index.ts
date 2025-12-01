@@ -16,6 +16,19 @@ export enum WorkLogScalarFieldEnum {
     updatedAt = "updatedAt"
 }
 
+export enum WorkExceptionScalarFieldEnum {
+    id = "id",
+    userId = "userId",
+    type = "type",
+    date = "date",
+    scheduledTime = "scheduledTime",
+    actualTime = "actualTime",
+    reason = "reason",
+    notes = "notes",
+    createdAt = "createdAt",
+    updatedAt = "updatedAt"
+}
+
 export enum UserScalarFieldEnum {
     id = "id",
     email = "email",
@@ -161,6 +174,16 @@ export enum QueryMode {
     insensitive = "insensitive"
 }
 
+export enum ExceptionType {
+    FULL_DAY_LEAVE = "FULL_DAY_LEAVE",
+    HALF_DAY_LEAVE = "HALF_DAY_LEAVE",
+    LATE_ARRIVAL = "LATE_ARRIVAL",
+    EARLY_EXIT = "EARLY_EXIT",
+    WORK_FROM_HOME = "WORK_FROM_HOME",
+    SICK_LEAVE = "SICK_LEAVE",
+    EMERGENCY_LEAVE = "EMERGENCY_LEAVE"
+}
+
 export enum BreakType {
     SHORT = "SHORT",
     LUNCH = "LUNCH",
@@ -182,6 +205,7 @@ export enum BreakScalarFieldEnum {
 
 registerEnumType(BreakScalarFieldEnum, { name: 'BreakScalarFieldEnum', description: undefined })
 registerEnumType(BreakType, { name: 'BreakType', description: undefined })
+registerEnumType(ExceptionType, { name: 'ExceptionType', description: undefined })
 registerEnumType(QueryMode, { name: 'QueryMode', description: undefined })
 registerEnumType(SegmentType, { name: 'SegmentType', description: undefined })
 registerEnumType(SessionStatus, { name: 'SessionStatus', description: undefined })
@@ -195,6 +219,7 @@ registerEnumType(SegmentScalarFieldEnum, { name: 'SegmentScalarFieldEnum', descr
 registerEnumType(SessionScalarFieldEnum, { name: 'SessionScalarFieldEnum', description: undefined })
 registerEnumType(TaskScalarFieldEnum, { name: 'TaskScalarFieldEnum', description: undefined })
 registerEnumType(UserScalarFieldEnum, { name: 'UserScalarFieldEnum', description: undefined })
+registerEnumType(WorkExceptionScalarFieldEnum, { name: 'WorkExceptionScalarFieldEnum', description: undefined })
 registerEnumType(WorkLogScalarFieldEnum, { name: 'WorkLogScalarFieldEnum', description: undefined })
 
 @ObjectType()
@@ -431,6 +456,8 @@ export class UserCount {
     taskAssignments?: number;
     @Field(() => Int, {nullable:false})
     taskApprovals?: number;
+    @Field(() => Int, {nullable:false})
+    workExceptions?: number;
 }
 
 @ObjectType()
@@ -473,8 +500,36 @@ export class User {
     taskAssignments?: Array<Task>;
     @Field(() => [Task], {nullable:true})
     taskApprovals?: Array<Task>;
+    @Field(() => [WorkException], {nullable:true})
+    workExceptions?: Array<WorkException>;
     @Field(() => UserCount, {nullable:false})
     _count?: InstanceType<typeof UserCount>;
+}
+
+@ObjectType()
+export class WorkException {
+    @Field(() => ID, {nullable:false})
+    id!: string;
+    @Field(() => String, {nullable:false})
+    userId!: string;
+    @Field(() => ExceptionType, {nullable:false})
+    type!: `${ExceptionType}`;
+    @Field(() => Date, {nullable:false})
+    date!: Date;
+    @Field(() => Date, {nullable:true})
+    scheduledTime!: Date | null;
+    @Field(() => Date, {nullable:true})
+    actualTime!: Date | null;
+    @Field(() => String, {nullable:true})
+    reason!: string | null;
+    @Field(() => String, {nullable:true})
+    notes!: string | null;
+    @Field(() => Date, {nullable:false})
+    createdAt!: Date;
+    @Field(() => Date, {nullable:false})
+    updatedAt!: Date;
+    @Field(() => User, {nullable:false})
+    user?: InstanceType<typeof User>;
 }
 
 @ObjectType()
