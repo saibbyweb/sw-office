@@ -9,6 +9,7 @@ export const CREATE_WORK_EXCEPTION_MUTATION = gql`
     $actualTime: String
     $reason: String
     $notes: String
+    $compensationDate: String
   ) {
     createWorkException(
       userId: $userId
@@ -18,6 +19,7 @@ export const CREATE_WORK_EXCEPTION_MUTATION = gql`
       actualTime: $actualTime
       reason: $reason
       notes: $notes
+      compensationDate: $compensationDate
     ) {
       id
       userId
@@ -27,6 +29,7 @@ export const CREATE_WORK_EXCEPTION_MUTATION = gql`
       actualTime
       reason
       notes
+      compensationDate
       user {
         id
         name
@@ -47,6 +50,7 @@ export const UPDATE_WORK_EXCEPTION_MUTATION = gql`
     $actualTime: String
     $reason: String
     $notes: String
+    $compensationDate: String
   ) {
     updateWorkException(
       id: $id
@@ -56,6 +60,7 @@ export const UPDATE_WORK_EXCEPTION_MUTATION = gql`
       actualTime: $actualTime
       reason: $reason
       notes: $notes
+      compensationDate: $compensationDate
     ) {
       id
       userId
@@ -65,6 +70,7 @@ export const UPDATE_WORK_EXCEPTION_MUTATION = gql`
       actualTime
       reason
       notes
+      compensationDate
       user {
         id
         name
@@ -105,6 +111,7 @@ export const WORK_EXCEPTIONS_QUERY = gql`
       actualTime
       reason
       notes
+      compensationDate
       user {
         id
         name

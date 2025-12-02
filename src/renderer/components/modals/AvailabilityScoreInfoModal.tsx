@@ -1,0 +1,555 @@
+import React, { useState } from 'react';
+import styled from 'styled-components';
+import { X, Info, Activity } from 'react-feather';
+
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+`;
+
+const ModalContent = styled.div`
+  background: ${props => props.theme.colors.background};
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: 16px;
+  padding: 0;
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: ${props => props.theme.colors.background}20;
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: ${props => props.theme.colors.text}20;
+    border-radius: 4px;
+
+    &:hover {
+      background: ${props => props.theme.colors.text}30;
+    }
+  }
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid ${props => props.theme.colors.border};
+  position: sticky;
+  top: 0;
+  background: ${props => props.theme.colors.background};
+  z-index: 10;
+`;
+
+const ModalTitle = styled.h2`
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: ${props => props.theme.colors.text};
+  display: flex;
+  align-items: center;
+  gap: 12px;
+`;
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  color: ${props => props.theme.colors.text}80;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: ${props => props.theme.colors.text}10;
+    color: ${props => props.theme.colors.text};
+  }
+`;
+
+const ModalBody = styled.div`
+  padding: 24px;
+`;
+
+const Section = styled.div`
+  margin-bottom: 32px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const SectionTitle = styled.h3`
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: ${props => props.theme.colors.text};
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const Description = styled.p`
+  color: ${props => props.theme.colors.text}CC;
+  line-height: 1.6;
+  margin: 0 0 16px 0;
+`;
+
+const Table = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+`;
+
+const Thead = styled.thead`
+  background: ${props => props.theme.colors.cardBackground};
+`;
+
+const Th = styled.th`
+  text-align: left;
+  padding: 12px;
+  color: ${props => props.theme.colors.text};
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-bottom: 2px solid ${props => props.theme.colors.border};
+`;
+
+const Td = styled.td`
+  padding: 12px;
+  color: ${props => props.theme.colors.text}DD;
+  font-size: 0.875rem;
+  border-bottom: 1px solid ${props => props.theme.colors.border}50;
+`;
+
+const Tr = styled.tr`
+  &:hover {
+    background: ${props => props.theme.colors.cardBackground}40;
+  }
+`;
+
+const WeightBadge = styled.span`
+  display: inline-block;
+  padding: 4px 8px;
+  background: ${props => props.theme.colors.primary}20;
+  color: ${props => props.theme.colors.primary};
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+`;
+
+const CalculatorSection = styled.div`
+  background: ${props => props.theme.colors.cardBackground};
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: 12px;
+  padding: 20px;
+`;
+
+const FormRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+`;
+
+const FormGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const Label = styled.label`
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: ${props => props.theme.colors.text}CC;
+`;
+
+const Select = styled.select`
+  padding: 10px 12px;
+  background: ${props => props.theme.colors.background};
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: 8px;
+  color: ${props => props.theme.colors.text};
+  font-size: 0.875rem;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.colors.primary};
+  }
+`;
+
+const Input = styled.input`
+  padding: 10px 12px;
+  background: ${props => props.theme.colors.background};
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: 8px;
+  color: ${props => props.theme.colors.text};
+  font-size: 0.875rem;
+
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.colors.primary};
+  }
+`;
+
+const ResultBox = styled.div`
+  background: ${props => props.theme.colors.background};
+  border: 2px solid ${props => props.theme.colors.primary};
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 20px;
+  text-align: center;
+`;
+
+const ResultLabel = styled.div`
+  font-size: 0.875rem;
+  color: ${props => props.theme.colors.text}80;
+  margin-bottom: 8px;
+`;
+
+const ResultValue = styled.div<{ score: number }>`
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: ${props =>
+    props.score >= 90 ? '#10b981' :
+    props.score >= 75 ? '#f59e0b' :
+    '#ef4444'};
+`;
+
+const FormulaBox = styled.div`
+  background: ${props => props.theme.colors.background};
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 0.875rem;
+  color: ${props => props.theme.colors.text}DD;
+  line-height: 1.8;
+`;
+
+const CodeLine = styled.div`
+  margin: 4px 0;
+`;
+
+const HighlightBox = styled.div`
+  background: ${props => props.theme.colors.primary}10;
+  border-left: 4px solid ${props => props.theme.colors.primary};
+  padding: 16px;
+  margin: 16px 0;
+  border-radius: 4px;
+`;
+
+const WarningBox = styled.div`
+  background: rgba(245, 158, 11, 0.1);
+  border-left: 4px solid #f59e0b;
+  padding: 16px;
+  margin: 16px 0;
+  border-radius: 4px;
+  color: ${props => props.theme.colors.text}DD;
+`;
+
+interface AvailabilityScoreInfoModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  currentScore: number;
+  workingDays: number;
+  exceptions: Array<{
+    type: string;
+    date: string;
+  }>;
+}
+
+const exceptionWeights: Record<string, number> = {
+  FULL_DAY_LEAVE: 1.0,
+  HALF_DAY_LEAVE: 0.5,
+  SICK_LEAVE: 0.8,
+  EMERGENCY_LEAVE: 0.7,
+  WORK_FROM_HOME: 0.15,
+  LATE_ARRIVAL: 0.3,
+  EARLY_EXIT: 0.3,
+};
+
+const exceptionLabels: Record<string, string> = {
+  FULL_DAY_LEAVE: 'Full Day Leave',
+  HALF_DAY_LEAVE: 'Half Day Leave',
+  SICK_LEAVE: 'Sick Leave',
+  EMERGENCY_LEAVE: 'Emergency Leave',
+  WORK_FROM_HOME: 'Work From Home',
+  LATE_ARRIVAL: 'Late Arrival',
+  EARLY_EXIT: 'Early Exit',
+};
+
+export const AvailabilityScoreInfoModal: React.FC<AvailabilityScoreInfoModalProps> = ({
+  isOpen,
+  onClose,
+  currentScore,
+  workingDays,
+  exceptions,
+}) => {
+  const [calculatorType, setCalculatorType] = useState<string>('FULL_DAY_LEAVE');
+  const [calculatorCount, setCalculatorCount] = useState<number>(1);
+
+  if (!isOpen) return null;
+
+  const valuePerDay = 100 / workingDays;
+
+  // Calculate breakdown for actual exceptions
+  const calculateBreakdown = () => {
+    const sortedExceptions = [...exceptions].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+    );
+
+    let currentPenalizedDays = 0;
+    const breakdown: Array<{
+      index: number;
+      type: string;
+      date: string;
+      weight: number;
+      penaltyDays: number;
+      penaltyScore: number;
+    }> = [];
+
+    sortedExceptions.forEach((exception, index) => {
+      const weight = exceptionWeights[exception.type] || 0.5;
+      const penaltyDays = weight + currentPenalizedDays;
+      const penaltyScore = penaltyDays * valuePerDay;
+
+      breakdown.push({
+        index: index + 1,
+        type: exception.type,
+        date: exception.date,
+        weight,
+        penaltyDays,
+        penaltyScore,
+      });
+
+      currentPenalizedDays += penaltyDays;
+    });
+
+    return breakdown;
+  };
+
+  // Calculate simulated penalty
+  const calculateSimulation = () => {
+    const weight = exceptionWeights[calculatorType] || 0.5;
+    let currentPenalizedDays = 0;
+    let totalPenalty = 0;
+
+    for (let i = 0; i < calculatorCount; i++) {
+      const penaltyDays = weight + currentPenalizedDays;
+      const penaltyScore = penaltyDays * valuePerDay;
+      totalPenalty += penaltyScore;
+      currentPenalizedDays += penaltyDays;
+    }
+
+    return {
+      totalPenalty,
+      score: Math.max(0, 100 - totalPenalty),
+    };
+  };
+
+  // Calculate max exceptions before score reaches 0
+  const calculateMaxExceptions = () => {
+    const weight = exceptionWeights[calculatorType] || 0.5;
+    let currentPenalizedDays = 0;
+    let totalPenalty = 0;
+    let count = 0;
+
+    while (100 - totalPenalty > 0) {
+      const penaltyDays = weight + currentPenalizedDays;
+      const penaltyScore = penaltyDays * valuePerDay;
+      totalPenalty += penaltyScore;
+      currentPenalizedDays += penaltyDays;
+      count++;
+
+      if (count > 100) break; // Safety limit
+    }
+
+    return Math.max(1, count - 1); // Return the last count before hitting 0
+  };
+
+  const breakdown = calculateBreakdown();
+  const simulation = calculateSimulation();
+  const maxExceptions = calculateMaxExceptions();
+
+  return (
+    <ModalOverlay onClick={onClose}>
+      <ModalContent onClick={(e) => e.stopPropagation()}>
+        <ModalHeader>
+          <ModalTitle>
+            <Info size={24} />
+            Availability Score Calculation
+          </ModalTitle>
+          <CloseButton onClick={onClose}>
+            <X size={20} />
+          </CloseButton>
+        </ModalHeader>
+
+        <ModalBody>
+          <Section>
+            <SectionTitle>How it Works</SectionTitle>
+            <Description>
+              The availability score is calculated based on work exceptions during the current billing cycle
+              (19th to 18th of each month). The system uses a <strong>Fibonacci-like exponential penalty</strong> where
+              each subsequent exception has a progressively larger impact.
+            </Description>
+            <Description>
+              <strong>Current Billing Cycle:</strong> {workingDays} working days (excluding weekends)
+              <br />
+              <strong>Value per Working Day:</strong> {valuePerDay.toFixed(2)} points
+            </Description>
+
+            <FormulaBox>
+              <CodeLine><strong>Calculation Formula:</strong></CodeLine>
+              <CodeLine>valuePerDay = 100 / workingDaysInCycle</CodeLine>
+              <CodeLine>&nbsp;</CodeLine>
+              <CodeLine>For each exception (chronologically):</CodeLine>
+              <CodeLine>&nbsp;&nbsp;penaltyDays = exceptionWeight + currentPenalizedDays</CodeLine>
+              <CodeLine>&nbsp;&nbsp;penaltyScore = penaltyDays × valuePerDay</CodeLine>
+              <CodeLine>&nbsp;&nbsp;currentPenalizedDays += penaltyDays</CodeLine>
+              <CodeLine>&nbsp;</CodeLine>
+              <CodeLine><strong>Final Score:</strong></CodeLine>
+              <CodeLine>availabilityScore = max(0, 100 - totalPenalty)</CodeLine>
+            </FormulaBox>
+
+            <WarningBox>
+              <strong>⚠️ Important Notes</strong>
+              <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                <li><strong>Fibonacci-like Progression:</strong> Each exception has exponentially larger impact than the previous</li>
+                <li><strong>Compensation Opportunity:</strong> With admin approval and availability of tasks, you may get an opportunity to partially compensate for penalties received due to work exceptions. Note that compensation can never provide 100% recovery of the penalty.</li>
+              </ul>
+            </WarningBox>
+          </Section>
+
+          <Section>
+            <SectionTitle>Exception Type Weights</SectionTitle>
+            <Description>
+              Each exception type has a weight representing what percentage of a working day it impacts:
+            </Description>
+            <Table>
+              <Thead>
+                <tr>
+                  <Th>Exception Type</Th>
+                  <Th>Weight</Th>
+                  <Th>Impact</Th>
+                </tr>
+              </Thead>
+              <tbody>
+                {Object.entries(exceptionWeights)
+                  .filter(([type]) => type === 'FULL_DAY_LEAVE' || type === 'HALF_DAY_LEAVE')
+                  .map(([type, weight]) => (
+                    <Tr key={type}>
+                      <Td>{exceptionLabels[type]}</Td>
+                      <Td><WeightBadge>{weight.toFixed(2)}</WeightBadge></Td>
+                      <Td>{(weight * 100).toFixed(0)}% of a working day</Td>
+                    </Tr>
+                  ))}
+              </tbody>
+            </Table>
+          </Section>
+
+          {breakdown.length > 0 && (
+            <Section>
+              <SectionTitle>Your Current Penalties</SectionTitle>
+              <Table>
+                <Thead>
+                  <tr>
+                    <Th>#</Th>
+                    <Th>Type</Th>
+                    <Th>Date</Th>
+                    <Th>Penalty Days</Th>
+                    <Th>Penalty Score</Th>
+                  </tr>
+                </Thead>
+                <tbody>
+                  {breakdown.map((item) => (
+                    <Tr key={item.index}>
+                      <Td>{item.index}</Td>
+                      <Td>{exceptionLabels[item.type]}</Td>
+                      <Td>{new Date(item.date).toLocaleDateString()}</Td>
+                      <Td>{item.penaltyDays.toFixed(2)}</Td>
+                      <Td>-{item.penaltyScore.toFixed(2)}</Td>
+                    </Tr>
+                  ))}
+                </tbody>
+              </Table>
+            </Section>
+          )}
+
+          <Section>
+            <SectionTitle>
+              <Activity size={18} />
+              Penalty Calculator
+            </SectionTitle>
+            <Description>
+              Simulate how exceptions would impact your availability score:
+            </Description>
+            <CalculatorSection>
+              <FormRow>
+                <FormGroup>
+                  <Label>Exception Type</Label>
+                  <Select
+                    value={calculatorType}
+                    onChange={(e) => setCalculatorType(e.target.value)}
+                  >
+                    {Object.entries(exceptionLabels)
+                      .filter(([value]) => value === 'FULL_DAY_LEAVE' || value === 'HALF_DAY_LEAVE')
+                      .map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                  </Select>
+                </FormGroup>
+                <FormGroup>
+                  <Label>Number of Exceptions (max: {maxExceptions})</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max={maxExceptions}
+                    value={Math.min(calculatorCount, maxExceptions)}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value) || 1;
+                      setCalculatorCount(Math.min(value, maxExceptions));
+                    }}
+                  />
+                </FormGroup>
+              </FormRow>
+
+              <ResultBox>
+                <ResultLabel>Simulated Availability Score</ResultLabel>
+                <ResultValue score={simulation.score}>
+                  {simulation.score.toFixed(1)}/100
+                </ResultValue>
+                <ResultLabel style={{ marginTop: '8px' }}>
+                  Total Penalty: -{simulation.totalPenalty.toFixed(2)} points
+                </ResultLabel>
+              </ResultBox>
+            </CalculatorSection>
+          </Section>
+        </ModalBody>
+      </ModalContent>
+    </ModalOverlay>
+  );
+};

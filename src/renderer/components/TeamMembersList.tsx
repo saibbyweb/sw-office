@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
 import styled from 'styled-components';
 import { IoWifi, IoVideocam } from 'react-icons/io5';
+import { Info } from 'react-feather';
+import { AvailabilityScoreInfoModal } from './modals/AvailabilityScoreInfoModal';
 
 const MemberList = styled.div`
-  padding: 0 16px;
+  padding: 0 16px 16px 16px;
 `;
 
 const MemberItem = styled.div<{
@@ -36,6 +39,51 @@ const MemberItem = styled.div<{
   }
 
   gap: 10px;
+`;
+
+const MemberInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+`;
+
+const MemberName = styled.div`
+  font-size: 14px;
+  font-weight: 500;
+`;
+
+const ScoreContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+`;
+
+const Score = styled.span<{ score: number }>`
+  font-size: 12px;
+  color: ${props => {
+    if (props.score >= 90) return '#10b981';
+    if (props.score >= 75) return '#f59e0b';
+    return '#ef4444';
+  }};
+  font-weight: 600;
+`;
+
+const InfoButton = styled.button`
+  background: none;
+  border: none;
+  color: ${props => props.theme.colors.text}60;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: ${props => props.theme.colors.text};
+  }
 `;
 
 const MemberAvatar = styled.div<{ src?: string }>`
@@ -102,6 +150,12 @@ interface Break {
   endTime: string | null;
 }
 
+interface WorkException {
+  id: string;
+  type: string;
+  date: string;
+}
+
 interface User {
   id: string;
   name: string;
@@ -110,6 +164,9 @@ interface User {
     id: string;
     breaks?: Break[];
   } | null;
+  availabilityScore?: number;
+  workingDaysInCycle?: number;
+  workExceptions?: WorkException[];
 }
 
 interface TeamMembersListProps {
@@ -127,43 +184,81 @@ export const TeamMembersList: React.FC<TeamMembersListProps> = ({
   onMemberClick,
   onCallUser,
 }) => {
-  return (
-    <MemberList>
-      {users.map((user: User) => {
-        const isOnBreak = user.activeSession?.breaks?.some((breakItem: Break) => !breakItem.endTime);
-        const isConnected = connectedUsers.includes(user.id);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
-        return (
-          <MemberItem
-            key={user.id}
-            isActive={!!user.activeSession}
-            isOnBreak={!!isOnBreak}
-            onClick={() => onMemberClick?.(user.id)}
-          >
-            <MemberAvatar src={user.avatarUrl}>
-              {!user.avatarUrl && user.name.charAt(0).toUpperCase()}
-              <StatusDot
-                isActive={!!user.activeSession}
-                isOnBreak={!!isOnBreak}
-              />
-            </MemberAvatar>
-            {user.name}
-            {isConnected && (
-              <ConnectedIndicator title="User is online">
-                <IoWifi size={16} color="#7AFFB2" />
-              </ConnectedIndicator>
-            )}
-            {user.id !== currentUserId && isConnected && onCallUser && (
-              <CallButton
-                onClick={(e) => onCallUser(user.id, e)}
-                title="Start video call"
-              >
-                <IoVideocam size={18} />
-              </CallButton>
-            )}
-          </MemberItem>
-        );
-      })}
-    </MemberList>
+  return (
+    <>
+      <MemberList>
+        {users.map((user: User) => {
+          const isOnBreak = user.activeSession?.breaks?.some((breakItem: Break) => !breakItem.endTime);
+          const isConnected = connectedUsers.includes(user.id);
+
+          return (
+            <MemberItem
+              key={user.id}
+              isActive={!!user.activeSession}
+              isOnBreak={!!isOnBreak}
+              onClick={() => onMemberClick?.(user.id)}
+            >
+              <MemberAvatar src={user.avatarUrl}>
+                {!user.avatarUrl && user.name.charAt(0).toUpperCase()}
+                <StatusDot
+                  isActive={!!user.activeSession}
+                  isOnBreak={!!isOnBreak}
+                />
+              </MemberAvatar>
+              <MemberInfo>
+                <MemberName>{user.name}</MemberName>
+                {user.availabilityScore !== undefined && (
+                  <ScoreContainer>
+                    <Score score={user.availabilityScore}>
+                      {user.availabilityScore.toFixed(1)}%
+                    </Score>
+                    <InfoButton
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedUser(user);
+                        setShowInfoModal(true);
+                      }}
+                      title="View availability score details"
+                    >
+                      <Info size={12} />
+                    </InfoButton>
+                  </ScoreContainer>
+                )}
+              </MemberInfo>
+              {isConnected && (
+                <ConnectedIndicator title="User is online">
+                  <IoWifi size={16} color="#7AFFB2" />
+                </ConnectedIndicator>
+              )}
+              {user.id !== currentUserId && isConnected && onCallUser && (
+                <CallButton
+                  onClick={(e) => onCallUser(user.id, e)}
+                  title="Start video call"
+                >
+                  <IoVideocam size={18} />
+                </CallButton>
+              )}
+            </MemberItem>
+          );
+        })}
+      </MemberList>
+
+      {selectedUser && showInfoModal && ReactDOM.createPortal(
+        <AvailabilityScoreInfoModal
+          isOpen={showInfoModal}
+          onClose={() => {
+            setShowInfoModal(false);
+            setSelectedUser(null);
+          }}
+          currentScore={selectedUser.availabilityScore || 0}
+          workingDays={selectedUser.workingDaysInCycle || 0}
+          exceptions={selectedUser.workExceptions || []}
+        />,
+        document.body
+      )}
+    </>
   );
 };

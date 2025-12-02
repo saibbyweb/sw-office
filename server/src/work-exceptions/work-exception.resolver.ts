@@ -43,6 +43,7 @@ export class WorkExceptionResolver {
     @Args('actualTime', { nullable: true }) actualTime?: string,
     @Args('reason', { nullable: true }) reason?: string,
     @Args('notes', { nullable: true }) notes?: string,
+    @Args('compensationDate', { nullable: true }) compensationDate?: string,
   ): Promise<any> {
     return this.workExceptionService.createWorkException(
       userId,
@@ -52,6 +53,7 @@ export class WorkExceptionResolver {
       actualTime ? new Date(actualTime) : undefined,
       reason,
       notes,
+      compensationDate ? new Date(compensationDate) : undefined,
     );
   }
 
@@ -84,6 +86,7 @@ export class WorkExceptionResolver {
     @Args('actualTime', { nullable: true }) actualTime?: string,
     @Args('reason', { nullable: true }) reason?: string,
     @Args('notes', { nullable: true }) notes?: string,
+    @Args('compensationDate', { nullable: true }) compensationDate?: string,
   ): Promise<any> {
     return this.workExceptionService.updateWorkException(
       id,
@@ -93,6 +96,7 @@ export class WorkExceptionResolver {
       actualTime ? new Date(actualTime) : undefined,
       reason,
       notes,
+      compensationDate ? new Date(compensationDate) : undefined,
     );
   }
 

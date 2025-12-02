@@ -255,7 +255,7 @@ export const GET_USER_SESSIONS = gql`
 
 export const TEAM_USERS_QUERY = gql`
   query GetTeamUsers {
-    getUsers {
+    getTeamUsers {
       id
       name
       email
@@ -272,6 +272,13 @@ export const TEAM_USERS_QUERY = gql`
           id
           endTime
         }
+      }
+      availabilityScore
+      workingDaysInCycle
+      workExceptions {
+        id
+        type
+        date
       }
     }
   }
@@ -440,6 +447,13 @@ export const GET_USER_PROFILE = gql`
         allottedTasks
         completedTasks
         inProgressTasks
+        availabilityScore
+        workingDaysInCycle
+      }
+      workExceptions {
+        id
+        type
+        date
       }
       activeSession {
         id

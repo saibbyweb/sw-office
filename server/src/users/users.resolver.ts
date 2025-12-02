@@ -13,6 +13,7 @@ import { User, Session } from 'src/generated-nestjs-typegraphql';
 import { UsersService } from './users.service';
 import { UpdateProfileInput } from './dto/update-profile.input';
 import { UserProfile } from './dto/user-profile.output';
+import { TeamUser } from './dto/team-user.output';
 
 interface RequestWithUser {
   user: {
@@ -42,6 +43,11 @@ export class UsersResolver {
   @UseGuards(JwtGuard)
   getUsers(): Promise<User[]> {
     return this.usersService.findAll();
+  }
+  @Query(() => [TeamUser])
+  @UseGuards(JwtGuard)
+  getTeamUsers(): Promise<TeamUser[]> {
+    return this.usersService.getTeamUsers();
   }
   @Query(() => UserProfile)
   @UseGuards(JwtGuard)

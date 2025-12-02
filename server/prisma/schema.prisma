@@ -200,6 +200,7 @@ enum ExceptionType {
   EMERGENCY_LEAVE
 }
 
+
 model WorkException {
   id            String        @id @default(auto()) @map("_id") @db.ObjectId
   userId        String        @db.ObjectId
@@ -215,11 +216,15 @@ model WorkException {
   reason        String?
   notes         String?       // Admin notes if needed
 
+  // Compensation tracking - the date the employee worked instead
+  compensationDate DateTime?   // When the employee worked to compensate for this exception
+
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
   @@map("work_exceptions")
 }
+
 
 model Task {
   id          String       @id @default(auto()) @map("_id") @db.ObjectId

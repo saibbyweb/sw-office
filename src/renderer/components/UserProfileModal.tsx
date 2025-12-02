@@ -1,9 +1,10 @@
 import React from 'react';
 import styled from 'styled-components';
 import { useQuery } from '@apollo/client';
-import { X, User as UserIcon, Clock, CheckCircle, TrendingUp, Calendar as CalendarIcon, List } from 'react-feather';
+import { X, User as UserIcon, Clock, CheckCircle, TrendingUp, Calendar as CalendarIcon, List, Award, Info } from 'react-feather';
 import { GET_USER_PROFILE, GET_USER_SESSION_DATES } from '../../graphql/queries';
 import { BillingCycleCalendar } from './common/BillingCycleCalendar';
+import { AvailabilityScoreInfoModal } from './modals/AvailabilityScoreInfoModal';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -256,6 +257,25 @@ const StatValue = styled.div`
   color: ${props => props.theme.colors.text};
 `;
 
+const InfoButton = styled.button`
+  background: none;
+  border: none;
+  color: ${props => props.theme.colors.text}60;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  margin-left: auto;
+
+  &:hover {
+    background: ${props => props.theme.colors.text}10;
+    color: ${props => props.theme.colors.primary};
+  }
+`;
+
 const Section = styled.div`
   margin-bottom: 32px;
 `;
@@ -394,6 +414,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
   const [currentTime, setCurrentTime] = React.useState(Date.now());
   const [activeTab, setActiveTab] = React.useState<'overview' | 'history'>('overview');
   const [currentCycleDate, setCurrentCycleDate] = React.useState(new Date());
+  const [showAvailabilityInfo, setShowAvailabilityInfo] = React.useState(false);
 
   const { cycleStart, cycleEnd } = React.useMemo(() =>
     getBillingCycle(currentCycleDate, 19),
@@ -622,6 +643,24 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
                   <StatValue>{user.statistics.inProgressTasks}</StatValue>
                 </StatInfo>
               </StatCard>
+              <StatCard>
+                <StatIcon color={user.statistics.availabilityScore >= 90 ? "#10b981" : user.statistics.availabilityScore >= 75 ? "#f59e0b" : "#ef4444"}>
+                  <Award size={20} />
+                </StatIcon>
+                <StatInfo>
+                  <StatLabel>Availability Score</StatLabel>
+                  <StatValue>{user.statistics.availabilityScore.toFixed(1)}/100</StatValue>
+                </StatInfo>
+                <InfoButton
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowAvailabilityInfo(true);
+                  }}
+                  title="View calculation details"
+                >
+                  <Info size={18} />
+                </InfoButton>
+              </StatCard>
             </StatsGrid>
           )}
 
@@ -678,6 +717,16 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
           )}
         </ModalContent>
       </ModalContainer>
+
+      {showAvailabilityInfo && user.statistics && (
+        <AvailabilityScoreInfoModal
+          isOpen={showAvailabilityInfo}
+          onClose={() => setShowAvailabilityInfo(false)}
+          currentScore={user.statistics.availabilityScore}
+          workingDays={user.statistics.workingDaysInCycle}
+          exceptions={user.workExceptions || []}
+        />
+      )}
     </ModalOverlay>
   );
 };

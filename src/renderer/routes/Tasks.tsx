@@ -16,12 +16,13 @@ import toast from 'react-hot-toast';
 import { useConnectedUsers } from '../../contexts/ConnectedUsersContext';
 
 const Container = styled.div`
-  min-height: 100vh;
+  height: 100vh;
   background: ${props => props.theme.colors.background};
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   color: ${props => props.theme.colors.text};
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 `;
 
 const MainLayout = styled.div`
@@ -2273,7 +2274,7 @@ export const Tasks: React.FC = () => {
   };
 
   const { connectedUsers } = useConnectedUsers();
-  const teamMembers = teamData?.getUsers || [];
+  const teamMembers = teamData?.getTeamUsers || [];
 
   return (
     <Container>

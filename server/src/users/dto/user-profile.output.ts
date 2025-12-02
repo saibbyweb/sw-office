@@ -1,5 +1,5 @@
 import { ObjectType, Field, Int, Float } from '@nestjs/graphql';
-import { User, Task, Session } from 'src/generated-nestjs-typegraphql';
+import { User, Task, Session, WorkException } from 'src/generated-nestjs-typegraphql';
 
 @ObjectType()
 export class UserStatistics {
@@ -11,6 +11,12 @@ export class UserStatistics {
 
   @Field(() => Int)
   inProgressTasks: number;
+
+  @Field(() => Float)
+  availabilityScore: number;
+
+  @Field(() => Int)
+  workingDaysInCycle: number;
 }
 
 @ObjectType()
@@ -53,4 +59,7 @@ export class UserProfile {
 
   @Field(() => Session, { nullable: true })
   activeSession?: Session;
+
+  @Field(() => [WorkException], { nullable: true })
+  workExceptions?: WorkException[];
 }

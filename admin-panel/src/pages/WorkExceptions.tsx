@@ -52,6 +52,7 @@ export default function WorkExceptions({
     actualTime: '',
     reason: '',
     notes: '',
+    compensationDate: '',
   });
 
   const { data: usersData } = useQuery(ADMIN_USERS_QUERY);
@@ -114,6 +115,7 @@ export default function WorkExceptions({
       actualTime: '',
       reason: '',
       notes: '',
+      compensationDate: '',
     });
   };
 
@@ -136,6 +138,7 @@ export default function WorkExceptions({
       date: formData.date,
       reason: formData.reason || undefined,
       notes: formData.notes || undefined,
+      compensationDate: formData.compensationDate || undefined,
     };
 
     if (isTimeBased) {
@@ -162,6 +165,7 @@ export default function WorkExceptions({
       actualTime: isTimeBased && exception.actualTime ? new Date(exception.actualTime).toISOString().split('T')[1].substring(0, 5) : '',
       reason: exception.reason || '',
       notes: exception.notes || '',
+      compensationDate: exception.compensationDate ? new Date(exception.compensationDate).toISOString().split('T')[0] : '',
     });
     setShowCreateModal(true);
   };
@@ -335,6 +339,15 @@ export default function WorkExceptions({
                     </div>
                   )}
 
+                  {exception.compensationDate && (
+                    <div className="flex items-center gap-2 text-sm bg-green-50 p-2 rounded-lg border border-green-200">
+                      <FiCalendar className="w-3.5 h-3.5 text-green-600" />
+                      <span className="text-green-700 font-medium">
+                        Compensated on: {new Date(exception.compensationDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
+
                   {exception.reason && (
                     <p className="text-xs text-gray-600 mt-2 p-2 bg-white/50 rounded-lg">
                       <span className="font-medium">Reason:</span> {exception.reason}
@@ -470,6 +483,20 @@ export default function WorkExceptions({
                     </div>
                   </div>
                 )}
+
+                {/* Compensation Date */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Compensation Date <span className="text-gray-400 text-xs">(optional)</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.compensationDate}
+                    onChange={(e) => setFormData({ ...formData, compensationDate: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">The date when the employee worked to compensate for this exception</p>
+                </div>
 
                 {/* Reason */}
                 <div>

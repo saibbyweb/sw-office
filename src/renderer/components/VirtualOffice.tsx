@@ -1027,11 +1027,11 @@ export const VirtualOffice: React.FC = () => {
   };
 
   const updateChairPositions = async () => {
-    if (!teamData?.getUsers || !sceneRef.current) return;
+    if (!teamData?.getTeamUsers || !sceneRef.current) return;
 
-    console.log('Updating chair positions for users:', teamData.getUsers);
-    
-    const users = teamData.getUsers;
+    console.log('Updating chair positions for users:', teamData.getTeamUsers);
+
+    const users = teamData.getTeamUsers;
     const spacing = 6; // Increased spacing for better visual separation
     const tableWidth = 30;
     
@@ -1627,7 +1627,7 @@ export const VirtualOffice: React.FC = () => {
   useEffect(() => {
     let cleanup: (() => void) | undefined;
 
-    if (!loading && teamData?.getUsers) {
+    if (!loading && teamData?.getTeamUsers) {
       console.log('Data loaded, setting up scene');
       setupScene().then((cleanupFn) => {
         if (cleanupFn) cleanup = cleanupFn;
@@ -1834,7 +1834,7 @@ export const VirtualOffice: React.FC = () => {
             {isACOn ? 'Turn off AC' : 'Turn on AC'}
           </ACControlButton>
           <TeamMembersList
-            users={teamData?.getUsers || []}
+            users={teamData?.getTeamUsers || []}
             connectedUsers={connectedUsers}
             currentUserId={userData?.me?.id}
             onMemberClick={handleMemberClick}

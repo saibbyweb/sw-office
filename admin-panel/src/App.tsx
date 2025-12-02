@@ -75,7 +75,6 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-
       {/* HR Routes */}
       <Route
         path="/hr"

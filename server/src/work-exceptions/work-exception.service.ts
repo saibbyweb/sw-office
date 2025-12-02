@@ -14,6 +14,7 @@ export class WorkExceptionService {
     actualTime?: Date,
     reason?: string,
     notes?: string,
+    compensationDate?: Date,
   ) {
     return this.prisma.workException.create({
       data: {
@@ -24,6 +25,7 @@ export class WorkExceptionService {
         actualTime,
         reason,
         notes,
+        compensationDate,
       },
       include: {
         user: true,
@@ -81,6 +83,7 @@ export class WorkExceptionService {
     actualTime?: Date,
     reason?: string,
     notes?: string,
+    compensationDate?: Date,
   ) {
     const data: any = {};
 
@@ -90,6 +93,7 @@ export class WorkExceptionService {
     if (actualTime !== undefined) data.actualTime = actualTime;
     if (reason !== undefined) data.reason = reason;
     if (notes !== undefined) data.notes = notes;
+    if (compensationDate !== undefined) data.compensationDate = compensationDate;
 
     return this.prisma.workException.update({
       where: { id },
