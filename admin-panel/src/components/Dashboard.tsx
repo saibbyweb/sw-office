@@ -1,4 +1,4 @@
-import { FiUsers, FiGitBranch, FiBarChart2, FiUserPlus, FiCheckSquare, FiCalendar } from 'react-icons/fi';
+import { FiUsers, FiGitBranch, FiBarChart2, FiUserPlus, FiCheckSquare, FiCalendar, FiAward } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 
 const pages = [
@@ -33,6 +33,14 @@ const pages = [
     icon: FiCalendar,
     gradient: 'from-rose-600 to-pink-600',
     bgGradient: 'from-rose-500/20 to-pink-500/20',
+  },
+  {
+    title: 'Daily Output Score',
+    description: 'Score daily performance and track productivity',
+    path: '/daily-output-score',
+    icon: FiAward,
+    gradient: 'from-indigo-600 to-purple-600',
+    bgGradient: 'from-indigo-500/20 to-purple-500/20',
   },
   {
     title: 'Workflow View',

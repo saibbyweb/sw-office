@@ -64,6 +64,8 @@ model User {
   taskAssignments Task[] @relation("TaskAssignedTo")
   taskApprovals Task[] @relation("TaskApprovedBy")
   workExceptions WorkException[] @relation("UserWorkExceptions")
+  dailyOutputScores DailyOutputScore[] @relation("UserDailyOutputScores")
+  assignedScores DailyOutputScore[] @relation("AssignedScores")
 
   @@map("users")
 }
@@ -82,6 +84,7 @@ model Session {
   breaks         Break[]
   workLogs       WorkLog[]
   segments       Segment[]
+  completedTasks Task[]        @relation("TaskCompletedInSession")
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
@@ -254,26 +257,66 @@ model Task {
   startedDate         DateTime?
   completedDate       DateTime?
   dueDate             DateTime?
-  
+
+  // Completion tracking - for daily output score
+  completedSessionId  String?  @db.ObjectId
+  completedSession    Session? @relation("TaskCompletedInSession", fields: [completedSessionId], references: [id])
+
   // Evidence & Quality
   prLinks             String[]
   commitLinks         String[]
   screenshots         String[]
-  
+
   // Production Bug Tracking
   causedProductionBug Boolean  @default(false)
   productionBugPenalty Int     @default(0)
   relatedBugTaskId    String?  @db.ObjectId // If this task is fixing a production bug
-  
+
   // Admin Control
   rejectionReason     String?
   adminNotes          String?
-  
+
   // Relations
   projectId           String?  @db.ObjectId
   project             Project? @relation("projectTasks", fields: [projectId], references: [id])
-  
+
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
+  // @@map("tasks")
+}
+
+// Daily Output Score - Admin assigns a score (0-10) for each user each day
+model DailyOutputScore {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+
+  // User being scored
+  userId      String   @db.ObjectId
+  user        User     @relation("UserDailyOutputScores", fields: [userId], references: [id])
+
+  // The date for this score (stored as start of day UTC)
+  date        DateTime
+
+  // Performance score (0-10)
+  score       Float
+
+  // Breakdown of scoring factors
+  tasksCompleted      Int      @default(0)
+  taskDifficulty      Float?   // Average difficulty of tasks completed
+  initiativeCount     Int      @default(0) // Count of self-suggested tasks
+  qualityRating       Float?   // Admin's quality assessment (0-10)
+  availabilityRating  Float?   // Admin's availability assessment (0-10)
+
+  // Admin notes/feedback
+  notes       String?
+
+  // Who assigned this score
+  assignedById String?  @db.ObjectId
+  assignedBy   User?    @relation("AssignedScores", fields: [assignedById], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, date])
+  @@map("daily_output_scores")
 }

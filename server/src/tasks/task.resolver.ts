@@ -321,4 +321,13 @@ export class TaskResolver {
     const end = endDate ? new Date(endDate) : undefined;
     return this.taskService.getActivityStats(start, end);
   }
+
+  @Query(() => [Task])
+  @UseGuards(JwtGuard)
+  async tasksCompletedOnDate(
+    @Args('date') date: string,
+    @Args('userId', { nullable: true }) userId?: string,
+  ): Promise<Task[]> {
+    return this.taskService.getTasksCompletedOnDate(new Date(date), userId);
+  }
 }

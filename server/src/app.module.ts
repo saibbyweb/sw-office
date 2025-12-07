@@ -18,6 +18,7 @@ import { UploadModule } from './upload/upload.module';
 import { TaskModule } from './tasks/task.module';
 import { SlackModule } from './slack/slack.module';
 import { WorkExceptionModule } from './work-exceptions/work-exception.module';
+import { DailyOutputScoreModule } from './daily-output-score/daily-output-score.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { WorkExceptionModule } from './work-exceptions/work-exception.module';
     TaskModule,
     SlackModule,
     WorkExceptionModule,
+    DailyOutputScoreModule,
   ],
 })
 export class AppModule {}

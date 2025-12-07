@@ -65,6 +65,7 @@ export enum TaskScalarFieldEnum {
     startedDate = "startedDate",
     completedDate = "completedDate",
     dueDate = "dueDate",
+    completedSessionId = "completedSessionId",
     prLinks = "prLinks",
     commitLinks = "commitLinks",
     screenshots = "screenshots",
@@ -192,6 +193,22 @@ export enum BreakType {
     OTHER = "OTHER"
 }
 
+export enum DailyOutputScoreScalarFieldEnum {
+    id = "id",
+    userId = "userId",
+    date = "date",
+    score = "score",
+    tasksCompleted = "tasksCompleted",
+    taskDifficulty = "taskDifficulty",
+    initiativeCount = "initiativeCount",
+    qualityRating = "qualityRating",
+    availabilityRating = "availabilityRating",
+    notes = "notes",
+    assignedById = "assignedById",
+    createdAt = "createdAt",
+    updatedAt = "updatedAt"
+}
+
 export enum BreakScalarFieldEnum {
     id = "id",
     userId = "userId",
@@ -205,6 +222,7 @@ export enum BreakScalarFieldEnum {
 }
 
 registerEnumType(BreakScalarFieldEnum, { name: 'BreakScalarFieldEnum', description: undefined })
+registerEnumType(DailyOutputScoreScalarFieldEnum, { name: 'DailyOutputScoreScalarFieldEnum', description: undefined })
 registerEnumType(BreakType, { name: 'BreakType', description: undefined })
 registerEnumType(ExceptionType, { name: 'ExceptionType', description: undefined })
 registerEnumType(QueryMode, { name: 'QueryMode', description: undefined })
@@ -257,6 +275,40 @@ export class Break {
     segments?: Array<Segment>;
     @Field(() => BreakCount, {nullable:false})
     _count?: InstanceType<typeof BreakCount>;
+}
+
+@ObjectType()
+export class DailyOutputScore {
+    @Field(() => ID, {nullable:false})
+    id!: string;
+    @Field(() => String, {nullable:false})
+    userId!: string;
+    @Field(() => Date, {nullable:false})
+    date!: Date;
+    @Field(() => Float, {nullable:false})
+    score!: number;
+    @Field(() => Int, {defaultValue:0,nullable:false})
+    tasksCompleted!: number;
+    @Field(() => Float, {nullable:true})
+    taskDifficulty!: number | null;
+    @Field(() => Int, {defaultValue:0,nullable:false})
+    initiativeCount!: number;
+    @Field(() => Float, {nullable:true})
+    qualityRating!: number | null;
+    @Field(() => Float, {nullable:true})
+    availabilityRating!: number | null;
+    @Field(() => String, {nullable:true})
+    notes!: string | null;
+    @Field(() => String, {nullable:true})
+    assignedById!: string | null;
+    @Field(() => Date, {nullable:false})
+    createdAt!: Date;
+    @Field(() => Date, {nullable:false})
+    updatedAt!: Date;
+    @Field(() => User, {nullable:false})
+    user?: InstanceType<typeof User>;
+    @Field(() => User, {nullable:true})
+    assignedBy?: InstanceType<typeof User> | null;
 }
 
 @ObjectType()
@@ -335,6 +387,8 @@ export class SessionCount {
     workLogs?: number;
     @Field(() => Int, {nullable:false})
     segments?: number;
+    @Field(() => Int, {nullable:false})
+    completedTasks?: number;
 }
 
 @ObjectType()
@@ -369,6 +423,8 @@ export class Session {
     workLogs?: Array<WorkLog>;
     @Field(() => [Segment], {nullable:true})
     segments?: Array<Segment>;
+    @Field(() => [Task], {nullable:true})
+    completedTasks?: Array<Task>;
     @Field(() => SessionCount, {nullable:false})
     _count?: InstanceType<typeof SessionCount>;
 }
@@ -411,6 +467,8 @@ export class Task {
     completedDate!: Date | null;
     @Field(() => Date, {nullable:true})
     dueDate!: Date | null;
+    @Field(() => String, {nullable:true})
+    completedSessionId!: string | null;
     @Field(() => [String], {nullable:true})
     prLinks!: Array<string>;
     @Field(() => [String], {nullable:true})
@@ -439,6 +497,8 @@ export class Task {
     assignedTo?: InstanceType<typeof User> | null;
     @Field(() => User, {nullable:true})
     approvedBy?: InstanceType<typeof User> | null;
+    @Field(() => Session, {nullable:true})
+    completedSession?: InstanceType<typeof Session> | null;
     @Field(() => Project, {nullable:true})
     project?: InstanceType<typeof Project> | null;
 }
@@ -459,6 +519,10 @@ export class UserCount {
     taskApprovals?: number;
     @Field(() => Int, {nullable:false})
     workExceptions?: number;
+    @Field(() => Int, {nullable:false})
+    dailyOutputScores?: number;
+    @Field(() => Int, {nullable:false})
+    assignedScores?: number;
 }
 
 @ObjectType()
@@ -503,6 +567,10 @@ export class User {
     taskApprovals?: Array<Task>;
     @Field(() => [WorkException], {nullable:true})
     workExceptions?: Array<WorkException>;
+    @Field(() => [DailyOutputScore], {nullable:true})
+    dailyOutputScores?: Array<DailyOutputScore>;
+    @Field(() => [DailyOutputScore], {nullable:true})
+    assignedScores?: Array<DailyOutputScore>;
     @Field(() => UserCount, {nullable:false})
     _count?: InstanceType<typeof UserCount>;
 }

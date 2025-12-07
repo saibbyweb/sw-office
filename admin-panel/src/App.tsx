@@ -10,6 +10,7 @@ import Tasks from './pages/Tasks';
 import WorkflowView from './pages/WorkflowView';
 import Workflow from './pages/Workflow';
 import WorkExceptions from './pages/WorkExceptions';
+import DailyOutputScore from './pages/DailyOutputScore';
 
 function AppRoutes() {
   const { login } = useAuth();
@@ -72,6 +73,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <WorkExceptions />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/daily-output-score"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <DailyOutputScore />
           </ProtectedRoute>
         }
       />

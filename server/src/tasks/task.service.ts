@@ -74,7 +74,12 @@ export class TaskService {
     });
   }
 
-  async getAllTasks(skip?: number, take?: number, filters?: TaskFilters, userId?: string): Promise<PaginatedTasksResponse> {
+  async getAllTasks(
+    skip?: number,
+    take?: number,
+    filters?: TaskFilters,
+    userId?: string,
+  ): Promise<PaginatedTasksResponse> {
     const includeClause = {
       project: true,
       suggestedBy: true,
@@ -94,7 +99,9 @@ export class TaskService {
       if (filters.searchQuery) {
         whereClause.OR = [
           { title: { contains: filters.searchQuery, mode: 'insensitive' } },
-          { description: { contains: filters.searchQuery, mode: 'insensitive' } },
+          {
+            description: { contains: filters.searchQuery, mode: 'insensitive' },
+          },
           {
             assignedTo: {
               name: { contains: filters.searchQuery, mode: 'insensitive' },
@@ -135,19 +142,24 @@ export class TaskService {
     }
 
     // Get counts for tabs (always calculated regardless of filters)
-    const [myTasksCount, availableTasksCount, suggestedTasksCount] = await Promise.all([
-      // My tasks count (excluding completed/partially completed)
-      userId ? this.prisma.task.count({
-        where: {
-          assignedToId: userId,
-          status: { notIn: ['COMPLETED', 'PARTIALLY_COMPLETED'] }
-        }
-      }) : 0,
-      // Available tasks count (approved and unassigned)
-      this.prisma.task.count({ where: { status: 'APPROVED', assignedToId: { isSet: false } } }),
-      // Suggested tasks count
-      this.prisma.task.count({ where: { status: 'SUGGESTED' } }),
-    ]);
+    const [myTasksCount, availableTasksCount, suggestedTasksCount] =
+      await Promise.all([
+        // My tasks count (excluding completed/partially completed)
+        userId
+          ? this.prisma.task.count({
+              where: {
+                assignedToId: userId,
+                status: { notIn: ['COMPLETED', 'PARTIALLY_COMPLETED'] },
+              },
+            })
+          : 0,
+        // Available tasks count (approved and unassigned)
+        this.prisma.task.count({
+          where: { status: 'APPROVED', assignedToId: { isSet: false } },
+        }),
+        // Suggested tasks count
+        this.prisma.task.count({ where: { status: 'SUGGESTED' } }),
+      ]);
 
     // Get total count with filters
     const total = await this.prisma.task.count({ where: whereClause });
@@ -162,9 +174,8 @@ export class TaskService {
     });
 
     // Calculate if there are more results
-    const hasMore = skip !== undefined && take !== undefined
-      ? (skip + take) < total
-      : false;
+    const hasMore =
+      skip !== undefined && take !== undefined ? skip + take < total : false;
 
     return {
       tasks,
@@ -189,7 +200,9 @@ export class TaskService {
   }
 
   async assignTask(taskId: string, userId: string | null): Promise<Task> {
-    console.log(`[TaskService] assignTask called - taskId: ${taskId}, userId: ${userId}`);
+    console.log(
+      `[TaskService] assignTask called - taskId: ${taskId}, userId: ${userId}`,
+    );
 
     const task = await this.prisma.task.update({
       where: { id: taskId },
@@ -204,17 +217,24 @@ export class TaskService {
       },
     });
 
-    console.log(`[TaskService] Task updated, assignedTo:`, task.assignedTo ? {
-      id: task.assignedTo.id,
-      name: task.assignedTo.name,
-      slackUserId: task.assignedTo.slackUserId
-    } : 'none');
+    console.log(
+      `[TaskService] Task updated, assignedTo:`,
+      task.assignedTo
+        ? {
+            id: task.assignedTo.id,
+            name: task.assignedTo.name,
+            slackUserId: task.assignedTo.slackUserId,
+          }
+        : 'none',
+    );
 
     // Send real-time notification to the assigned user
     if (userId) {
       const socketId = this.socketManager.getUserSocketId(userId);
       if (socketId) {
-        console.log(`[TaskService] Sending task assignment notification to user ${userId}`);
+        console.log(
+          `[TaskService] Sending task assignment notification to user ${userId}`,
+        );
         this.notificationsGateway.sendNotificationToClient(socketId, {
           type: 'TASK_ASSIGNED',
           taskId: task.id,
@@ -223,12 +243,16 @@ export class TaskService {
           priority: task.priority,
         });
       } else {
-        console.log(`[TaskService] User ${userId} is not connected, skipping WebSocket notification`);
+        console.log(
+          `[TaskService] User ${userId} is not connected, skipping WebSocket notification`,
+        );
       }
 
       // Send Slack notification if user has Slack ID
       if (task.assignedTo?.slackUserId) {
-        console.log(`[TaskService] User has Slack ID: ${task.assignedTo.slackUserId}, sending Slack notification`);
+        console.log(
+          `[TaskService] User has Slack ID: ${task.assignedTo.slackUserId}, sending Slack notification`,
+        );
         try {
           const blocks = this.slackService.buildTaskAssignmentBlocks({
             title: task.title,
@@ -241,17 +265,27 @@ export class TaskService {
           await this.slackService.sendDirectMessage(
             task.assignedTo.slackUserId,
             `New task assigned: ${task.title}`, // Fallback text
-            blocks
+            blocks,
           );
-          console.log(`[TaskService] ✅ Successfully sent Slack notification to user ${userId}`);
+          console.log(
+            `[TaskService] ✅ Successfully sent Slack notification to user ${userId}`,
+          );
         } catch (error) {
-          console.error(`[TaskService] ❌ Failed to send Slack notification:`, error);
+          console.error(
+            `[TaskService] ❌ Failed to send Slack notification:`,
+            error,
+          );
           if (error.response) {
-            console.error(`[TaskService] Slack API response:`, error.response.data);
+            console.error(
+              `[TaskService] Slack API response:`,
+              error.response.data,
+            );
           }
         }
       } else {
-        console.log(`[TaskService] User does not have Slack ID set, skipping Slack notification`);
+        console.log(
+          `[TaskService] User does not have Slack ID set, skipping Slack notification`,
+        );
       }
     }
 
@@ -278,7 +312,9 @@ export class TaskService {
     if (task.suggestedById) {
       const socketId = this.socketManager.getUserSocketId(task.suggestedById);
       if (socketId) {
-        console.log(`[TaskService] Sending task approval notification to user ${task.suggestedById}`);
+        console.log(
+          `[TaskService] Sending task approval notification to user ${task.suggestedById}`,
+        );
         this.notificationsGateway.sendNotificationToClient(socketId, {
           type: 'TASK_APPROVED',
           taskId: task.id,
@@ -287,7 +323,9 @@ export class TaskService {
           priority: task.priority,
         });
       } else {
-        console.log(`[TaskService] User ${task.suggestedById} is not connected, skipping notification`);
+        console.log(
+          `[TaskService] User ${task.suggestedById} is not connected, skipping notification`,
+        );
       }
 
       // Send Slack notification if user has Slack ID
@@ -306,11 +344,16 @@ export class TaskService {
           await this.slackService.sendDirectMessage(
             task.suggestedBy.slackUserId,
             `Task approved: ${task.title}`, // Fallback text
-            blocks
+            blocks,
           );
-          console.log(`[TaskService] Sent Slack notification to user ${task.suggestedById}`);
+          console.log(
+            `[TaskService] Sent Slack notification to user ${task.suggestedById}`,
+          );
         } catch (error) {
-          console.error(`[TaskService] Failed to send Slack notification:`, error);
+          console.error(
+            `[TaskService] Failed to send Slack notification:`,
+            error,
+          );
         }
       }
     }
@@ -377,12 +420,17 @@ export class TaskService {
     const updateData: any = {};
 
     if (input.title !== undefined) updateData.title = input.title;
-    if (input.description !== undefined) updateData.description = input.description;
-    if (input.category !== undefined) updateData.category = input.category as any;
-    if (input.priority !== undefined) updateData.priority = input.priority as any;
+    if (input.description !== undefined)
+      updateData.description = input.description;
+    if (input.category !== undefined)
+      updateData.category = input.category as any;
+    if (input.priority !== undefined)
+      updateData.priority = input.priority as any;
     if (input.points !== undefined) updateData.points = input.points;
-    if (input.estimatedHours !== undefined) updateData.estimatedHours = input.estimatedHours;
-    if (input.projectId !== undefined) updateData.projectId = input.projectId || null;
+    if (input.estimatedHours !== undefined)
+      updateData.estimatedHours = input.estimatedHours;
+    if (input.projectId !== undefined)
+      updateData.projectId = input.projectId || null;
 
     return this.prisma.task.update({
       where: { id: taskId },
@@ -396,7 +444,11 @@ export class TaskService {
     });
   }
 
-  async editSuggestedTask(taskId: string, input: UpdateTaskInput, userId: string): Promise<Task> {
+  async editSuggestedTask(
+    taskId: string,
+    input: UpdateTaskInput,
+    userId: string,
+  ): Promise<Task> {
     // First check if the task exists and was suggested by this user
     const existingTask = await this.prisma.task.findUnique({
       where: { id: taskId },
@@ -419,12 +471,17 @@ export class TaskService {
     const updateData: any = {};
 
     if (input.title !== undefined) updateData.title = input.title;
-    if (input.description !== undefined) updateData.description = input.description;
-    if (input.category !== undefined) updateData.category = input.category as any;
-    if (input.priority !== undefined) updateData.priority = input.priority as any;
+    if (input.description !== undefined)
+      updateData.description = input.description;
+    if (input.category !== undefined)
+      updateData.category = input.category as any;
+    if (input.priority !== undefined)
+      updateData.priority = input.priority as any;
     if (input.points !== undefined) updateData.points = input.points;
-    if (input.estimatedHours !== undefined) updateData.estimatedHours = input.estimatedHours;
-    if (input.projectId !== undefined) updateData.projectId = input.projectId || null;
+    if (input.estimatedHours !== undefined)
+      updateData.estimatedHours = input.estimatedHours;
+    if (input.projectId !== undefined)
+      updateData.projectId = input.projectId || null;
 
     return this.prisma.task.update({
       where: { id: taskId },
@@ -466,12 +523,36 @@ export class TaskService {
   }
 
   async completeTask(taskId: string): Promise<Task> {
+    const task = await this.prisma.task.findUnique({
+      where: { id: taskId },
+      select: { assignedToId: true },
+    });
+
+    const updateData: any = {
+      status: 'COMPLETED',
+      completedDate: new Date(),
+    };
+
+    // Find user's active session to link the completion
+    if (task?.assignedToId) {
+      const activeSession = await this.prisma.session.findFirst({
+        where: {
+          userId: task.assignedToId,
+          status: 'ACTIVE',
+        },
+        orderBy: {
+          startTime: 'desc',
+        },
+      });
+
+      if (activeSession) {
+        updateData.completedSessionId = activeSession.id;
+      }
+    }
+
     return this.prisma.task.update({
       where: { id: taskId },
-      data: {
-        status: 'COMPLETED',
-        completedDate: new Date(),
-      },
+      data: updateData,
       include: {
         project: true,
         suggestedBy: true,
@@ -497,7 +578,11 @@ export class TaskService {
     });
   }
 
-  async updateTaskStatus(taskId: string, status: string, userId: string): Promise<Task> {
+  async updateTaskStatus(
+    taskId: string,
+    status: string,
+    userId: string,
+  ): Promise<Task> {
     const updateData: any = { status };
 
     // Set startedDate when status changes to IN_PROGRESS for the first time
@@ -512,9 +597,24 @@ export class TaskService {
       }
     }
 
-    // Set completedDate when status is COMPLETED or PARTIALLY_COMPLETED
+    // Set completedDate and completedSessionId when status is COMPLETED or PARTIALLY_COMPLETED
     if (status === 'COMPLETED' || status === 'PARTIALLY_COMPLETED') {
       updateData.completedDate = new Date();
+
+      // Find user's active session
+      const activeSession = await this.prisma.session.findFirst({
+        where: {
+          userId: userId,
+          status: 'ACTIVE',
+        },
+        orderBy: {
+          startTime: 'desc',
+        },
+      });
+
+      if (activeSession) {
+        updateData.completedSessionId = activeSession.id;
+      }
     }
 
     const task = await this.prisma.task.update({
@@ -540,7 +640,9 @@ export class TaskService {
       admins.forEach((admin) => {
         const socketId = this.socketManager.getUserSocketId(admin.id);
         if (socketId) {
-          console.log(`[TaskService] Sending task ${status.toLowerCase()} notification to admin ${admin.id}`);
+          console.log(
+            `[TaskService] Sending task ${status.toLowerCase()} notification to admin ${admin.id}`,
+          );
           this.notificationsGateway.sendNotificationToClient(socketId, {
             type: status === 'COMPLETED' ? 'TASK_COMPLETED' : 'TASK_COMPLETED',
             taskId: task.id,
@@ -581,6 +683,40 @@ export class TaskService {
     });
   }
 
+  async getTasksCompletedOnDate(date: Date, userId?: string): Promise<Task[]> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const whereClause: any = {
+      status: 'COMPLETED',
+      completedDate: {
+        gte: startOfDay,
+        lte: endOfDay,
+      },
+    };
+
+    if (userId) {
+      whereClause.assignedToId = userId;
+    }
+
+    return this.prisma.task.findMany({
+      where: whereClause,
+      include: {
+        project: true,
+        suggestedBy: true,
+        assignedTo: true,
+        approvedBy: true,
+        completedSession: true,
+      },
+      orderBy: {
+        completedDate: 'asc',
+      },
+    });
+  }
+
   async getActivityStats(startDate?: Date, endDate?: Date) {
     const whereClause: any = {
       status: 'COMPLETED',
@@ -605,8 +741,12 @@ export class TaskService {
 
     // Calculate stats
     const totalTasks = tasks.length;
-    const uniqueProjects = new Set(tasks.map(t => t.projectId).filter(Boolean));
-    const uniqueUsers = new Set(tasks.map(t => t.assignedToId).filter(Boolean));
+    const uniqueProjects = new Set(
+      tasks.map((t) => t.projectId).filter(Boolean),
+    );
+    const uniqueUsers = new Set(
+      tasks.map((t) => t.assignedToId).filter(Boolean),
+    );
 
     return {
       totalTasks,

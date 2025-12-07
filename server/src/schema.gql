@@ -65,6 +65,19 @@ enum CallStatus {
   REJECTED
 }
 
+input CreateDailyScoreInput {
+  assignedById: String
+  availabilityRating: Float
+  date: DateTime!
+  initiativeCount: Int
+  notes: String
+  qualityRating: Float
+  score: Float!
+  taskDifficulty: Float
+  tasksCompleted: Int
+  userId: String!
+}
+
 input CreateTaskInputType {
   category: String!
   description: String!
@@ -73,6 +86,24 @@ input CreateTaskInputType {
   priority: String!
   projectId: String
   title: String!
+}
+
+type DailyOutputScore {
+  assignedBy: User
+  assignedById: String
+  availabilityRating: Float
+  createdAt: DateTime!
+  date: DateTime!
+  id: ID!
+  initiativeCount: Int!
+  notes: String
+  qualityRating: Float
+  score: Float!
+  taskDifficulty: Float
+  tasksCompleted: Int!
+  updatedAt: DateTime!
+  user: User!
+  userId: String!
 }
 
 """
@@ -140,8 +171,10 @@ type Mutation {
   cleanupInconsistentBreaks: String!
   completeTask(taskId: String!): Task!
   createOnlineMeeting(endTime: String!, startTime: String!, subject: String!, userId: String!): OnlineMeeting!
+  createOrUpdateDailyScore(input: CreateDailyScoreInput!): DailyOutputScore!
   createTask(input: CreateTaskInputType!, userId: String): Task!
   createWorkException(actualTime: String, compensationDate: String, date: String!, notes: String, reason: String, scheduledTime: String, type: ExceptionType!, userId: String!): WorkException!
+  deleteDailyScore(id: String!): DailyOutputScore!
   deleteSuggestedTask(taskId: String!): Boolean!
   deleteWorkException(id: String!): WorkException!
   deleteWorkLog(id: ID!): Boolean!
@@ -167,6 +200,7 @@ type Mutation {
   testInitiateCall(callerId: String!, receiverId: String!): Call!
   unapproveTask(taskId: String!): Task!
   uncompleteTask(taskId: String!): Task!
+  updateDailyScore(id: String!, input: UpdateDailyScoreInput!): DailyOutputScore!
   updateProfile(input: UpdateProfileInput!): User!
   updateTask(input: UpdateTaskInputType!, taskId: String!): Task!
   updateTaskStatus(status: String!, taskId: String!, userId: String!): Task!
@@ -249,8 +283,12 @@ type Query {
   adminUserSessions(input: GetSessionsInput!, userId: ID!): [Session!]!
   adminUserWorkLogs(input: GetSessionsInput!, userId: ID!): [WorkLog!]!
   adminUsers: [User!]!
+  allDailyScores(endDate: String, startDate: String): [DailyOutputScore!]!
   checkUserInMeeting(userId: String!): MeetingStatus!
   completedTasks(endDate: String, startDate: String): [Task!]!
+  dailyScoreByUserAndDate(date: String!, userId: String!): DailyOutputScore
+  dailyScoresByDate(date: String!): [DailyOutputScore!]!
+  dailyScoresByUser(endDate: String, startDate: String, userId: String!): [DailyOutputScore!]!
   debugData: String!
   getAllUsers: [TeamsUser!]!
   getAllUsersWithPresence: [TeamsUserWithPresence!]!
@@ -270,6 +308,7 @@ type Query {
   sessionWorkLogs(sessionId: ID!): [WorkLog!]!
   task(id: String!): Task
   tasks(filters: TaskFiltersInput, skip: Int, take: Int, userId: String): PaginatedTasksResponse!
+  tasksCompletedOnDate(date: String!, userId: String): [Task!]!
   testSlackConnection: String!
   userSessionDates(input: GetSessionDatesInput!): [SessionDate!]!
   userSessions(input: GetSessionsInput!): [Session!]!
@@ -310,6 +349,7 @@ enum SegmentType {
 type Session {
   _count: SessionCount!
   breaks: [Break!]
+  completedTasks: [Task!]
   createdAt: DateTime!
   endTime: DateTime
   id: ID!
@@ -328,6 +368,7 @@ type Session {
 
 type SessionCount {
   breaks: Int!
+  completedTasks: Int!
   segments: Int!
   workLogs: Int!
 }
@@ -390,6 +431,8 @@ type Task {
   causedProductionBug: Boolean!
   commitLinks: [String!]
   completedDate: DateTime
+  completedSession: Session
+  completedSessionId: String
   createdAt: DateTime!
   description: String!
   dueDate: DateTime
@@ -488,6 +531,16 @@ type TeamsUserWithPresence {
   userPrincipalName: String!
 }
 
+input UpdateDailyScoreInput {
+  availabilityRating: Float
+  initiativeCount: Int
+  notes: String
+  qualityRating: Float
+  score: Float
+  taskDifficulty: Float
+  tasksCompleted: Int
+}
+
 input UpdateProfileInput {
   avatarUrl: String
   name: String!
@@ -514,10 +567,12 @@ type User {
   _count: UserCount!
   activeSession: Session
   archived: Boolean!
+  assignedScores: [DailyOutputScore!]
   avatarUrl: String
   breaks: [Break!]
   createdAt: DateTime!
   currentStatus: String
+  dailyOutputScores: [DailyOutputScore!]
   email: String!
   id: ID!
   isOnline: Boolean!
@@ -536,7 +591,9 @@ type User {
 }
 
 type UserCount {
+  assignedScores: Int!
   breaks: Int!
+  dailyOutputScores: Int!
   sessions: Int!
   taskApprovals: Int!
   taskAssignments: Int!
