@@ -152,7 +152,7 @@ export default function DailyOutputScore({
             <div className="flex items-center justify-between mb-3">
               <FiCheckCircle className="w-8 h-8 text-green-600" />
               <span className="text-2xl font-bold text-gray-800">
-                {userScores.reduce((sum, u) => sum + u.totalTasks, 0)}
+                {userScores.reduce((sum: number, u: UserDailyScore) => sum + u.totalTasks, 0)}
               </span>
             </div>
             <p className="text-sm text-gray-600 font-medium">Total Tasks</p>
@@ -163,7 +163,7 @@ export default function DailyOutputScore({
               <FiTrendingUp className="w-8 h-8 text-blue-600" />
               <span className="text-2xl font-bold text-gray-800">
                 {userScores.length > 0
-                  ? Math.round(userScores.reduce((sum, u) => sum + u.averageScore, 0) / userScores.length)
+                  ? Math.round(userScores.reduce((sum: number, u: UserDailyScore) => sum + u.averageScore, 0) / userScores.length)
                   : 0}
               </span>
             </div>
@@ -174,7 +174,7 @@ export default function DailyOutputScore({
             <div className="flex items-center justify-between mb-3">
               <FiStar className="w-8 h-8 text-amber-600" />
               <span className="text-2xl font-bold text-gray-800">
-                {userScores.filter(u => u.averageScore >= 120).length}
+                {userScores.filter((u: UserDailyScore) => u.averageScore >= 120).length}
               </span>
             </div>
             <p className="text-sm text-gray-600 font-medium">Top Performers</p>
@@ -203,18 +203,18 @@ export default function DailyOutputScore({
           ) : (
             <div className="space-y-6">
               {/* Pending Rating Section */}
-              {userScores.filter(u => u.scoredTasks < u.totalTasks).length > 0 && (
+              {userScores.filter((u: UserDailyScore) => u.scoredTasks < u.totalTasks).length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-3">
                     <div className="h-8 w-1 bg-gradient-to-b from-amber-500 to-orange-600 rounded-full" />
                     <h3 className="text-lg font-semibold text-gray-700">
-                      Pending Rating ({userScores.filter(u => u.scoredTasks < u.totalTasks).length})
+                      Pending Rating ({userScores.filter((u: UserDailyScore) => u.scoredTasks < u.totalTasks).length})
                     </h3>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {userScores
-                      .filter(u => u.scoredTasks < u.totalTasks)
-                      .map((userScore, index) => (
+                      .filter((u: UserDailyScore) => u.scoredTasks < u.totalTasks)
+                      .map((userScore: UserDailyScore, index: number) => (
                         <UserScoreCard
                           key={userScore.userId}
                           userScore={userScore}
@@ -229,18 +229,18 @@ export default function DailyOutputScore({
               )}
 
               {/* Fully Scored Section */}
-              {userScores.filter(u => u.scoredTasks === u.totalTasks).length > 0 && (
+              {userScores.filter((u: UserDailyScore) => u.scoredTasks === u.totalTasks).length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-3">
                     <div className="h-8 w-1 bg-gradient-to-b from-green-500 to-emerald-600 rounded-full" />
                     <h3 className="text-lg font-semibold text-gray-700">
-                      Fully Scored ({userScores.filter(u => u.scoredTasks === u.totalTasks).length})
+                      Fully Scored ({userScores.filter((u: UserDailyScore) => u.scoredTasks === u.totalTasks).length})
                     </h3>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {userScores
-                      .filter(u => u.scoredTasks === u.totalTasks)
-                      .map((userScore, index) => (
+                      .filter((u: UserDailyScore) => u.scoredTasks === u.totalTasks)
+                      .map((userScore: UserDailyScore, index: number) => (
                         <UserScoreCard
                           key={userScore.userId}
                           userScore={userScore}
