@@ -1671,6 +1671,7 @@ interface Task {
   startedDate?: string;
   completedDate?: string;
   suggestedById?: string;
+  score?: number;
   assignedTo?: {
     id: string;
     name: string;
@@ -2286,6 +2287,7 @@ export const Tasks: React.FC = () => {
         showBackButton
         onBack={() => navigate('/')}
         screenName="Tasks"
+        onUserClick={() => setSelectedProfileUserId(userData?.me?.id || null)}
       />
       <MainLayout>
         <Sidebar>
@@ -2561,6 +2563,18 @@ export const Tasks: React.FC = () => {
                             <Calendar size={10} />
                             Due {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                           </Badge>
+                        )}
+                        {/* Show score badge only in My Tasks history tab */}
+                        {activeTab === 'my' && myTasksTab === 'history' && (
+                          task.score !== null && task.score !== undefined ? (
+                            <Badge variant="success" style={{ fontWeight: 600 }}>
+                              Score: {task.score}
+                            </Badge>
+                          ) : (
+                            <Badge variant="warning" style={{ fontWeight: 600 }}>
+                              Unrated
+                            </Badge>
+                          )
                         )}
                       </div>
 

@@ -203,6 +203,7 @@ type Mutation {
   updateDailyScore(id: String!, input: UpdateDailyScoreInput!): DailyOutputScore!
   updateProfile(input: UpdateProfileInput!): User!
   updateTask(input: UpdateTaskInputType!, taskId: String!): Task!
+  updateTaskScore(score: Float!, taskId: String!): Task!
   updateTaskStatus(status: String!, taskId: String!, userId: String!): Task!
   updateWorkException(actualTime: String, compensationDate: String, date: String, id: String!, notes: String, reason: String, scheduledTime: String, type: ExceptionType): WorkException!
   updateWorkLog(input: UpdateWorkLogInput!): WorkLog!
@@ -286,6 +287,7 @@ type Query {
   allDailyScores(endDate: String, startDate: String): [DailyOutputScore!]!
   checkUserInMeeting(userId: String!): MeetingStatus!
   completedTasks(endDate: String, startDate: String): [Task!]!
+  completedTasksByUser(endDate: String, startDate: String, userId: String!): [Task!]!
   dailyScoreByUserAndDate(date: String!, userId: String!): DailyOutputScore
   dailyScoresByDate(date: String!): [DailyOutputScore!]!
   dailyScoresByUser(endDate: String, startDate: String, userId: String!): [DailyOutputScore!]!
@@ -310,6 +312,7 @@ type Query {
   tasks(filters: TaskFiltersInput, skip: Int, take: Int, userId: String): PaginatedTasksResponse!
   tasksCompletedOnDate(date: String!, userId: String): [Task!]!
   testSlackConnection: String!
+  userDailyScores(endDate: String, startDate: String): [UserDailyScore!]!
   userSessionDates(input: GetSessionDatesInput!): [SessionDate!]!
   userSessions(input: GetSessionsInput!): [Session!]!
   workException(id: String!): WorkException
@@ -446,6 +449,7 @@ type Task {
   projectId: String
   rejectionReason: String
   relatedBugTaskId: String
+  score: Int
   screenshots: [String!]
   startedDate: DateTime
   status: TaskStatus!
@@ -602,6 +606,14 @@ type UserCount {
   workLogs: Int!
 }
 
+type UserDailyScore {
+  averageScore: Int!
+  scoredTasks: Int!
+  totalTasks: Int!
+  userId: String!
+  userName: String!
+}
+
 type UserProfile {
   activeSession: Session
   avatarUrl: String
@@ -629,6 +641,9 @@ type UserStatistics {
   availabilityScore: Float!
   completedTasks: Int!
   inProgressTasks: Int!
+  monthlyOutputScore: Float!
+  totalRatedTasksInCycle: Int!
+  totalTasksInCycle: Int!
   workingDaysInCycle: Int!
 }
 

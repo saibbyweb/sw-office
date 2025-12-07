@@ -216,3 +216,60 @@ export const TASKS_COMPLETED_ON_DATE_QUERY = gql`
     }
   }
 `;
+
+export const USER_DAILY_SCORES_QUERY = gql`
+  query UserDailyScores($startDate: String, $endDate: String) {
+    userDailyScores(startDate: $startDate, endDate: $endDate) {
+      userId
+      userName
+      totalTasks
+      scoredTasks
+      averageScore
+    }
+  }
+`;
+
+export const COMPLETED_TASKS_BY_USER_QUERY = gql`
+  query CompletedTasksByUser($userId: String!, $startDate: String, $endDate: String) {
+    completedTasksByUser(userId: $userId, startDate: $startDate, endDate: $endDate) {
+      id
+      title
+      description
+      category
+      priority
+      status
+      points
+      score
+      estimatedHours
+      actualHours
+      completedDate
+      project {
+        id
+        name
+      }
+      assignedTo {
+        id
+        name
+        email
+      }
+      suggestedBy {
+        id
+        name
+        email
+      }
+      approvedBy {
+        id
+        name
+      }
+    }
+  }
+`;
+
+export const UPDATE_TASK_SCORE_MUTATION = gql`
+  mutation UpdateTaskScore($taskId: String!, $score: Float!) {
+    updateTaskScore(taskId: $taskId, score: $score) {
+      id
+      score
+    }
+  }
+`;

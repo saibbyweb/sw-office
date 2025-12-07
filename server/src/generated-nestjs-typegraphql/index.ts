@@ -66,6 +66,7 @@ export enum TaskScalarFieldEnum {
     completedDate = "completedDate",
     dueDate = "dueDate",
     completedSessionId = "completedSessionId",
+    score = "score",
     prLinks = "prLinks",
     commitLinks = "commitLinks",
     screenshots = "screenshots",
@@ -469,6 +470,8 @@ export class Task {
     dueDate!: Date | null;
     @Field(() => String, {nullable:true})
     completedSessionId!: string | null;
+    @Field(() => Int, {nullable:true})
+    score!: number | null;
     @Field(() => [String], {nullable:true})
     prLinks!: Array<string>;
     @Field(() => [String], {nullable:true})

@@ -233,6 +233,34 @@ export class UsersService {
       workingDaysInCycle,
     );
 
+    // Fetch completed tasks in current billing cycle for monthly output score
+    const completedTasksInCycle = await this.prisma.task.findMany({
+      where: {
+        assignedToId: userId,
+        status: 'COMPLETED',
+        completedDate: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      select: {
+        score: true,
+      },
+    });
+
+    // Calculate monthly output score
+    const totalTasksInCycle = completedTasksInCycle.length;
+    const ratedTasksInCycle = completedTasksInCycle.filter(
+      (task) => task.score !== null,
+    );
+    const totalRatedTasksInCycle = ratedTasksInCycle.length;
+
+    const monthlyOutputScore =
+      totalRatedTasksInCycle > 0
+        ? ratedTasksInCycle.reduce((sum, task) => sum + (task.score || 0), 0) /
+          totalRatedTasksInCycle
+        : 0;
+
     return {
       id: user.id,
       email: user.email,
@@ -252,6 +280,9 @@ export class UsersService {
         inProgressTasks,
         availabilityScore,
         workingDaysInCycle,
+        monthlyOutputScore,
+        totalTasksInCycle,
+        totalRatedTasksInCycle,
       },
     };
   }

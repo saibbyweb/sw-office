@@ -17,6 +17,15 @@ export class UserStatistics {
 
   @Field(() => Int)
   workingDaysInCycle: number;
+
+  @Field(() => Float)
+  monthlyOutputScore: number;
+
+  @Field(() => Int)
+  totalTasksInCycle: number;
+
+  @Field(() => Int)
+  totalRatedTasksInCycle: number;
 }
 
 @ObjectType()

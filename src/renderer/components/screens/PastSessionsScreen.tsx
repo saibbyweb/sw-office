@@ -7,6 +7,7 @@ import { BillingCycleCalendar } from '../common/BillingCycleCalendar';
 import { Button } from '../common';
 import { Header } from '../common/Header';
 import { Loader } from '../common/Loader';
+import { UserProfileModal } from '../UserProfileModal';
 import { gql } from '@apollo/client';
 
 const Container = styled.div`
@@ -606,6 +607,7 @@ export const PastSessionsScreen: React.FC<PastSessionsScreenProps> = ({ onBack }
   const [currentCycleDate, setCurrentCycleDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [selectedProfileUserId, setSelectedProfileUserId] = useState<string | null>(null);
   const today = new Date();
 
   const { cycleStart, cycleEnd } = useMemo(() =>
@@ -841,7 +843,7 @@ export const PastSessionsScreen: React.FC<PastSessionsScreenProps> = ({ onBack }
 
   return (
     <Container>
-      <Header 
+      <Header
         userName={userData?.me?.name}
         userEmail={userData?.me?.email}
         onProfileEdit={() => {}}
@@ -849,6 +851,7 @@ export const PastSessionsScreen: React.FC<PastSessionsScreenProps> = ({ onBack }
         showBackButton
         onBack={onBack}
         screenName="Session History"
+        onUserClick={() => setSelectedProfileUserId(userData?.me?.id || null)}
       />
 
       <MainContent>
@@ -882,6 +885,12 @@ export const PastSessionsScreen: React.FC<PastSessionsScreenProps> = ({ onBack }
           )}
         </CalendarWrapper>
       </MainContent>
+      {selectedProfileUserId && (
+        <UserProfileModal
+          userId={selectedProfileUserId}
+          onClose={() => setSelectedProfileUserId(null)}
+        />
+      )}
     </Container>
   );
 }; 

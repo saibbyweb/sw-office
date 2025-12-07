@@ -20,17 +20,17 @@ export class TaskMigrationService implements OnModuleInit {
   constructor(private readonly prisma: PrismaService) {}
 
   async onModuleInit() {
-    console.log('🔄 TaskMigrationService initialized');
-    console.log('🔍 Running task completion migration check...');
-
-    // Run migration in dry-run mode on startup
-    await this.runMigration(true, new Date('2025-12-05'));
+    // Migration already completed - commented out to prevent re-running on startup
+    // console.log('🔄 TaskMigrationService initialized');
+    // console.log('🔍 Running task completion migration...');
+    // console.log('⚠️  EXECUTING MIGRATION - Will update database!\n');
+    // await this.runMigration(false);
   }
 
   private async findSessionForTaskCompletion(
     userId: string,
     completedTimestamp: Date,
-  ): Promise<string | null> {
+  ): Promise<{ id: string; startTime: Date; endTime: Date | null } | null> {
     // Find sessions for this user that could have included this task completion
     const sessions = await this.prisma.session.findMany({
       where: {
@@ -52,9 +52,14 @@ export class TaskMigrationService implements OnModuleInit {
       orderBy: {
         startTime: 'desc',
       },
+      select: {
+        id: true,
+        startTime: true,
+        endTime: true,
+      },
     });
 
-    return sessions.length > 0 ? sessions[0].id : null;
+    return sessions.length > 0 ? sessions[0] : null;
   }
 
   async runMigration(
@@ -81,32 +86,66 @@ export class TaskMigrationService implements OnModuleInit {
     console.log(`📊 Completed tasks: ${completedTasksCount}\n`);
 
     // Build where clause
-    const whereClause: any = {
+    const baseWhereClause: any = {
       status: 'COMPLETED',
-      completedSessionId: { isSet: false },
       completedDate: { isSet: true },
     };
 
-    // If targetDate is provided, filter to that specific date
     if (targetDate) {
-      const startOfDay = new Date(targetDate);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(targetDate);
-      endOfDay.setHours(23, 59, 59, 999);
+      // Filter by completedDate (SAME AS DASHBOARD - uses local timezone)
+      // Dashboard does: new Date(startDate).setHours(0, 0, 0, 0)
+      // This uses local timezone, which then gets converted to UTC
+      const start = new Date(targetDate);
+      const end = new Date(targetDate);
+      const startOfDay = new Date(start.setHours(0, 0, 0, 0));
+      const endOfDay = new Date(end.setHours(23, 59, 59, 999));
 
-      whereClause.completedDate = {
+      baseWhereClause.completedDate = {
         gte: startOfDay,
         lte: endOfDay,
       };
 
-      console.log(`📅 Filtering for date: ${targetDate.toDateString()}\n`);
+      console.log(
+        `📅 Filtering for date (Local TZ): ${targetDate.toISOString().split('T')[0]}`,
+      );
+      console.log(
+        `   Start (Local): ${startOfDay.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}`,
+      );
+      console.log(`   Start (UTC): ${startOfDay.toISOString()}`);
+      console.log(
+        `   End (Local): ${endOfDay.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}`,
+      );
+      console.log(`   End (UTC): ${endOfDay.toISOString()}\n`);
     }
 
-    // console.log('🔎 Where clause:', JSON.stringify(whereClause, null, 2));
+    // First, check total completed tasks on this date (like Activity Tab)
+    const allCompletedTasks = await this.prisma.task.count({
+      where: baseWhereClause,
+    });
 
-    // Find all completed tasks that need migration
+    console.log(`📊 Total completed tasks on this date: ${allCompletedTasks}`);
+
+    // Check how many already have sessions
+    const tasksWithSessions = await this.prisma.task.count({
+      where: {
+        ...baseWhereClause,
+        completedSessionId: { isSet: true },
+      },
+    });
+
+    console.log(
+      `📊 Tasks already migrated (have session): ${tasksWithSessions}`,
+    );
+    console.log(
+      `📊 Tasks needing migration: ${allCompletedTasks - tasksWithSessions}\n`,
+    );
+
+    // Get tasks that need migration
     const completedTasks = await this.prisma.task.findMany({
-      where: whereClause,
+      where: {
+        ...baseWhereClause,
+        completedSessionId: { isSet: false },
+      },
       include: {
         assignedTo: {
           select: {
@@ -141,31 +180,71 @@ export class TaskMigrationService implements OnModuleInit {
 
         const completionTime = task.completedDate!;
 
-        const sessionId = await this.findSessionForTaskCompletion(
+        const session = await this.findSessionForTaskCompletion(
           task.assignedToId,
           completionTime,
         );
 
-        if (!sessionId) {
+        if (!session) {
+          // Format date in IST for logging
+          const toIST = (date: Date) => {
+            const options: Intl.DateTimeFormatOptions = {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: true,
+              timeZone: 'Asia/Kolkata',
+            };
+            return date.toLocaleString('en-IN', options);
+          };
+
           console.log(
-            `⚠️  No session found for task "${task.title}" (${task.id}) completed by ${task.assignedTo?.name || 'Unknown'} at ${completionTime.toISOString()}`,
+            `\n⚠️  NO SESSION FOUND:`,
+            `\n  Task ID: ${task.id}`,
+            `\n  Task Title: "${task.title}"`,
+            `\n  Assigned To: ${task.assignedTo?.name || 'Unknown'} (${task.assignedToId})`,
+            `\n  Completed Date (IST): ${toIST(completionTime)}`,
+            `\n  Completed Date (UTC): ${completionTime.toISOString()}`,
+            `\n  Status: ${task.status}`,
+            `\n  Category: ${task.category}`,
+            `\n  Points: ${task.points}\n`,
           );
           stats.noSessionFound++;
           continue;
         }
 
+        // Format date in IST (Asia/Kolkata timezone)
+        const toIST = (date: Date) => {
+          const options: Intl.DateTimeFormatOptions = {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true,
+            timeZone: 'Asia/Kolkata',
+          };
+          return date.toLocaleString('en-IN', options);
+        };
+
         console.log(
           `✓ Task: "${task.title}"`,
           `\n  User: ${task.assignedTo?.name || 'Unknown'}`,
-          `\n  Completed: ${completionTime.toLocaleString()}`,
-          `\n  Session: ${sessionId}`,
+          `\n  Task Completed: ${toIST(completionTime)}`,
+          `\n  Session Started: ${toIST(session.startTime)}`,
+          `\n  Session Ended: ${session.endTime ? toIST(session.endTime) : 'Still Active'}`,
+          `\n  Session ID: ${session.id}`,
         );
 
         if (!dryRun) {
           await this.prisma.task.update({
             where: { id: task.id },
             data: {
-              completedSessionId: sessionId,
+              completedSessionId: session.id,
             },
           });
           console.log(`  ✅ Updated in database\n`);
@@ -179,7 +258,7 @@ export class TaskMigrationService implements OnModuleInit {
           title: task.title,
           userId: task.assignedToId,
           completedDate: completionTime,
-          sessionId: sessionId,
+          sessionId: session.id,
         });
       } catch (error) {
         console.error(

@@ -20,6 +20,7 @@ import { Button, Notification, StatsCard } from '../components/common';
 import { Header } from '../components/common/Header';
 import { StartWorkModal, EndWorkModal, BreakModal, SwitchProjectModal, AddWorkLogModal, LogoutModal } from '../components/modals';
 import { WorkLogList } from '../components/work-logs/WorkLogList';
+import { UserProfileModal } from '../components/UserProfileModal';
 import { SegmentsList } from '../components/segments/SegmentsList';
 import { UpdateInfo } from '../components/common/UpdateInfo';
 import { theme } from '../styles/theme';
@@ -374,6 +375,7 @@ export const Home: React.FC = () => {
   const [appVersion, setAppVersion] = useState<string>('1.0.0');
   const client = useApolloClient();
   const [isProfileEditOpen, setIsProfileEditOpen] = useState(false);
+  const [selectedProfileUserId, setSelectedProfileUserId] = useState<string | null>(null);
 
   const { data: userData, loading: userLoading } = useQuery(ME, {
     onError: (error) => {
@@ -585,11 +587,12 @@ export const Home: React.FC = () => {
             {appVersion === '1.0.2' && <NewVersionBadge>NEW</NewVersionBadge>}
           </VersionTag>
 
-          <Header 
+          <Header
             userName={userData?.me.name}
             userEmail={userData?.me.email}
             onProfileEdit={() => setIsProfileEditOpen(true)}
             onLogout={() => setShowLogoutModal(true)}
+            onUserClick={() => setSelectedProfileUserId(userData?.me.id || null)}
           />
           <MainContent>
             <WelcomeContainer>
@@ -611,11 +614,12 @@ export const Home: React.FC = () => {
           <VersionTag>
             v{appVersion}
           </VersionTag>
-          <Header 
+          <Header
             userName={userData?.me.name}
             userEmail={userData?.me.email}
             onProfileEdit={() => setIsProfileEditOpen(true)}
             onLogout={() => setShowLogoutModal(true)}
+            onUserClick={() => setSelectedProfileUserId(userData?.me.id || null)}
           />
           <MainContent>
             <Section fullWidth>
@@ -759,6 +763,12 @@ export const Home: React.FC = () => {
         onClose={() => setIsProfileEditOpen(false)}
         isOpen={isProfileEditOpen}
       />
+      {selectedProfileUserId && (
+        <UserProfileModal
+          userId={selectedProfileUserId}
+          onClose={() => setSelectedProfileUserId(null)}
+        />
+      )}
     </AppContainer>
   );
 }; 

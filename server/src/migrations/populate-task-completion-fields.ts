@@ -92,21 +92,31 @@ async function migrateTaskCompletionFields(
     completedDate: { isSet: true }, // MongoDB: Must have a completedDate to use
   };
 
-  // If targetDate is provided, filter to that specific date
+  // If targetDate is provided, filter to that specific date (UTC-based)
   if (targetDate) {
-    const startOfDay = new Date(targetDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(targetDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    // Force UTC to match database timestamps
+    const startOfDay = new Date(Date.UTC(
+      targetDate.getFullYear(),
+      targetDate.getMonth(),
+      targetDate.getDate(),
+      0, 0, 0, 0
+    ));
+    const endOfDay = new Date(Date.UTC(
+      targetDate.getFullYear(),
+      targetDate.getMonth(),
+      targetDate.getDate(),
+      23, 59, 59, 999
+    ));
 
     whereClause.completedDate = {
       gte: startOfDay,
       lte: endOfDay,
     };
 
-    console.log(`📅 Filtering for date: ${targetDate.toDateString()}\n`);
+    console.log(`📅 Filtering for date (UTC): ${targetDate.toISOString().split('T')[0]}`);
+    console.log(`   Start: ${startOfDay.toISOString()}`);
+    console.log(`   End: ${endOfDay.toISOString()}\n`);
   }
-  prisma.task.findMany().then(console.log);
 
   // Find all completed tasks that don't have completedSessionId set yet
   const completedTasks = await prisma.task.findMany({

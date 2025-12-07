@@ -301,6 +301,7 @@ export const AVAILABLE_TASKS = gql`
         startedDate
         completedDate
         suggestedById
+        score
         assignedTo {
           id
           name
@@ -449,6 +450,9 @@ export const GET_USER_PROFILE = gql`
         inProgressTasks
         availabilityScore
         workingDaysInCycle
+        monthlyOutputScore
+        totalTasksInCycle
+        totalRatedTasksInCycle
       }
       workExceptions {
         id

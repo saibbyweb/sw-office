@@ -658,24 +658,39 @@ export class TaskService {
   }
 
   async getCompletedTasks(startDate?: Date, endDate?: Date): Promise<Task[]> {
-    const whereClause: any = {
-      status: 'COMPLETED',
-      completedDate: { not: null },
-    };
+    // First, fetch all sessions that started within the date range
+    const sessionWhereClause: any = {};
 
     if (startDate || endDate) {
-      whereClause.completedDate = {};
-      if (startDate) whereClause.completedDate.gte = startDate;
-      if (endDate) whereClause.completedDate.lte = endDate;
+      sessionWhereClause.startTime = {};
+      if (startDate) sessionWhereClause.startTime.gte = startDate;
+      if (endDate) sessionWhereClause.startTime.lte = endDate;
     }
 
+    const sessions = await this.prisma.session.findMany({
+      where: sessionWhereClause,
+      select: { id: true },
+    });
+
+    const sessionIds = sessions.map((s) => s.id);
+
+    // If no sessions found, return empty array
+    if (sessionIds.length === 0) {
+      return [];
+    }
+
+    // Now fetch all tasks completed in those sessions
     return this.prisma.task.findMany({
-      where: whereClause,
+      where: {
+        status: 'COMPLETED',
+        completedSessionId: { in: sessionIds },
+      },
       include: {
         project: true,
         suggestedBy: true,
         assignedTo: true,
         approvedBy: true,
+        completedSession: true,
       },
       orderBy: {
         completedDate: 'desc',
@@ -718,20 +733,37 @@ export class TaskService {
   }
 
   async getActivityStats(startDate?: Date, endDate?: Date) {
-    const whereClause: any = {
-      status: 'COMPLETED',
-      completedDate: { not: null },
-    };
+    // First, fetch all sessions that started within the date range
+    const sessionWhereClause: any = {};
 
     if (startDate || endDate) {
-      whereClause.completedDate = {};
-      if (startDate) whereClause.completedDate.gte = startDate;
-      if (endDate) whereClause.completedDate.lte = endDate;
+      sessionWhereClause.startTime = {};
+      if (startDate) sessionWhereClause.startTime.gte = startDate;
+      if (endDate) sessionWhereClause.startTime.lte = endDate;
     }
 
-    // Get all completed tasks in date range
+    const sessions = await this.prisma.session.findMany({
+      where: sessionWhereClause,
+      select: { id: true },
+    });
+
+    const sessionIds = sessions.map((s) => s.id);
+
+    // If no sessions found, return zero stats
+    if (sessionIds.length === 0) {
+      return {
+        totalTasks: 0,
+        totalProjects: 0,
+        totalUniqueUsers: 0,
+      };
+    }
+
+    // Get all completed tasks in those sessions
     const tasks = await this.prisma.task.findMany({
-      where: whereClause,
+      where: {
+        status: 'COMPLETED',
+        completedSessionId: { in: sessionIds },
+      },
       select: {
         id: true,
         projectId: true,
@@ -753,5 +785,169 @@ export class TaskService {
       totalProjects: uniqueProjects.size,
       totalUniqueUsers: uniqueUsers.size,
     };
+  }
+
+  async updateTaskScore(taskId: string, score: number): Promise<Task> {
+    // Validate score is between 0 and 200
+    if (score < 0 || score > 200) {
+      throw new Error('Score must be between 0 and 200');
+    }
+
+    return this.prisma.task.update({
+      where: { id: taskId },
+      data: { score },
+      include: {
+        project: true,
+        suggestedBy: true,
+        assignedTo: true,
+        approvedBy: true,
+        completedSession: true,
+      },
+    });
+  }
+
+  async getCompletedTasksByUser(
+    userId: string,
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<Task[]> {
+    // First, fetch all sessions that started within the date range for this user
+    const sessionWhereClause: any = { userId };
+
+    if (startDate || endDate) {
+      sessionWhereClause.startTime = {};
+      if (startDate) sessionWhereClause.startTime.gte = startDate;
+      if (endDate) sessionWhereClause.startTime.lte = endDate;
+    }
+
+    const sessions = await this.prisma.session.findMany({
+      where: sessionWhereClause,
+      select: { id: true },
+    });
+
+    const sessionIds = sessions.map((s) => s.id);
+
+    if (sessionIds.length === 0) {
+      return [];
+    }
+
+    return this.prisma.task.findMany({
+      where: {
+        status: 'COMPLETED',
+        assignedToId: userId,
+        completedSessionId: { in: sessionIds },
+      },
+      include: {
+        project: true,
+        suggestedBy: true,
+        assignedTo: true,
+        approvedBy: true,
+        completedSession: true,
+      },
+      orderBy: {
+        completedDate: 'desc',
+      },
+    });
+  }
+
+  async getUserDailyScores(
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<
+    Array<{
+      userId: string;
+      userName: string;
+      totalTasks: number;
+      scoredTasks: number;
+      averageScore: number;
+    }>
+  > {
+    // First, fetch all sessions that started within the date range
+    const sessionWhereClause: any = {};
+
+    if (startDate || endDate) {
+      sessionWhereClause.startTime = {};
+      if (startDate) sessionWhereClause.startTime.gte = startDate;
+      if (endDate) sessionWhereClause.startTime.lte = endDate;
+    }
+
+    const sessions = await this.prisma.session.findMany({
+      where: sessionWhereClause,
+      select: { id: true },
+    });
+
+    const sessionIds = sessions.map((s) => s.id);
+
+    if (sessionIds.length === 0) {
+      return [];
+    }
+
+    // Get all completed tasks in those sessions
+    const tasks = await this.prisma.task.findMany({
+      where: {
+        status: 'COMPLETED',
+        completedSessionId: { in: sessionIds },
+      },
+      select: {
+        id: true,
+        assignedToId: true,
+        score: true,
+        assignedTo: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    // Group by user and calculate stats
+    const userStatsMap = new Map<
+      string,
+      {
+        userId: string;
+        userName: string;
+        totalTasks: number;
+        totalScore: number;
+        scoredTasks: number;
+      }
+    >();
+
+    tasks.forEach((task) => {
+      if (!task.assignedToId || !task.assignedTo) return;
+
+      const userId = task.assignedToId;
+      const existing = userStatsMap.get(userId);
+      const taskScore = task.score ?? 100; // Use 100 as default for calculation if not scored
+      const isScored = task.score !== null && task.score !== undefined; // Scored if value exists in DB
+
+      if (existing) {
+        existing.totalTasks++;
+        if (isScored) {
+          existing.scoredTasks++;
+        }
+        existing.totalScore += taskScore;
+      } else {
+        userStatsMap.set(userId, {
+          userId,
+          userName: task.assignedTo.name,
+          totalTasks: 1,
+          totalScore: taskScore,
+          scoredTasks: isScored ? 1 : 0,
+        });
+      }
+    });
+
+    // Convert to array and calculate averages
+    return Array.from(userStatsMap.values()).map((stats) => ({
+      userId: stats.userId,
+      userName: stats.userName,
+      totalTasks: stats.totalTasks,
+      scoredTasks: stats.scoredTasks,
+      averageScore:
+        stats.totalTasks > 0
+          ? Math.round(stats.totalScore / stats.totalTasks)
+          : 0,
+    }));
   }
 }

@@ -23,6 +23,24 @@ class ActivityStats {
 }
 
 @ObjectType()
+class UserDailyScore {
+  @Field()
+  userId: string;
+
+  @Field()
+  userName: string;
+
+  @Field(() => Int)
+  totalTasks: number;
+
+  @Field(() => Int)
+  scoredTasks: number;
+
+  @Field(() => Int)
+  averageScore: number;
+}
+
+@ObjectType()
 class PaginatedTasksResponse {
   @Field(() => [Task])
   tasks: Task[];
@@ -329,5 +347,42 @@ export class TaskResolver {
     @Args('userId', { nullable: true }) userId?: string,
   ): Promise<Task[]> {
     return this.taskService.getTasksCompletedOnDate(new Date(date), userId);
+  }
+
+  @Mutation(() => Task)
+  async updateTaskScore(
+    @Args('taskId') taskId: string,
+    @Args('score') score: number,
+  ): Promise<Task> {
+    return this.taskService.updateTaskScore(taskId, score);
+  }
+
+  @Query(() => [Task])
+  async completedTasksByUser(
+    @Args('userId') userId: string,
+    @Args('startDate', { nullable: true }) startDate?: string,
+    @Args('endDate', { nullable: true }) endDate?: string,
+  ): Promise<Task[]> {
+    const start = startDate ? new Date(startDate) : undefined;
+    const end = endDate ? new Date(endDate) : undefined;
+    return this.taskService.getCompletedTasksByUser(userId, start, end);
+  }
+
+  @Query(() => [UserDailyScore])
+  async userDailyScores(
+    @Args('startDate', { nullable: true }) startDate?: string,
+    @Args('endDate', { nullable: true }) endDate?: string,
+  ): Promise<
+    Array<{
+      userId: string;
+      userName: string;
+      totalTasks: number;
+      scoredTasks: number;
+      averageScore: number;
+    }>
+  > {
+    const start = startDate ? new Date(startDate) : undefined;
+    const end = endDate ? new Date(endDate) : undefined;
+    return this.taskService.getUserDailyScores(start, end);
   }
 }

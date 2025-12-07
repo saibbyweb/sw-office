@@ -124,6 +124,15 @@ const UserInfo = styled.div`
   gap: ${props => props.theme.spacing.sm};
   color: ${props => props.theme.colors.text}80;
   font-size: 0.875rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: ${({ theme }) => theme.colors.primary}20;
+    color: ${props => props.theme.colors.text};
+  }
 `;
 
 interface HeaderProps {
@@ -134,6 +143,7 @@ interface HeaderProps {
   showBackButton?: boolean;
   onBack?: () => void;
   screenName?: string;
+  onUserClick?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -143,7 +153,8 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout,
   showBackButton,
   onBack,
-  screenName
+  screenName,
+  onUserClick
 }) => {
   const navigate = useNavigate();
 
@@ -173,7 +184,7 @@ export const Header: React.FC<HeaderProps> = ({
           Tasks
           <BetaBadge>Beta</BetaBadge>
         </TeamsButton>
-        <UserInfo>
+        <UserInfo onClick={onUserClick}>
           {userName} ({userEmail})
         </UserInfo>
         {/* <ProfileButton onClick={onProfileEdit}>

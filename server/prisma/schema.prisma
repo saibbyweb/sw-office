@@ -261,6 +261,7 @@ model Task {
   // Completion tracking - for daily output score
   completedSessionId  String?  @db.ObjectId
   completedSession    Session? @relation("TaskCompletedInSession", fields: [completedSessionId], references: [id])
+  score               Int?     // Admin-assigned score for task quality (0-200, null = not yet scored)
 
   // Evidence & Quality
   prLinks             String[]

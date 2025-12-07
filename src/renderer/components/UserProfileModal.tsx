@@ -649,7 +649,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
                 </StatIcon>
                 <StatInfo>
                   <StatLabel>Availability Score</StatLabel>
-                  <StatValue>{user.statistics.availabilityScore.toFixed(1)}/100</StatValue>
+                  <StatValue>{user.statistics.availabilityScore.toFixed(1)}</StatValue>
                 </StatInfo>
                 <InfoButton
                   onClick={(e) => {
@@ -660,6 +660,18 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
                 >
                   <Info size={18} />
                 </InfoButton>
+              </StatCard>
+              <StatCard>
+                <StatIcon color={user.statistics.monthlyOutputScore >= 150 ? "#10b981" : user.statistics.monthlyOutputScore >= 100 ? "#f59e0b" : "#ef4444"}>
+                  <Award size={20} />
+                </StatIcon>
+                <StatInfo>
+                  <StatLabel>Monthly Output Score</StatLabel>
+                  <StatValue>{user.statistics.monthlyOutputScore.toFixed(1)}</StatValue>
+                  <StatLabel style={{ fontSize: '11px', marginTop: '4px', opacity: 0.7 }}>
+                    {user.statistics.totalRatedTasksInCycle}/{user.statistics.totalTasksInCycle} tasks rated
+                  </StatLabel>
+                </StatInfo>
               </StatCard>
             </StatsGrid>
           )}
