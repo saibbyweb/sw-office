@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 import styled from 'styled-components';
 import { IoWifi, IoVideocam } from 'react-icons/io5';
-import { Info } from 'react-feather';
+import { Info, CheckCircle, Shield } from 'react-feather';
 import { AvailabilityScoreInfoModal } from './modals/AvailabilityScoreInfoModal';
 
 const MemberList = styled.div`
@@ -53,21 +53,30 @@ const MemberName = styled.div`
   font-weight: 500;
 `;
 
-const ScoreContainer = styled.div`
+const ScoresWrapper = styled.div`
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
   margin-top: 2px;
 `;
 
-const Score = styled.span<{ score: number }>`
-  font-size: 12px;
-  color: ${props => {
-    if (props.score >= 90) return '#10b981';
-    if (props.score >= 75) return '#f59e0b';
-    return '#ef4444';
-  }};
+const ScoreContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 3px;
+`;
+
+const ScoreItem = styled.div<{ color: string }>`
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: ${props => props.color};
   font-weight: 600;
+`;
+
+const Score = styled.span`
+  font-size: 11px;
 `;
 
 const InfoButton = styled.button`
@@ -165,6 +174,7 @@ interface User {
     breaks?: Break[];
   } | null;
   availabilityScore?: number;
+  stabilityScore?: number;
   workingDaysInCycle?: number;
   workExceptions?: WorkException[];
 }
@@ -210,23 +220,40 @@ export const TeamMembersList: React.FC<TeamMembersListProps> = ({
               </MemberAvatar>
               <MemberInfo>
                 <MemberName>{user.name}</MemberName>
-                {user.availabilityScore !== undefined && (
-                  <ScoreContainer>
-                    <Score score={user.availabilityScore}>
-                      {user.availabilityScore.toFixed(1)}%
-                    </Score>
-                    <InfoButton
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedUser(user);
-                        setShowInfoModal(true);
-                      }}
-                      title="View availability score details"
-                    >
-                      <Info size={12} />
-                    </InfoButton>
-                  </ScoreContainer>
-                )}
+                <ScoresWrapper>
+                  {user.availabilityScore !== undefined && (
+                    <ScoreContainer>
+                      <ScoreItem color={
+                        user.availabilityScore >= 90 ? '#10b981' :
+                        user.availabilityScore >= 75 ? '#f59e0b' : '#ef4444'
+                      }>
+                        <CheckCircle size={11} />
+                        <Score>{user.availabilityScore.toFixed(1)}%</Score>
+                      </ScoreItem>
+                      <InfoButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedUser(user);
+                          setShowInfoModal(true);
+                        }}
+                        title="View availability score details"
+                      >
+                        <Info size={11} />
+                      </InfoButton>
+                    </ScoreContainer>
+                  )}
+                  {user.stabilityScore !== undefined && (
+                    <ScoreContainer>
+                      <ScoreItem color={
+                        user.stabilityScore >= 90 ? '#8b5cf6' :
+                        user.stabilityScore >= 75 ? '#f59e0b' : '#ef4444'
+                      }>
+                        <Shield size={11} />
+                        <Score>{user.stabilityScore.toFixed(1)}%</Score>
+                      </ScoreItem>
+                    </ScoreContainer>
+                  )}
+                </ScoresWrapper>
               </MemberInfo>
               {isConnected && (
                 <ConnectedIndicator title="User is online">

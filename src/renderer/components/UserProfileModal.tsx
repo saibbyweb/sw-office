@@ -662,7 +662,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
                 </InfoButton>
               </StatCard>
               <StatCard>
-                <StatIcon color={user.statistics.stabilityScore >= 90 ? "#10b981" : user.statistics.stabilityScore >= 75 ? "#f59e0b" : "#ef4444"}>
+                <StatIcon color={user.statistics.stabilityScore >= 90 ? "#8b5cf6" : user.statistics.stabilityScore >= 75 ? "#f59e0b" : "#ef4444"}>
                   <Award size={20} />
                 </StatIcon>
                 <StatInfo>

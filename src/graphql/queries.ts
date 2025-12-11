@@ -274,11 +274,20 @@ export const TEAM_USERS_QUERY = gql`
         }
       }
       availabilityScore
+      stabilityScore
       workingDaysInCycle
       workExceptions {
         id
         type
         date
+      }
+      stabilityIncidents {
+        id
+        type
+        severity
+        title
+        description
+        incidentDate
       }
     }
   }

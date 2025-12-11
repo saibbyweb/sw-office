@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@apollo/client';
-import { FiArrowLeft, FiPlus, FiX, FiCalendar, FiEdit2, FiTrash2, FiFilter, FiUser, FiAlertTriangle, FiCheckCircle, FiExternalLink } from 'react-icons/fi';
+import { FiArrowLeft, FiPlus, FiX, FiCalendar, FiEdit2, FiTrash2, FiFilter, FiUser, FiAlertTriangle, FiCheckCircle } from 'react-icons/fi';
 import ResolveIncidentModal from '../components/StabilityIncidents/ResolveIncidentModal';
 import DeleteConfirmationModal from '../components/StabilityIncidents/DeleteConfirmationModal';
 import toast, { Toaster } from 'react-hot-toast';
@@ -86,7 +86,7 @@ export default function StabilityIncidents({
   if (startDate) filters.startDate = Math.floor(new Date(startDate).getTime() / 1000);
   if (endDate) filters.endDate = Math.floor(new Date(endDate).getTime() / 1000);
 
-  const { data: incidentsData, refetch: refetchIncidents } = useQuery(STABILITY_INCIDENTS_QUERY, {
+  const { data: incidentsData } = useQuery(STABILITY_INCIDENTS_QUERY, {
     variables: { filters: Object.keys(filters).length > 0 ? filters : undefined },
   });
 
@@ -104,6 +104,7 @@ export default function StabilityIncidents({
     refetchQueries: [{ query: STABILITY_INCIDENTS_QUERY, variables: { filters: Object.keys(filters).length > 0 ? filters : undefined } }],
     onCompleted: () => {
       toast.success('Incident updated successfully');
+      setShowCreateModal(false);
       setEditIncident(null);
       resetForm();
     },
@@ -254,7 +255,7 @@ export default function StabilityIncidents({
               isClearable
               placeholder="User"
               options={usersData?.adminUsers?.filter((u: any) => !u.archived).map((u: any) => ({ value: u.id, label: u.name }))}
-              onChange={(option) => setSelectedUser(option?.value || null)}
+              onChange={(option: any) => setSelectedUser(option?.value || null)}
             />
             <Select
               isClearable
@@ -304,9 +305,9 @@ export default function StabilityIncidents({
               incident={incident}
               index={index}
               onEdit={handleEdit}
-              onDelete={(incident) => setDeleteModalIncident(incident)}
-              onResolve={(incident) => setResolveModalIncident(incident)}
-              onUnresolve={(id) => unresolveIncident({ variables: { id } })}
+              onDelete={(incident: any) => setDeleteModalIncident(incident)}
+              onResolve={(incident: any) => setResolveModalIncident(incident)}
+              onUnresolve={(id: string) => unresolveIncident({ variables: { id } })}
             />
           ))}
           {incidents.length === 0 && (
@@ -455,9 +456,6 @@ function IncidentCard({ incident, index, onEdit, onDelete, onResolve, onUnresolv
 }
 
 function IncidentModal({ formData, setFormData, isEdit, users, tasks, onClose, onSubmit }: any) {
-  const [screenshotInput, setScreenshotInput] = useState('');
-  const [logLinkInput, setLogLinkInput] = useState('');
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
