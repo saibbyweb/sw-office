@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@apollo/client';
-import { FiArrowLeft, FiPlus, FiX, FiAlertCircle, FiCheckCircle, FiClock, FiTarget, FiZap, FiAward, FiUser, FiUserPlus, FiCheck, FiCornerUpLeft, FiEdit2, FiCalendar, FiActivity, FiUsers } from 'react-icons/fi';
+import { FiArrowLeft, FiPlus, FiX, FiAlertCircle, FiCheckCircle, FiClock, FiTarget, FiZap, FiAward, FiUser, FiUserPlus, FiCheck, FiCornerUpLeft, FiEdit2, FiCalendar, FiActivity, FiUsers, FiGithub, FiExternalLink } from 'react-icons/fi';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import Select from 'react-select';
@@ -78,6 +78,7 @@ interface Task {
   estimatedHours: number;
   actualHours?: number;
   completedDate?: string;
+  prLinks?: string[];
   project?: { id: string; name: string; };
   assignedTo?: User;
   suggestedBy?: User;
@@ -854,6 +855,30 @@ function TaskCard({
               <p className="text-xs text-blue-800">
                 <span className="text-blue-600 font-medium">Suggested by:</span> {task.suggestedBy.name}
               </p>
+            </div>
+          </div>
+        )}
+
+        {/* PR Links */}
+        {task.prLinks && task.prLinks.length > 0 && (
+          <div className="mb-3 px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg">
+            <div className="flex items-center gap-1.5 mb-1">
+              <FiGithub className="w-3.5 h-3.5 text-gray-600" />
+              <span className="text-xs font-medium text-gray-700">Pull Requests:</span>
+            </div>
+            <div className="space-y-1">
+              {task.prLinks.map((prLink, index) => (
+                <a
+                  key={index}
+                  href={prLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-xs text-violet-600 hover:text-violet-700 hover:underline group"
+                >
+                  <FiExternalLink className="w-3 h-3 flex-shrink-0" />
+                  <span className="truncate">{prLink}</span>
+                </a>
+              ))}
             </div>
           </div>
         )}

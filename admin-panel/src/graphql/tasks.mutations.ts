@@ -34,6 +34,7 @@ export const TASKS_QUERY = gql`
         estimatedHours
         actualHours
         completedDate
+        prLinks
         project {
           id
           name
@@ -149,6 +150,7 @@ export const COMPLETED_TASKS_QUERY = gql`
       estimatedHours
       actualHours
       completedDate
+      prLinks
       project {
         id
         name

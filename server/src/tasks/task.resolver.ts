@@ -8,6 +8,7 @@ import { JwtGuard } from '../auth/guards/jwt.guard';
 import { OpenAIService } from '../services/openai.service';
 import { ParseTaskInput } from './dto/parse-task.input';
 import { ParsedTaskOutput } from './dto/parsed-task.output';
+import { UpdatePrLinksInput } from './dto/update-pr-links.input';
 import { PrismaService } from '../database/prisma.service';
 
 @ObjectType()
@@ -384,5 +385,13 @@ export class TaskResolver {
     const start = startDate ? new Date(startDate) : undefined;
     const end = endDate ? new Date(endDate) : undefined;
     return this.taskService.getUserDailyScores(start, end);
+  }
+
+  @Mutation(() => Task)
+  @UseGuards(JwtGuard)
+  async updatePrLinks(
+    @Args('input') input: UpdatePrLinksInput,
+  ): Promise<Task> {
+    return this.taskService.updatePrLinks(input.taskId, input.prLinks);
   }
 }

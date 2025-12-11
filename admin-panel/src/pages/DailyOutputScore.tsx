@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@apollo/client';
-import { FiArrowLeft, FiCalendar, FiAward, FiTrendingUp, FiCheckCircle, FiUser, FiStar, FiX, FiUsers } from 'react-icons/fi';
+import { FiArrowLeft, FiCalendar, FiAward, FiTrendingUp, FiCheckCircle, FiUser, FiStar, FiX, FiUsers, FiGithub, FiExternalLink } from 'react-icons/fi';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -35,6 +35,7 @@ interface Task {
   estimatedHours: number;
   actualHours?: number;
   completedDate?: string;
+  prLinks?: string[];
   project?: { id: string; name: string };
   assignedTo?: { id: string; name: string; email: string };
   suggestedBy?: { id: string; name: string; email: string };
@@ -507,6 +508,30 @@ function TaskScoringModal({
                             </div>
                           </div>
                         </div>
+
+                        {/* PR Links */}
+                        {task.prLinks && task.prLinks.length > 0 && (
+                          <div className="mb-2 px-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg">
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <FiGithub className="w-3 h-3 text-gray-600" />
+                              <span className="text-xs font-medium text-gray-700">PRs:</span>
+                            </div>
+                            <div className="space-y-0.5">
+                              {task.prLinks.map((prLink, idx) => (
+                                <a
+                                  key={idx}
+                                  href={prLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1 text-xs text-violet-600 hover:text-violet-700 hover:underline"
+                                >
+                                  <FiExternalLink className="w-2.5 h-2.5 flex-shrink-0" />
+                                  <span className="truncate text-xs">{prLink}</span>
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
                         {/* Slider and Score in one row */}
                         <div className="flex items-center gap-3">

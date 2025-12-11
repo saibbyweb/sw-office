@@ -219,6 +219,7 @@ interface TaskCompletionConfirmModalProps {
   onConfirm: () => void;
   onCancel: () => void;
   loading?: boolean;
+  hasPrLinks?: boolean;
 }
 
 export const TaskCompletionConfirmModal: React.FC<TaskCompletionConfirmModalProps> = ({
@@ -227,6 +228,7 @@ export const TaskCompletionConfirmModal: React.FC<TaskCompletionConfirmModalProp
   onConfirm,
   onCancel,
   loading = false,
+  hasPrLinks = true,
 }) => {
   const isCompleted = completionType === 'COMPLETED';
   const variant = isCompleted ? 'completed' : 'partial';
@@ -261,6 +263,17 @@ export const TaskCompletionConfirmModal: React.FC<TaskCompletionConfirmModalProp
           <TaskTitle>{task.title}</TaskTitle>
           <TaskDescription>{task.description}</TaskDescription>
         </TaskInfo>
+
+        {!hasPrLinks && (
+          <InfoBox variant="partial">
+            <InfoIconWrapper variant="partial">
+              <AlertTriangle size={20} />
+            </InfoIconWrapper>
+            <InfoText>
+              <strong>Warning:</strong> No PR links have been attached to this task. This may affect your review and daily output score. Are you sure you want to continue?
+            </InfoText>
+          </InfoBox>
+        )}
 
         <InfoBox variant={variant}>
           <InfoIconWrapper variant={variant}>

@@ -833,7 +833,7 @@ export class TaskService {
 
     return this.prisma.task.findMany({
       where: {
-        status: 'COMPLETED',
+        status: { in: ['COMPLETED', 'PARTIALLY_COMPLETED'] },
         assignedToId: userId,
         completedSessionId: { in: sessionIds },
       },
@@ -885,7 +885,7 @@ export class TaskService {
     // Get all completed tasks in those sessions
     const tasks = await this.prisma.task.findMany({
       where: {
-        status: 'COMPLETED',
+        status: { in: ['COMPLETED', 'PARTIALLY_COMPLETED'] },
         completedSessionId: { in: sessionIds },
       },
       select: {
@@ -949,5 +949,28 @@ export class TaskService {
           ? Math.round(stats.totalScore / stats.totalTasks)
           : 0,
     }));
+  }
+
+  async updatePrLinks(taskId: string, prLinks: string[]): Promise<Task> {
+    // Validate that each link is a valid URL
+    const urlRegex = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+    for (const link of prLinks) {
+      if (!urlRegex.test(link)) {
+        throw new Error(`Invalid URL: ${link}`);
+      }
+    }
+
+    const task = await this.prisma.task.update({
+      where: { id: taskId },
+      data: { prLinks },
+      include: {
+        assignedTo: true,
+        suggestedBy: true,
+        approvedBy: true,
+        project: true,
+      },
+    });
+
+    return task as Task;
   }
 }

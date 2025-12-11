@@ -10,8 +10,9 @@ import { TaskCompletionConfirmModal } from '../components/modals/TaskCompletionC
 import { EditTaskModal } from '../components/modals/EditTaskModal';
 import { UserProfileModal } from '../components/UserProfileModal';
 import { TeamMembersList } from '../components/TeamMembersList';
-import { ME, AVAILABLE_TASKS, GET_PROJECTS, ASSIGN_TASK, UPDATE_TASK_STATUS, SELF_APPROVE_TASK, TEAM_USERS_QUERY, EDIT_SUGGESTED_TASK, DELETE_SUGGESTED_TASK } from '../../graphql/queries';
-import { CheckSquare, Clock, User, Calendar, AlertCircle, Briefcase, Search, Filter, X, Plus, UserPlus, Play, Check, Slash, AlertTriangle, ArrowLeft, RotateCcw, RefreshCw, CheckCircle, ChevronDown, ChevronUp, Edit2, Trash2 } from 'react-feather';
+import { PrLinksInput } from '../components/PrLinksInput';
+import { ME, AVAILABLE_TASKS, GET_PROJECTS, ASSIGN_TASK, UPDATE_TASK_STATUS, SELF_APPROVE_TASK, TEAM_USERS_QUERY, EDIT_SUGGESTED_TASK, DELETE_SUGGESTED_TASK, UPDATE_PR_LINKS, ACTIVE_SESSION } from '../../graphql/queries';
+import { CheckSquare, Clock, User, Calendar, AlertCircle, Briefcase, Search, Filter, X, Plus, UserPlus, Play, Check, Slash, AlertTriangle, ArrowLeft, RotateCcw, RefreshCw, CheckCircle, ChevronDown, ChevronUp, Edit2, Trash2, Link as LinkIcon, ExternalLink } from 'react-feather';
 import toast from 'react-hot-toast';
 import { useConnectedUsers } from '../../contexts/ConnectedUsersContext';
 
@@ -503,13 +504,9 @@ const SuggestTaskButton = styled.button`
 
 const TasksGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
   width: 100%;
-
-  @media (max-width: 1200px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -697,6 +694,81 @@ const ViewMoreButton = styled.button`
   &:hover {
     color: rgba(99, 102, 241, 1);
     text-decoration: underline;
+  }
+`;
+
+const PrLinksSection = styled.div`
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid ${props => props.theme.colors.text}10;
+`;
+
+const PrLinksHeader = styled.button`
+  background: none;
+  border: none;
+  color: ${props => props.theme.colors.text}80;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 0;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  justify-content: flex-start;
+
+  &:hover {
+    color: ${props => props.theme.colors.text};
+  }
+`;
+
+const PrLinksContent = styled.div`
+  margin-top: 12px;
+`;
+
+const SavePrLinksButton = styled.button`
+  margin-top: 12px;
+  padding: 8px 16px;
+  background: ${props => props.theme.colors.primary};
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    opacity: 0.9;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const PrLinksList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+`;
+
+const PrLinkItem = styled.a`
+  color: ${props => props.theme.colors.primary};
+  font-size: 0.75rem;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  transition: all 0.2s;
+
+  &:hover {
+    text-decoration: underline;
+    opacity: 0.8;
   }
 `;
 
@@ -1672,6 +1744,7 @@ interface Task {
   completedDate?: string;
   suggestedById?: string;
   score?: number;
+  prLinks?: string[];
   assignedTo?: {
     id: string;
     name: string;
@@ -1837,6 +1910,8 @@ export const Tasks: React.FC = () => {
   const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
   const [expandedDescriptions, setExpandedDescriptions] = useState<Set<string>>(new Set());
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
+  const [expandedPrLinks, setExpandedPrLinks] = useState<Set<string>>(new Set());
+  const [editingPrLinks, setEditingPrLinks] = useState<{ [taskId: string]: string[] }>({});
   const initialLoadRef = React.useRef(true);
   const userSwitchedTabRef = React.useRef(false);
   const tasksPerPage = 50;
@@ -1917,6 +1992,16 @@ export const Tasks: React.FC = () => {
     },
   });
 
+  const [updatePrLinks, { loading: updatePrLinksLoading }] = useMutation(UPDATE_PR_LINKS, {
+    refetchQueries: ['AvailableTasks'],
+    onCompleted: () => {
+      toast.success('PR links updated successfully!');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to update PR links');
+    },
+  });
+
   // Build filters object
   const filters = useMemo(() => {
     const filterObj: any = {};
@@ -1950,6 +2035,7 @@ export const Tasks: React.FC = () => {
     },
   });
   const { data: projectsData } = useQuery(GET_PROJECTS);
+  const { data: sessionData } = useQuery(ACTIVE_SESSION);
 
   const tasks: Task[] = tasksData?.tasks?.tasks || [];
   const totalTasks = tasksData?.tasks?.total || 0;
@@ -1960,6 +2046,7 @@ export const Tasks: React.FC = () => {
   const projects = projectsData?.projects || [];
   const currentUserId = userData?.me?.id;
   const totalPages = Math.ceil(totalTasks / tasksPerPage);
+  const hasActiveSession = sessionData?.activeSession?.status === 'ACTIVE';
 
   // Show loading indicator when search is being debounced
   const isSearching = searchQuery !== debouncedSearchQuery;
@@ -2186,6 +2273,68 @@ export const Tasks: React.FC = () => {
   const isDescriptionLong = (description: string) => {
     // Check if description is longer than approximately 2 lines (roughly 100 characters)
     return description && description.length > 100;
+  };
+
+  const togglePrLinksExpansion = (taskId: string, task: Task) => {
+    setExpandedPrLinks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(taskId)) {
+        newSet.delete(taskId);
+        // Clear editing state when collapsing
+        setEditingPrLinks(prev => {
+          const newState = { ...prev };
+          delete newState[taskId];
+          return newState;
+        });
+      } else {
+        newSet.add(taskId);
+        // Initialize editing state with current PR links
+        setEditingPrLinks(prev => ({
+          ...prev,
+          [taskId]: task.prLinks && task.prLinks.length > 0 ? [...task.prLinks] : [''],
+        }));
+      }
+      return newSet;
+    });
+  };
+
+  const handlePrLinksChange = (taskId: string, links: string[]) => {
+    setEditingPrLinks(prev => ({
+      ...prev,
+      [taskId]: links,
+    }));
+  };
+
+  const handleSavePrLinks = async (taskId: string) => {
+    const links = editingPrLinks[taskId] || [];
+    // Filter out empty links
+    const filteredLinks = links.filter(link => link.trim() !== '');
+
+    try {
+      await updatePrLinks({
+        variables: {
+          input: {
+            taskId,
+            prLinks: filteredLinks,
+          },
+        },
+      });
+
+      // Clear editing state and collapse
+      setEditingPrLinks(prev => {
+        const newState = { ...prev };
+        delete newState[taskId];
+        return newState;
+      });
+      setExpandedPrLinks(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(taskId);
+        return newSet;
+      });
+    } catch (error) {
+      // Error already handled by mutation onError
+      console.error('Failed to update PR links:', error);
+    }
   };
 
   const handleStatusUpdate = async (taskId: string, newStatus: string) => {
@@ -2588,12 +2737,17 @@ export const Tasks: React.FC = () => {
                             {/* Start Task Button (only show when APPROVED or not started) */}
                             {task.status === 'APPROVED' && (
                               <PrimaryActionButton
-                                disabled={updateStatusLoading}
+                                disabled={updateStatusLoading || !hasActiveSession}
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  if (!hasActiveSession) {
+                                    toast.error('You must have an active session to start a task');
+                                    return;
+                                  }
                                   handleStatusUpdate(task.id, 'IN_PROGRESS');
                                   setShowCompletionButtons(null);
                                 }}
+                                title={!hasActiveSession ? 'Start a session to work on tasks' : ''}
                               >
                                 <Play size={14} />
                                 Start Task
@@ -2605,35 +2759,50 @@ export const Tasks: React.FC = () => {
                               <SecondaryActionsRow>
                                 <SecondaryActionButton
                                   variant="reset"
-                                  disabled={updateStatusLoading}
+                                  disabled={updateStatusLoading || !hasActiveSession}
                                   onClick={(e) => {
                                     e.stopPropagation();
+                                    if (!hasActiveSession) {
+                                      toast.error('You must have an active session to reset a task');
+                                      return;
+                                    }
                                     handleStatusUpdate(task.id, 'APPROVED');
                                     setShowCompletionButtons(null);
                                   }}
+                                  title={!hasActiveSession ? 'Start a session to reset tasks' : ''}
                                 >
                                   <RotateCcw size={11} />
                                   Reset
                                 </SecondaryActionButton>
                                 <SecondaryActionButton
                                   variant="blocked"
-                                  disabled={updateStatusLoading}
+                                  disabled={updateStatusLoading || !hasActiveSession}
                                   onClick={(e) => {
                                     e.stopPropagation();
+                                    if (!hasActiveSession) {
+                                      toast.error('You must have an active session to mark a task as blocked');
+                                      return;
+                                    }
                                     handleStatusUpdate(task.id, 'BLOCKED');
                                     setShowCompletionButtons(null);
                                   }}
+                                  title={!hasActiveSession ? 'Start a session to mark tasks as blocked' : ''}
                                 >
                                   <Slash size={11} />
                                   I'm Blocked
                                 </SecondaryActionButton>
                                 <SecondaryActionButton
                                   variant="end"
-                                  disabled={updateStatusLoading}
+                                  disabled={updateStatusLoading || !hasActiveSession}
                                   onClick={(e) => {
                                     e.stopPropagation();
+                                    if (!hasActiveSession) {
+                                      toast.error('You must have an active session to complete a task');
+                                      return;
+                                    }
                                     setShowCompletionButtons(task.id);
                                   }}
+                                  title={!hasActiveSession ? 'Start a session to complete tasks' : ''}
                                 >
                                   <Check size={11} />
                                   End
@@ -2647,22 +2816,32 @@ export const Tasks: React.FC = () => {
                                 <CompletionButtonsRow>
                                   <CompletionButton
                                     variant="completed"
-                                    disabled={updateStatusLoading}
+                                    disabled={updateStatusLoading || !hasActiveSession}
                                     onClick={(e) => {
                                       e.stopPropagation();
+                                      if (!hasActiveSession) {
+                                        toast.error('You must have an active session to complete a task');
+                                        return;
+                                      }
                                       setTaskToComplete({ task, type: 'COMPLETED' });
                                     }}
+                                    title={!hasActiveSession ? 'Start a session to complete tasks' : ''}
                                   >
                                     <Check size={14} />
                                     Completed
                                   </CompletionButton>
                                   <CompletionButton
                                     variant="partial"
-                                    disabled={updateStatusLoading}
+                                    disabled={updateStatusLoading || !hasActiveSession}
                                     onClick={(e) => {
                                       e.stopPropagation();
+                                      if (!hasActiveSession) {
+                                        toast.error('You must have an active session to complete a task');
+                                        return;
+                                      }
                                       setTaskToComplete({ task, type: 'PARTIALLY_COMPLETED' });
                                     }}
+                                    title={!hasActiveSession ? 'Start a session to complete tasks' : ''}
                                   >
                                     <AlertTriangle size={14} />
                                     Partial
@@ -2684,12 +2863,17 @@ export const Tasks: React.FC = () => {
                             {task.status === 'BLOCKED' && (
                               <PrimaryActionButton
                                 // isActive={false}
-                                disabled={updateStatusLoading}
+                                disabled={updateStatusLoading || !hasActiveSession}
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  if (!hasActiveSession) {
+                                    toast.error('You must have an active session to resume a task');
+                                    return;
+                                  }
                                   handleStatusUpdate(task.id, 'IN_PROGRESS');
                                   setShowCompletionButtons(null);
                                 }}
+                                title={!hasActiveSession ? 'Start a session to resume tasks' : ''}
                               >
                                 <Play size={14} />
                                 Resume Task
@@ -2698,6 +2882,46 @@ export const Tasks: React.FC = () => {
                           </StatusButtonsContainer>
                         </div>
                       </TaskFooter>
+
+                      {/* PR Links Section - Show for IN_PROGRESS and COMPLETED tasks */}
+                      {(task.status === 'IN_PROGRESS' || task.status === 'COMPLETED' || task.status === 'PARTIALLY_COMPLETED') && (
+                        <PrLinksSection>
+                          <PrLinksHeader
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              togglePrLinksExpansion(task.id, task);
+                            }}
+                          >
+                            <LinkIcon size={14} />
+                            PR Links {task.prLinks && task.prLinks.length > 0 && `(${task.prLinks.length})`}
+                            {expandedPrLinks.has(task.id) ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                          </PrLinksHeader>
+
+                          {expandedPrLinks.has(task.id) && (
+                            <PrLinksContent>
+                              <PrLinksInput
+                                value={editingPrLinks[task.id] || task.prLinks || []}
+                                onChange={(links) => handlePrLinksChange(task.id, links)}
+                                disabled={updatePrLinksLoading}
+                                hasExistingLinks={task.prLinks && task.prLinks.length > 0}
+                                readOnly={task.status === 'COMPLETED' || task.status === 'PARTIALLY_COMPLETED'}
+                              />
+                              {/* Hide save button for completed tasks (history tab) */}
+                              {task.status === 'IN_PROGRESS' && (
+                                <SavePrLinksButton
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSavePrLinks(task.id);
+                                  }}
+                                  disabled={updatePrLinksLoading}
+                                >
+                                  {updatePrLinksLoading ? 'Saving...' : 'Save PR Links'}
+                                </SavePrLinksButton>
+                              )}
+                            </PrLinksContent>
+                          )}
+                        </PrLinksSection>
+                      )}
                     </TaskCard>
                   ))}
                   </TasksGrid>
@@ -3126,6 +3350,7 @@ export const Tasks: React.FC = () => {
           onConfirm={confirmTaskCompletion}
           onCancel={() => setTaskToComplete(null)}
           loading={updateStatusLoading}
+          hasPrLinks={taskToComplete.task.prLinks && taskToComplete.task.prLinks.length > 0}
         />
       )}
 

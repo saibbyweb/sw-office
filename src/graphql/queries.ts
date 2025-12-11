@@ -302,6 +302,7 @@ export const AVAILABLE_TASKS = gql`
         completedDate
         suggestedById
         score
+        prLinks
         assignedTo {
           id
           name
@@ -548,3 +549,11 @@ export const DELETE_SUGGESTED_TASK = gql`
     deleteSuggestedTask(taskId: $taskId)
   }
 `; 
+export const UPDATE_PR_LINKS = gql`
+  mutation UpdatePrLinks($input: UpdatePrLinksInput!) {
+    updatePrLinks(input: $input) {
+      id
+      prLinks
+    }
+  }
+`;

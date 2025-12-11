@@ -201,6 +201,7 @@ type Mutation {
   unapproveTask(taskId: String!): Task!
   uncompleteTask(taskId: String!): Task!
   updateDailyScore(id: String!, input: UpdateDailyScoreInput!): DailyOutputScore!
+  updatePrLinks(input: UpdatePrLinksInput!): Task!
   updateProfile(input: UpdateProfileInput!): User!
   updateTask(input: UpdateTaskInputType!, taskId: String!): Task!
   updateTaskScore(score: Float!, taskId: String!): Task!
@@ -543,6 +544,11 @@ input UpdateDailyScoreInput {
   score: Float
   taskDifficulty: Float
   tasksCompleted: Int
+}
+
+input UpdatePrLinksInput {
+  prLinks: [String!]!
+  taskId: String!
 }
 
 input UpdateProfileInput {
