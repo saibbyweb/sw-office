@@ -128,6 +128,64 @@ export class UsersService {
     return Math.round(score * 100) / 100;
   }
 
+  private calculateStabilityScore(incidents: any[]): number {
+    // If no incidents, perfect score
+    if (incidents.length === 0) {
+      return 100;
+    }
+
+    // Define penalty points based on incident type and severity
+    const severityWeights: Record<string, number> = {
+      CRITICAL: 15, // 15 points penalty
+      HIGH: 10, // 10 points penalty
+      MEDIUM: 6, // 6 points penalty
+      LOW: 3, // 3 points penalty
+      NEGLIGIBLE: 1, // 1 point penalty
+    };
+
+    const typeMultipliers: Record<string, number> = {
+      PRODUCTION_BUG: 1.5, // Most critical
+      SECURITY_VULNERABILITY: 1.5, // Most critical
+      DATA_CORRUPTION: 1.4,
+      DEPLOYMENT_FAILURE: 1.3,
+      BREAKING_CHANGE: 1.3,
+      HOTFIX_REQUIRED: 1.2,
+      REGRESSION: 1.2,
+      PERFORMANCE_ISSUE: 1.0,
+      TEST_FAILURE: 0.8,
+      CODE_QUALITY_ISSUE: 0.7,
+    };
+
+    // Sort incidents by date to process chronologically
+    const sortedIncidents = [...incidents].sort(
+      (a, b) => a.incidentDate - b.incidentDate,
+    );
+
+    let totalPenalty = 0;
+    let accumulatedPenalty = 0;
+
+    // Process each incident chronologically with compounding effect
+    sortedIncidents.forEach((incident) => {
+      const severityPenalty = severityWeights[incident.severity] || 5;
+      const typeMultiplier = typeMultipliers[incident.type] || 1.0;
+
+      // Calculate base penalty for this incident
+      const basePenalty = severityPenalty * typeMultiplier;
+
+      // Add compounding effect: each incident makes future incidents cost more
+      const compoundedPenalty = basePenalty + accumulatedPenalty * 0.1;
+
+      totalPenalty += compoundedPenalty;
+      accumulatedPenalty += basePenalty;
+    });
+
+    // Calculate final score (100 - penalty, capped between 0 and 100)
+    const score = Math.min(100, Math.max(0, 100 - totalPenalty));
+
+    // Round to 2 decimal places
+    return Math.round(score * 100) / 100;
+  }
+
   private getCurrentBillingCycle(): { startDate: Date; endDate: Date } {
     const now = new Date();
     const currentDay = now.getDate();
@@ -218,6 +276,34 @@ export class UsersService {
       },
     });
 
+    // Fetch stability incidents for current billing cycle
+    // Convert dates to epoch timestamps for comparison
+    const startEpoch = Math.floor(startDate.getTime() / 1000);
+    const endEpoch = Math.floor(endDate.getTime() / 1000);
+
+    const stabilityIncidents = await this.prisma.stabilityIncident.findMany({
+      where: {
+        userId: userId,
+        incidentDate: {
+          gte: startEpoch,
+          lte: endEpoch,
+        },
+      },
+      include: {
+        task: true,
+        resolutionTask: true,
+        reportedBy: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        incidentDate: 'asc',
+      },
+    });
+
     // Calculate task statistics
     const allottedTasks = user.taskAssignments.length;
     const completedTasks = user.taskAssignments.filter(
@@ -232,6 +318,9 @@ export class UsersService {
       workExceptions,
       workingDaysInCycle,
     );
+
+    // Calculate stability score
+    const stabilityScore = this.calculateStabilityScore(stabilityIncidents);
 
     // Fetch completed tasks in current billing cycle for monthly output score
     const completedTasksInCycle = await this.prisma.task.findMany({
@@ -274,11 +363,13 @@ export class UsersService {
       sessions: user.sessions,
       activeSession: user.sessions?.[0] || undefined,
       workExceptions: workExceptions,
+      stabilityIncidents: stabilityIncidents as any,
       statistics: {
         allottedTasks,
         completedTasks,
         inProgressTasks,
         availabilityScore,
+        stabilityScore,
         workingDaysInCycle,
         monthlyOutputScore,
         totalTasksInCycle,
@@ -314,6 +405,9 @@ export class UsersService {
     const { startDate, endDate } = this.getCurrentBillingCycle();
     const workingDaysInCycle = this.calculateWorkingDays(startDate, endDate);
 
+    const startEpoch = Math.floor(startDate.getTime() / 1000);
+    const endEpoch = Math.floor(endDate.getTime() / 1000);
+
     const teamUsers: TeamUser[] = await Promise.all(
       users.map(async (user) => {
         const workExceptions = await this.prisma.workException.findMany({
@@ -326,10 +420,28 @@ export class UsersService {
           },
         });
 
+        const stabilityIncidents = await this.prisma.stabilityIncident.findMany(
+          {
+            where: {
+              userId: user.id,
+              incidentDate: {
+                gte: startEpoch,
+                lte: endEpoch,
+              },
+            },
+            orderBy: {
+              incidentDate: 'asc',
+            },
+          },
+        );
+
         const availabilityScore = this.calculateAvailabilityScore(
           workExceptions,
           workingDaysInCycle,
         );
+
+        const stabilityScore =
+          this.calculateStabilityScore(stabilityIncidents);
 
         return {
           id: user.id,
@@ -340,8 +452,10 @@ export class UsersService {
           currentStatus: user.currentStatus || undefined,
           activeSession: user.sessions?.[0] || undefined,
           availabilityScore,
+          stabilityScore,
           workingDaysInCycle,
           workExceptions,
+          stabilityIncidents: stabilityIncidents as any,
         };
       }),
     );

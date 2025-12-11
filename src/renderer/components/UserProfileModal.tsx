@@ -662,6 +662,20 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
                 </InfoButton>
               </StatCard>
               <StatCard>
+                <StatIcon color={user.statistics.stabilityScore >= 90 ? "#10b981" : user.statistics.stabilityScore >= 75 ? "#f59e0b" : "#ef4444"}>
+                  <Award size={20} />
+                </StatIcon>
+                <StatInfo>
+                  <StatLabel>Stability Score</StatLabel>
+                  <StatValue>{user.statistics.stabilityScore.toFixed(1)}</StatValue>
+                  {user.stabilityIncidents && user.stabilityIncidents.length > 0 && (
+                    <StatLabel style={{ fontSize: '11px', marginTop: '4px', opacity: 0.7 }}>
+                      {user.stabilityIncidents.length} incident{user.stabilityIncidents.length !== 1 ? 's' : ''} this cycle
+                    </StatLabel>
+                  )}
+                </StatInfo>
+              </StatCard>
+              <StatCard>
                 <StatIcon color={user.statistics.monthlyOutputScore >= 150 ? "#10b981" : user.statistics.monthlyOutputScore >= 100 ? "#f59e0b" : "#ef4444"}>
                   <Award size={20} />
                 </StatIcon>

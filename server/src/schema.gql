@@ -78,6 +78,22 @@ input CreateDailyScoreInput {
   userId: String!
 }
 
+input CreateStabilityIncidentInput {
+  adminNotes: String
+  description: String!
+  incidentDate: Int!
+  logLinks: [String!]
+  preventionPlan: String
+  reportedById: String
+  rootCause: String
+  screenshots: [String!]
+  severity: String!
+  taskId: String
+  title: String!
+  type: String!
+  userId: String!
+}
+
 input CreateTaskInputType {
   category: String!
   description: String!
@@ -134,6 +150,38 @@ input GetSessionsInput {
   statuses: [SessionStatus!]
 }
 
+input IncidentFiltersInput {
+  endDate: Int
+  resolved: Boolean
+  searchQuery: String
+  severity: String
+  startDate: Int
+  taskId: String
+  type: String
+  userId: String
+}
+
+enum IncidentSeverity {
+  CRITICAL
+  HIGH
+  LOW
+  MEDIUM
+  NEGLIGIBLE
+}
+
+enum IncidentType {
+  BREAKING_CHANGE
+  CODE_QUALITY_ISSUE
+  DATA_CORRUPTION
+  DEPLOYMENT_FAILURE
+  HOTFIX_REQUIRED
+  PERFORMANCE_ISSUE
+  PRODUCTION_BUG
+  REGRESSION
+  SECURITY_VULNERABILITY
+  TEST_FAILURE
+}
+
 input LoginInput {
   email: String!
   password: String!
@@ -172,9 +220,11 @@ type Mutation {
   completeTask(taskId: String!): Task!
   createOnlineMeeting(endTime: String!, startTime: String!, subject: String!, userId: String!): OnlineMeeting!
   createOrUpdateDailyScore(input: CreateDailyScoreInput!): DailyOutputScore!
+  createStabilityIncident(input: CreateStabilityIncidentInput!): StabilityIncident!
   createTask(input: CreateTaskInputType!, userId: String): Task!
   createWorkException(actualTime: String, compensationDate: String, date: String!, notes: String, reason: String, scheduledTime: String, type: ExceptionType!, userId: String!): WorkException!
   deleteDailyScore(id: String!): DailyOutputScore!
+  deleteStabilityIncident(id: String!): Boolean!
   deleteSuggestedTask(taskId: String!): Boolean!
   deleteWorkException(id: String!): WorkException!
   deleteWorkLog(id: ID!): Boolean!
@@ -190,6 +240,7 @@ type Mutation {
   parseTaskFromNaturalLanguage(input: ParseTaskInput!): ParsedTaskOutput!
   register(input: RegisterInput!): AuthPayload!
   registerSeedUser: AuthPayload!
+  resolveStabilityIncident(id: String!, resolutionNotes: String!, resolutionTaskId: String, resolvedAt: Int!): StabilityIncident!
   selfApproveTask(taskId: String!): Task!
   startBreak(input: StartBreakInput!): Break!
   startSession(input: StartSessionInput!): Session!
@@ -200,9 +251,11 @@ type Mutation {
   testInitiateCall(callerId: String!, receiverId: String!): Call!
   unapproveTask(taskId: String!): Task!
   uncompleteTask(taskId: String!): Task!
+  unresolveStabilityIncident(id: String!): StabilityIncident!
   updateDailyScore(id: String!, input: UpdateDailyScoreInput!): DailyOutputScore!
   updatePrLinks(input: UpdatePrLinksInput!): Task!
   updateProfile(input: UpdateProfileInput!): User!
+  updateStabilityIncident(id: String!, input: UpdateStabilityIncidentInput!): StabilityIncident!
   updateTask(input: UpdateTaskInputType!, taskId: String!): Task!
   updateTaskScore(score: Float!, taskId: String!): Task!
   updateTaskStatus(status: String!, taskId: String!, userId: String!): Task!
@@ -309,6 +362,8 @@ type Query {
   projects: [Project!]!
   session(id: ID!): Session
   sessionWorkLogs(sessionId: ID!): [WorkLog!]!
+  stabilityIncident(id: String!): StabilityIncident
+  stabilityIncidents(filters: IncidentFiltersInput): [StabilityIncident!]!
   task(id: String!): Task
   tasks(filters: TaskFiltersInput, skip: Int, take: Int, userId: String): PaginatedTasksResponse!
   tasksCompletedOnDate(date: String!, userId: String): [Task!]!
@@ -409,6 +464,32 @@ type SlackUserProfile {
   real_name: String
 }
 
+type StabilityIncident {
+  adminNotes: String
+  createdAt: DateTime!
+  description: String!
+  id: ID!
+  incidentDate: Int!
+  logLinks: [String!]
+  preventionPlan: String
+  reportedBy: User
+  reportedById: String
+  resolutionNotes: String
+  resolutionTask: Task
+  resolutionTaskId: String
+  resolvedAt: Int
+  rootCause: String
+  screenshots: [String!]
+  severity: IncidentSeverity!
+  task: Task
+  taskId: String
+  title: String!
+  type: IncidentType!
+  updatedAt: DateTime!
+  user: User!
+  userId: String!
+}
+
 input StartBreakInput {
   sessionId: ID!
   type: BreakType!
@@ -424,6 +505,7 @@ input SwitchProjectInput {
 }
 
 type Task {
+  _count: TaskCount!
   actualHours: Float
   adminNotes: String
   approvedBy: User
@@ -442,6 +524,7 @@ type Task {
   dueDate: DateTime
   estimatedHours: Float!
   id: ID!
+  incidentResolutions: [StabilityIncident!]
   points: Int!
   prLinks: [String!]
   priority: TaskPriority!
@@ -452,6 +535,7 @@ type Task {
   relatedBugTaskId: String
   score: Int
   screenshots: [String!]
+  stabilityIncidents: [StabilityIncident!]
   startedDate: DateTime
   status: TaskStatus!
   suggestedBy: User
@@ -478,6 +562,11 @@ enum TaskCategory {
   RESEARCH
   TESTING_QA
   WEB_FRONTEND
+}
+
+type TaskCount {
+  incidentResolutions: Int!
+  stabilityIncidents: Int!
 }
 
 input TaskFiltersInput {
@@ -517,6 +606,8 @@ type TeamUser {
   id: String!
   isOnline: Boolean
   name: String!
+  stabilityIncidents: [StabilityIncident!]
+  stabilityScore: Float!
   workExceptions: [WorkException!]
   workingDaysInCycle: Int!
 }
@@ -556,6 +647,22 @@ input UpdateProfileInput {
   name: String!
 }
 
+input UpdateStabilityIncidentInput {
+  adminNotes: String
+  description: String
+  incidentDate: Int
+  logLinks: [String!]
+  preventionPlan: String
+  resolutionNotes: String
+  resolvedAt: Int
+  rootCause: String
+  screenshots: [String!]
+  severity: String
+  taskId: String
+  title: String
+  type: String
+}
+
 input UpdateTaskInputType {
   category: String
   description: String
@@ -588,10 +695,12 @@ type User {
   isOnline: Boolean!
   name: String!
   password: String!
+  reportedIncidents: [StabilityIncident!]
   role: UserRole!
   salaryINR: Int
   sessions: [Session!]
   slackUserId: String
+  stabilityIncidents: [StabilityIncident!]
   taskApprovals: [Task!]
   taskAssignments: [Task!]
   taskSuggestions: [Task!]
@@ -604,7 +713,9 @@ type UserCount {
   assignedScores: Int!
   breaks: Int!
   dailyOutputScores: Int!
+  reportedIncidents: Int!
   sessions: Int!
+  stabilityIncidents: Int!
   taskApprovals: Int!
   taskAssignments: Int!
   taskSuggestions: Int!
@@ -631,6 +742,7 @@ type UserProfile {
   name: String!
   role: String!
   sessions: [Session!]
+  stabilityIncidents: [StabilityIncident!]
   statistics: UserStatistics
   taskAssignments: [Task!]
   taskSuggestions: [Task!]
@@ -648,6 +760,7 @@ type UserStatistics {
   completedTasks: Int!
   inProgressTasks: Int!
   monthlyOutputScore: Float!
+  stabilityScore: Float!
   totalRatedTasksInCycle: Int!
   totalTasksInCycle: Int!
   workingDaysInCycle: Int!

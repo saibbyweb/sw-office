@@ -11,6 +11,7 @@ import WorkflowView from './pages/WorkflowView';
 import Workflow from './pages/Workflow';
 import WorkExceptions from './pages/WorkExceptions';
 import DailyOutputScore from './pages/DailyOutputScore';
+import StabilityIncidents from './pages/StabilityIncidents';
 
 function AppRoutes() {
   const { login } = useAuth();
@@ -81,6 +82,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <DailyOutputScore />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/stability-incidents"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <StabilityIncidents />
           </ProtectedRoute>
         }
       />

@@ -66,6 +66,8 @@ model User {
   workExceptions WorkException[] @relation("UserWorkExceptions")
   dailyOutputScores DailyOutputScore[] @relation("UserDailyOutputScores")
   assignedScores DailyOutputScore[] @relation("AssignedScores")
+  stabilityIncidents StabilityIncident[] @relation("UserStabilityIncidents")
+  reportedIncidents StabilityIncident[] @relation("ReportedStabilityIncidents")
 
   @@map("users")
 }
@@ -203,6 +205,27 @@ enum ExceptionType {
   EMERGENCY_LEAVE
 }
 
+enum IncidentSeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  NEGLIGIBLE
+}
+
+enum IncidentType {
+  PRODUCTION_BUG
+  SECURITY_VULNERABILITY
+  PERFORMANCE_ISSUE
+  DATA_CORRUPTION
+  DEPLOYMENT_FAILURE
+  BREAKING_CHANGE
+  TEST_FAILURE
+  CODE_QUALITY_ISSUE
+  HOTFIX_REQUIRED
+  REGRESSION
+}
+
 
 model WorkException {
   id            String        @id @default(auto()) @map("_id") @db.ObjectId
@@ -280,6 +303,8 @@ model Task {
   // Relations
   projectId           String?  @db.ObjectId
   project             Project? @relation("projectTasks", fields: [projectId], references: [id])
+  stabilityIncidents  StabilityIncident[] @relation("TaskStabilityIncidents")
+  incidentResolutions StabilityIncident[] @relation("IncidentResolutionTasks")
 
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -320,4 +345,52 @@ model DailyOutputScore {
 
   @@unique([userId, date])
   @@map("daily_output_scores")
+}
+
+model StabilityIncident {
+  id                String            @id @default(auto()) @map("_id") @db.ObjectId
+
+  // User who caused the incident
+  userId            String            @db.ObjectId
+  user              User              @relation("UserStabilityIncidents", fields: [userId], references: [id])
+
+  // Incident Details
+  type              IncidentType
+  severity          IncidentSeverity
+  title             String
+  description       String
+
+  // Related Task (optional - the task where this originated)
+  taskId            String?           @db.ObjectId
+  task              Task?             @relation("TaskStabilityIncidents", fields: [taskId], references: [id])
+
+  // Resolution
+  resolvedAt        Int?              // Epoch timestamp in seconds when resolved
+  resolutionNotes   String?           // How it was resolved
+  resolutionTaskId  String?           @db.ObjectId
+  resolutionTask    Task?             @relation("IncidentResolutionTasks", fields: [resolutionTaskId], references: [id])
+
+  // Root Cause Analysis
+  rootCause         String?
+  preventionPlan    String?
+
+  // Incident Date (when it occurred/was discovered) - epoch timestamp in seconds
+  incidentDate      Int
+
+  // Who reported/logged this incident
+  reportedById      String?           @db.ObjectId
+  reportedBy        User?             @relation("ReportedStabilityIncidents", fields: [reportedById], references: [id])
+
+  // Admin notes
+  adminNotes        String?
+
+  // Evidence
+  screenshots       String[]
+  logLinks          String[]
+
+  // Metadata
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@map("stability_incidents")
 }

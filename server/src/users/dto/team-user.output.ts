@@ -1,5 +1,5 @@
 import { ObjectType, Field, Float, Int } from '@nestjs/graphql';
-import { Session, WorkException } from 'src/generated-nestjs-typegraphql';
+import { Session, WorkException, StabilityIncident } from 'src/generated-nestjs-typegraphql';
 
 @ObjectType()
 export class TeamUser {
@@ -27,9 +27,15 @@ export class TeamUser {
   @Field(() => Float)
   availabilityScore: number;
 
+  @Field(() => Float)
+  stabilityScore: number;
+
   @Field(() => Int)
   workingDaysInCycle: number;
 
   @Field(() => [WorkException], { nullable: true })
   workExceptions?: WorkException[];
+
+  @Field(() => [StabilityIncident], { nullable: true })
+  stabilityIncidents?: StabilityIncident[];
 }

@@ -1,5 +1,5 @@
 import { ObjectType, Field, Int, Float } from '@nestjs/graphql';
-import { User, Task, Session, WorkException } from 'src/generated-nestjs-typegraphql';
+import { User, Task, Session, WorkException, StabilityIncident } from 'src/generated-nestjs-typegraphql';
 
 @ObjectType()
 export class UserStatistics {
@@ -14,6 +14,9 @@ export class UserStatistics {
 
   @Field(() => Float)
   availabilityScore: number;
+
+  @Field(() => Float)
+  stabilityScore: number;
 
   @Field(() => Int)
   workingDaysInCycle: number;
@@ -71,4 +74,7 @@ export class UserProfile {
 
   @Field(() => [WorkException], { nullable: true })
   workExceptions?: WorkException[];
+
+  @Field(() => [StabilityIncident], { nullable: true })
+  stabilityIncidents?: StabilityIncident[];
 }

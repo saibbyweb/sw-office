@@ -80,6 +80,28 @@ export enum TaskScalarFieldEnum {
     updatedAt = "updatedAt"
 }
 
+export enum StabilityIncidentScalarFieldEnum {
+    id = "id",
+    userId = "userId",
+    type = "type",
+    severity = "severity",
+    title = "title",
+    description = "description",
+    taskId = "taskId",
+    resolvedAt = "resolvedAt",
+    resolutionNotes = "resolutionNotes",
+    resolutionTaskId = "resolutionTaskId",
+    rootCause = "rootCause",
+    preventionPlan = "preventionPlan",
+    incidentDate = "incidentDate",
+    reportedById = "reportedById",
+    adminNotes = "adminNotes",
+    screenshots = "screenshots",
+    logLinks = "logLinks",
+    createdAt = "createdAt",
+    updatedAt = "updatedAt"
+}
+
 export enum SessionScalarFieldEnum {
     id = "id",
     userId = "userId",
@@ -177,6 +199,27 @@ export enum QueryMode {
     insensitive = "insensitive"
 }
 
+export enum IncidentType {
+    PRODUCTION_BUG = "PRODUCTION_BUG",
+    SECURITY_VULNERABILITY = "SECURITY_VULNERABILITY",
+    PERFORMANCE_ISSUE = "PERFORMANCE_ISSUE",
+    DATA_CORRUPTION = "DATA_CORRUPTION",
+    DEPLOYMENT_FAILURE = "DEPLOYMENT_FAILURE",
+    BREAKING_CHANGE = "BREAKING_CHANGE",
+    TEST_FAILURE = "TEST_FAILURE",
+    CODE_QUALITY_ISSUE = "CODE_QUALITY_ISSUE",
+    HOTFIX_REQUIRED = "HOTFIX_REQUIRED",
+    REGRESSION = "REGRESSION"
+}
+
+export enum IncidentSeverity {
+    CRITICAL = "CRITICAL",
+    HIGH = "HIGH",
+    MEDIUM = "MEDIUM",
+    LOW = "LOW",
+    NEGLIGIBLE = "NEGLIGIBLE"
+}
+
 export enum ExceptionType {
     FULL_DAY_LEAVE = "FULL_DAY_LEAVE",
     HALF_DAY_LEAVE = "HALF_DAY_LEAVE",
@@ -226,6 +269,8 @@ registerEnumType(BreakScalarFieldEnum, { name: 'BreakScalarFieldEnum', descripti
 registerEnumType(DailyOutputScoreScalarFieldEnum, { name: 'DailyOutputScoreScalarFieldEnum', description: undefined })
 registerEnumType(BreakType, { name: 'BreakType', description: undefined })
 registerEnumType(ExceptionType, { name: 'ExceptionType', description: undefined })
+registerEnumType(IncidentSeverity, { name: 'IncidentSeverity', description: undefined })
+registerEnumType(IncidentType, { name: 'IncidentType', description: undefined })
 registerEnumType(QueryMode, { name: 'QueryMode', description: undefined })
 registerEnumType(SegmentType, { name: 'SegmentType', description: undefined })
 registerEnumType(SessionStatus, { name: 'SessionStatus', description: undefined })
@@ -237,6 +282,7 @@ registerEnumType(UserRole, { name: 'UserRole', description: undefined })
 registerEnumType(ProjectScalarFieldEnum, { name: 'ProjectScalarFieldEnum', description: undefined })
 registerEnumType(SegmentScalarFieldEnum, { name: 'SegmentScalarFieldEnum', description: undefined })
 registerEnumType(SessionScalarFieldEnum, { name: 'SessionScalarFieldEnum', description: undefined })
+registerEnumType(StabilityIncidentScalarFieldEnum, { name: 'StabilityIncidentScalarFieldEnum', description: undefined })
 registerEnumType(TaskScalarFieldEnum, { name: 'TaskScalarFieldEnum', description: undefined })
 registerEnumType(UserScalarFieldEnum, { name: 'UserScalarFieldEnum', description: undefined })
 registerEnumType(WorkExceptionScalarFieldEnum, { name: 'WorkExceptionScalarFieldEnum', description: undefined })
@@ -431,6 +477,64 @@ export class Session {
 }
 
 @ObjectType()
+export class StabilityIncident {
+    @Field(() => ID, {nullable:false})
+    id!: string;
+    @Field(() => String, {nullable:false})
+    userId!: string;
+    @Field(() => IncidentType, {nullable:false})
+    type!: `${IncidentType}`;
+    @Field(() => IncidentSeverity, {nullable:false})
+    severity!: `${IncidentSeverity}`;
+    @Field(() => String, {nullable:false})
+    title!: string;
+    @Field(() => String, {nullable:false})
+    description!: string;
+    @Field(() => String, {nullable:true})
+    taskId!: string | null;
+    @Field(() => Int, {nullable:true})
+    resolvedAt!: number | null;
+    @Field(() => String, {nullable:true})
+    resolutionNotes!: string | null;
+    @Field(() => String, {nullable:true})
+    resolutionTaskId!: string | null;
+    @Field(() => String, {nullable:true})
+    rootCause!: string | null;
+    @Field(() => String, {nullable:true})
+    preventionPlan!: string | null;
+    @Field(() => Int, {nullable:false})
+    incidentDate!: number;
+    @Field(() => String, {nullable:true})
+    reportedById!: string | null;
+    @Field(() => String, {nullable:true})
+    adminNotes!: string | null;
+    @Field(() => [String], {nullable:true})
+    screenshots!: Array<string>;
+    @Field(() => [String], {nullable:true})
+    logLinks!: Array<string>;
+    @Field(() => Date, {nullable:false})
+    createdAt!: Date;
+    @Field(() => Date, {nullable:false})
+    updatedAt!: Date;
+    @Field(() => User, {nullable:false})
+    user?: InstanceType<typeof User>;
+    @Field(() => Task, {nullable:true})
+    task?: InstanceType<typeof Task> | null;
+    @Field(() => Task, {nullable:true})
+    resolutionTask?: InstanceType<typeof Task> | null;
+    @Field(() => User, {nullable:true})
+    reportedBy?: InstanceType<typeof User> | null;
+}
+
+@ObjectType()
+export class TaskCount {
+    @Field(() => Int, {nullable:false})
+    stabilityIncidents?: number;
+    @Field(() => Int, {nullable:false})
+    incidentResolutions?: number;
+}
+
+@ObjectType()
 export class Task {
     @Field(() => ID, {nullable:false})
     id!: string;
@@ -504,6 +608,12 @@ export class Task {
     completedSession?: InstanceType<typeof Session> | null;
     @Field(() => Project, {nullable:true})
     project?: InstanceType<typeof Project> | null;
+    @Field(() => [StabilityIncident], {nullable:true})
+    stabilityIncidents?: Array<StabilityIncident>;
+    @Field(() => [StabilityIncident], {nullable:true})
+    incidentResolutions?: Array<StabilityIncident>;
+    @Field(() => TaskCount, {nullable:false})
+    _count?: InstanceType<typeof TaskCount>;
 }
 
 @ObjectType()
@@ -526,6 +636,10 @@ export class UserCount {
     dailyOutputScores?: number;
     @Field(() => Int, {nullable:false})
     assignedScores?: number;
+    @Field(() => Int, {nullable:false})
+    stabilityIncidents?: number;
+    @Field(() => Int, {nullable:false})
+    reportedIncidents?: number;
 }
 
 @ObjectType()
@@ -574,6 +688,10 @@ export class User {
     dailyOutputScores?: Array<DailyOutputScore>;
     @Field(() => [DailyOutputScore], {nullable:true})
     assignedScores?: Array<DailyOutputScore>;
+    @Field(() => [StabilityIncident], {nullable:true})
+    stabilityIncidents?: Array<StabilityIncident>;
+    @Field(() => [StabilityIncident], {nullable:true})
+    reportedIncidents?: Array<StabilityIncident>;
     @Field(() => UserCount, {nullable:false})
     _count?: InstanceType<typeof UserCount>;
 }

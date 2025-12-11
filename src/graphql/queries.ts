@@ -450,6 +450,7 @@ export const GET_USER_PROFILE = gql`
         completedTasks
         inProgressTasks
         availabilityScore
+        stabilityScore
         workingDaysInCycle
         monthlyOutputScore
         totalTasksInCycle
@@ -459,6 +460,14 @@ export const GET_USER_PROFILE = gql`
         id
         type
         date
+      }
+      stabilityIncidents {
+        id
+        type
+        severity
+        title
+        description
+        incidentDate
       }
       activeSession {
         id

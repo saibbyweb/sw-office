@@ -1,4 +1,4 @@
-import { FiUsers, FiGitBranch, FiBarChart2, FiUserPlus, FiCheckSquare, FiCalendar, FiAward } from 'react-icons/fi';
+import { FiUsers, FiGitBranch, FiBarChart2, FiUserPlus, FiCheckSquare, FiCalendar, FiAward, FiAlertTriangle } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 
 const pages = [
@@ -41,6 +41,14 @@ const pages = [
     icon: FiAward,
     gradient: 'from-indigo-600 to-purple-600',
     bgGradient: 'from-indigo-500/20 to-purple-500/20',
+  },
+  {
+    title: 'Stability Incidents',
+    description: 'Track code quality issues and production incidents',
+    path: '/stability-incidents',
+    icon: FiAlertTriangle,
+    gradient: 'from-red-600 to-orange-600',
+    bgGradient: 'from-red-500/20 to-orange-500/20',
   },
   {
     title: 'Workflow View',
