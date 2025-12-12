@@ -15,6 +15,7 @@ import {
 } from '../graphql/work-exceptions.mutations';
 
 const exceptionTypeConfig = {
+  UNAUTHORIZED_ABSENCE: { label: 'Unauthorized Absence', color: 'from-gray-700 to-gray-900', bgColor: 'bg-gray-100', borderColor: 'border-gray-300' },
   FULL_DAY_LEAVE: { label: 'Full Day Leave', color: 'from-red-500 to-pink-500', bgColor: 'bg-red-50', borderColor: 'border-red-200' },
   HALF_DAY_LEAVE: { label: 'Half Day Leave', color: 'from-orange-500 to-amber-500', bgColor: 'bg-orange-50', borderColor: 'border-orange-200' },
   LATE_ARRIVAL: { label: 'Late Arrival', color: 'from-yellow-500 to-orange-500', bgColor: 'bg-yellow-50', borderColor: 'border-yellow-200' },
