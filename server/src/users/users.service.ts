@@ -89,13 +89,14 @@ export class UsersService {
   ): number {
     // Define weightages for each exception type (as proportion of a working day)
     const exceptionWeights: Record<string, number> = {
+      UNAUTHORIZED_ABSENCE: 1.5, // 150% of a working day
       FULL_DAY_LEAVE: 1.0, // 100% of a working day
-      HALF_DAY_LEAVE: 0.5, // 50% of a working day
       SICK_LEAVE: 0.8, // 80% of a working day
       EMERGENCY_LEAVE: 0.7, // 70% of a working day
-      WORK_FROM_HOME: 0.15, // 15% of a working day
+      HALF_DAY_LEAVE: 0.5, // 50% of a working day
       LATE_ARRIVAL: 0.3, // 30% of a working day
       EARLY_EXIT: 0.3, // 30% of a working day
+      WORK_FROM_HOME: 0.15, // 15% of a working day
     };
 
     // Calculate value per working day

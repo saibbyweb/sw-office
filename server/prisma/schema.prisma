@@ -203,6 +203,7 @@ enum ExceptionType {
   WORK_FROM_HOME
   SICK_LEAVE
   EMERGENCY_LEAVE
+  UNAUTHORIZED_ABSENCE
 }
 
 enum IncidentSeverity {
