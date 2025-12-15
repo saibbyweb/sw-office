@@ -313,6 +313,7 @@ export const AvailabilityScoreInfoModal: React.FC<AvailabilityScoreInfoModalProp
 }) => {
   const [calculatorType, setCalculatorType] = useState<string>('FULL_DAY_LEAVE');
   const [calculatorCount, setCalculatorCount] = useState<number>(1);
+  const [lateArrivalMinutes, setLateArrivalMinutes] = useState<number>(30);
 
   if (!isOpen) return null;
 
@@ -350,11 +351,30 @@ export const AvailabilityScoreInfoModal: React.FC<AvailabilityScoreInfoModalProp
           exception.actualTimeEpoch - exception.scheduledTimeEpoch
         ) / 60;
 
-        // 1% penalty per 30 minutes = 0.01 working day per 30 minutes
-        const halfHourUnits = timeDiffMinutes / 30;
-        weight = halfHourUnits * 0.01;
+        // 0.3 penalty score per 30 minutes (0.01 per minute)
+        // 30 min = 0.3, 60 min = 0.6, 90 min = 0.9, etc.
+        const halfHourUnits = Math.ceil(timeDiffMinutes / 30);
+        const penaltyScore = halfHourUnits * 0.3;
 
-        // For late arrivals/early exits, apply penalty linearly (no Fibonacci progression)
+        // Calculate penalty days for display (reverse calculation)
+        const penaltyDays = penaltyScore / valuePerDay;
+
+        breakdown.push({
+          index: index + 1,
+          type: exception.type,
+          date: exception.date,
+          weight: penaltyDays,
+          penaltyDays: penaltyDays, // Just the weight itself, no accumulation
+          penaltyScore,
+          timeDiffMinutes,
+        });
+
+        // Don't accumulate penalty days for late arrival/early exit
+        return;
+      }
+
+      // For sick leaves, apply penalty linearly (no Fibonacci progression)
+      if (exception.type === 'SICK_LEAVE') {
         const penaltyScore = weight * valuePerDay;
 
         breakdown.push({
@@ -367,7 +387,7 @@ export const AvailabilityScoreInfoModal: React.FC<AvailabilityScoreInfoModalProp
           timeDiffMinutes,
         });
 
-        // Don't accumulate penalty days for late arrival/early exit
+        // Don't accumulate penalty days for sick leaves
         return;
       }
 
@@ -392,15 +412,31 @@ export const AvailabilityScoreInfoModal: React.FC<AvailabilityScoreInfoModalProp
 
   // Calculate simulated penalty
   const calculateSimulation = () => {
-    const weight = exceptionWeights[calculatorType] || 0.5;
+    let weight = exceptionWeights[calculatorType] || 0.5;
     let currentPenalizedDays = 0;
     let totalPenalty = 0;
 
-    for (let i = 0; i < calculatorCount; i++) {
-      const penaltyDays = weight + currentPenalizedDays;
-      const penaltyScore = penaltyDays * valuePerDay;
-      totalPenalty += penaltyScore;
-      currentPenalizedDays += penaltyDays;
+    // For late arrivals, calculate based on minutes
+    if (calculatorType === 'LATE_ARRIVAL') {
+      const halfHourUnits = Math.ceil(lateArrivalMinutes / 30);
+      const penaltyScorePerOccurrence = halfHourUnits * 0.3;
+      for (let i = 0; i < calculatorCount; i++) {
+        totalPenalty += penaltyScorePerOccurrence;
+      }
+    } else if (calculatorType === 'SICK_LEAVE') {
+      // For sick leaves, calculate linearly
+      for (let i = 0; i < calculatorCount; i++) {
+        const penaltyScore = weight * valuePerDay;
+        totalPenalty += penaltyScore;
+      }
+    } else {
+      // For full/half day leaves, use Fibonacci progression
+      for (let i = 0; i < calculatorCount; i++) {
+        const penaltyDays = weight + currentPenalizedDays;
+        const penaltyScore = penaltyDays * valuePerDay;
+        totalPenalty += penaltyScore;
+        currentPenalizedDays += penaltyDays;
+      }
     }
 
     return {
@@ -411,19 +447,41 @@ export const AvailabilityScoreInfoModal: React.FC<AvailabilityScoreInfoModalProp
 
   // Calculate max exceptions before score reaches 0
   const calculateMaxExceptions = () => {
-    const weight = exceptionWeights[calculatorType] || 0.5;
+    let weight = exceptionWeights[calculatorType] || 0.5;
     let currentPenalizedDays = 0;
     let totalPenalty = 0;
     let count = 0;
 
-    while (100 - totalPenalty > 0) {
-      const penaltyDays = weight + currentPenalizedDays;
-      const penaltyScore = penaltyDays * valuePerDay;
-      totalPenalty += penaltyScore;
-      currentPenalizedDays += penaltyDays;
-      count++;
+    // For late arrivals, calculate based on minutes
+    if (calculatorType === 'LATE_ARRIVAL') {
+      const halfHourUnits = Math.ceil(lateArrivalMinutes / 30);
+      const penaltyScorePerOccurrence = halfHourUnits * 0.3;
+      while (100 - totalPenalty > 0) {
+        totalPenalty += penaltyScorePerOccurrence;
+        count++;
 
-      if (count > 100) break; // Safety limit
+        if (count > 1000) break; // Safety limit
+      }
+    } else if (calculatorType === 'SICK_LEAVE') {
+      // For sick leaves, calculate linearly
+      while (100 - totalPenalty > 0) {
+        const penaltyScore = weight * valuePerDay;
+        totalPenalty += penaltyScore;
+        count++;
+
+        if (count > 100) break; // Safety limit
+      }
+    } else {
+      // For full/half day leaves, use Fibonacci progression
+      while (100 - totalPenalty > 0) {
+        const penaltyDays = weight + currentPenalizedDays;
+        const penaltyScore = penaltyDays * valuePerDay;
+        totalPenalty += penaltyScore;
+        currentPenalizedDays += penaltyDays;
+        count++;
+
+        if (count > 100) break; // Safety limit
+      }
     }
 
     return Math.max(1, count - 1); // Return the last count before hitting 0
@@ -453,7 +511,7 @@ export const AvailabilityScoreInfoModal: React.FC<AvailabilityScoreInfoModalProp
               The availability score is calculated based on work exceptions during the current billing cycle
               (19th to 18th of each month). The system uses a <strong>Fibonacci-like exponential penalty</strong> for
               full/half day leaves where each subsequent exception has a progressively larger impact.
-              <strong>Late arrivals are calculated linearly</strong> based on actual time difference without accumulation.
+              <strong>Late arrivals and sick leaves are calculated linearly</strong> based on their weight without accumulation.
             </Description>
             <Description>
               <strong>Current Billing Cycle:</strong> {workingDays} working days (excluding weekends)
@@ -466,8 +524,12 @@ export const AvailabilityScoreInfoModal: React.FC<AvailabilityScoreInfoModalProp
               <CodeLine>valuePerDay = 100 / workingDaysInCycle</CodeLine>
               <CodeLine>&nbsp;</CodeLine>
               <CodeLine><strong>For Late Arrivals (Linear):</strong></CodeLine>
-              <CodeLine>&nbsp;&nbsp;weight = (minutes late / 30) × 0.01</CodeLine>
-              <CodeLine>&nbsp;&nbsp;penaltyScore = weight × valuePerDay</CodeLine>
+              <CodeLine>&nbsp;&nbsp;halfHourUnits = ceil(minutes late / 30)</CodeLine>
+              <CodeLine>&nbsp;&nbsp;penaltyScore = halfHourUnits × 0.3</CodeLine>
+              <CodeLine>&nbsp;&nbsp;// 1-30 min = 0.3, 31-60 min = 0.6, 61-90 min = 0.9</CodeLine>
+              <CodeLine>&nbsp;</CodeLine>
+              <CodeLine><strong>For Sick Leaves (Linear):</strong></CodeLine>
+              <CodeLine>&nbsp;&nbsp;penaltyScore = exceptionWeight × valuePerDay</CodeLine>
               <CodeLine>&nbsp;</CodeLine>
               <CodeLine><strong>For Full/Half Day Leaves (Fibonacci):</strong></CodeLine>
               <CodeLine>&nbsp;&nbsp;penaltyDays = exceptionWeight + currentPenalizedDays</CodeLine>
@@ -482,7 +544,7 @@ export const AvailabilityScoreInfoModal: React.FC<AvailabilityScoreInfoModalProp
               <strong>⚠️ Important Notes</strong>
               <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
                 <li><strong>Fibonacci-like Progression:</strong> Full/Half day leaves have exponentially larger impact with each occurrence</li>
-                <li><strong>Linear Penalty for Late Arrivals:</strong> Late arrivals are calculated independently at 1% per 30 minutes, without accumulation from previous exceptions</li>
+                <li><strong>Linear Penalty:</strong> Late arrivals (0.3 penalty score per 30-minute unit, rounded up) and sick leaves (0.8 weight) are calculated independently without accumulation from previous exceptions</li>
                 <li><strong>Compensation Opportunity:</strong> With admin approval and availability of tasks, you may get an opportunity to partially compensate for penalties received due to work exceptions. Note that compensation can never provide 100% recovery of the penalty.</li>
               </ul>
             </WarningBox>
@@ -503,14 +565,14 @@ export const AvailabilityScoreInfoModal: React.FC<AvailabilityScoreInfoModalProp
               </Thead>
               <tbody>
                 {Object.entries(exceptionWeights)
-                  .filter(([type]) => type === 'FULL_DAY_LEAVE' || type === 'HALF_DAY_LEAVE' || type === 'LATE_ARRIVAL')
+                  .filter(([type]) => type === 'FULL_DAY_LEAVE' || type === 'HALF_DAY_LEAVE' || type === 'LATE_ARRIVAL' || type === 'SICK_LEAVE')
                   .map(([type, weight]) => (
                     <Tr key={type}>
                       <Td>{exceptionLabels[type]}</Td>
-                      <Td><WeightBadge>{weight.toFixed(2)}</WeightBadge></Td>
+                      <Td><WeightBadge>{type === 'LATE_ARRIVAL' ? '0.03' : weight.toFixed(2)}</WeightBadge></Td>
                       <Td>
                         {type === 'LATE_ARRIVAL'
-                          ? '1% per 30 minutes (dynamic)'
+                          ? '0.3% of the score per 30 minutes (or up to)'
                           : `${(weight * 100).toFixed(0)}% of a working day`}
                       </Td>
                     </Tr>
@@ -570,7 +632,7 @@ export const AvailabilityScoreInfoModal: React.FC<AvailabilityScoreInfoModalProp
                     onChange={(e) => setCalculatorType(e.target.value)}
                   >
                     {Object.entries(exceptionLabels)
-                      .filter(([value]) => value === 'FULL_DAY_LEAVE' || value === 'HALF_DAY_LEAVE' || value === 'LATE_ARRIVAL')
+                      .filter(([value]) => value === 'FULL_DAY_LEAVE' || value === 'HALF_DAY_LEAVE' || value === 'LATE_ARRIVAL' || value === 'SICK_LEAVE')
                       .map(([value, label]) => (
                         <option key={value} value={value}>
                           {label}
@@ -578,25 +640,58 @@ export const AvailabilityScoreInfoModal: React.FC<AvailabilityScoreInfoModalProp
                       ))}
                   </Select>
                 </FormGroup>
-                <FormGroup>
-                  <Label>Number of Exceptions (max: {maxExceptions})</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max={maxExceptions}
-                    value={Math.min(calculatorCount, maxExceptions)}
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value) || 1;
-                      setCalculatorCount(Math.min(value, maxExceptions));
-                    }}
-                  />
-                </FormGroup>
+                {calculatorType === 'LATE_ARRIVAL' ? (
+                  <FormGroup>
+                    <Label>Minutes Late</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="480"
+                      value={lateArrivalMinutes}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 1;
+                        setLateArrivalMinutes(Math.max(1, Math.min(value, 480)));
+                      }}
+                    />
+                  </FormGroup>
+                ) : (
+                  <FormGroup>
+                    <Label>Number of Exceptions (max: {maxExceptions})</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max={maxExceptions}
+                      value={Math.min(calculatorCount, maxExceptions)}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 1;
+                        setCalculatorCount(Math.min(value, maxExceptions));
+                      }}
+                    />
+                  </FormGroup>
+                )}
               </FormRow>
+              {calculatorType === 'LATE_ARRIVAL' && (
+                <FormRow>
+                  <FormGroup>
+                    <Label>Number of Late Arrivals (max: {maxExceptions})</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max={maxExceptions}
+                      value={Math.min(calculatorCount, maxExceptions)}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 1;
+                        setCalculatorCount(Math.min(value, maxExceptions));
+                      }}
+                    />
+                  </FormGroup>
+                </FormRow>
+              )}
 
               <ResultBox>
                 <ResultLabel>Simulated Availability Score</ResultLabel>
                 <ResultValue score={simulation.score}>
-                  {simulation.score.toFixed(1)}/100
+                  {simulation.score % 1 === 0 ? simulation.score.toFixed(0) : simulation.score.toFixed(2)}/100
                 </ResultValue>
                 <ResultLabel style={{ marginTop: '8px' }}>
                   Total Penalty: -{simulation.totalPenalty.toFixed(2)} points

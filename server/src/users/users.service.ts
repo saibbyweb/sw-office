@@ -125,14 +125,20 @@ export class UsersService {
           exception.actualTimeEpoch - exception.scheduledTimeEpoch
         ) / 60;
 
-        // 1% penalty per 30 minutes = 0.01 working day per 30 minutes
-        const halfHourUnits = timeDiffMinutes / 30;
-        exceptionDaysImpact = halfHourUnits * 0.01;
-
-        // For late arrivals/early exits, apply penalty linearly (no Fibonacci progression)
-        const penaltyScore = exceptionDaysImpact * valuePerDay;
+        // 0.3 penalty score per 30 minutes (0.01 per minute)
+        // 30 min = 0.3, 60 min = 0.6, 90 min = 0.9, etc.
+        const halfHourUnits = Math.ceil(timeDiffMinutes / 30);
+        const penaltyScore = halfHourUnits * 0.3;
         totalPenalty += penaltyScore;
         // Don't accumulate penalty days for late arrival/early exit
+        return;
+      }
+
+      // For sick leaves, apply penalty linearly (no Fibonacci progression)
+      if (exception.type === 'SICK_LEAVE') {
+        const penaltyScore = exceptionDaysImpact * valuePerDay;
+        totalPenalty += penaltyScore;
+        // Don't accumulate penalty days for sick leaves
         return;
       }
 
