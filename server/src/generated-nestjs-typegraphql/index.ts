@@ -23,6 +23,8 @@ export enum WorkExceptionScalarFieldEnum {
     date = "date",
     scheduledTime = "scheduledTime",
     actualTime = "actualTime",
+    scheduledTimeEpoch = "scheduledTimeEpoch",
+    actualTimeEpoch = "actualTimeEpoch",
     reason = "reason",
     notes = "notes",
     compensationDate = "compensationDate",
@@ -711,6 +713,10 @@ export class WorkException {
     scheduledTime!: Date | null;
     @Field(() => Date, {nullable:true})
     actualTime!: Date | null;
+    @Field(() => Int, {nullable:true})
+    scheduledTimeEpoch!: number | null;
+    @Field(() => Int, {nullable:true})
+    actualTimeEpoch!: number | null;
     @Field(() => String, {nullable:true})
     reason!: string | null;
     @Field(() => String, {nullable:true})

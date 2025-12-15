@@ -280,6 +280,8 @@ export const TEAM_USERS_QUERY = gql`
         id
         type
         date
+        scheduledTimeEpoch
+        actualTimeEpoch
       }
       stabilityIncidents {
         id
@@ -469,6 +471,8 @@ export const GET_USER_PROFILE = gql`
         id
         type
         date
+        scheduledTimeEpoch
+        actualTimeEpoch
       }
       stabilityIncidents {
         id

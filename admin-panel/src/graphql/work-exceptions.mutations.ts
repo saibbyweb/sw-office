@@ -5,8 +5,8 @@ export const CREATE_WORK_EXCEPTION_MUTATION = gql`
     $userId: String!
     $type: ExceptionType!
     $date: String!
-    $scheduledTime: String
-    $actualTime: String
+    $scheduledTimeEpoch: Int
+    $actualTimeEpoch: Int
     $reason: String
     $notes: String
     $compensationDate: String
@@ -15,8 +15,8 @@ export const CREATE_WORK_EXCEPTION_MUTATION = gql`
       userId: $userId
       type: $type
       date: $date
-      scheduledTime: $scheduledTime
-      actualTime: $actualTime
+      scheduledTimeEpoch: $scheduledTimeEpoch
+      actualTimeEpoch: $actualTimeEpoch
       reason: $reason
       notes: $notes
       compensationDate: $compensationDate
@@ -25,8 +25,8 @@ export const CREATE_WORK_EXCEPTION_MUTATION = gql`
       userId
       type
       date
-      scheduledTime
-      actualTime
+      scheduledTimeEpoch
+      actualTimeEpoch
       reason
       notes
       compensationDate
@@ -46,8 +46,8 @@ export const UPDATE_WORK_EXCEPTION_MUTATION = gql`
     $id: String!
     $type: ExceptionType
     $date: String
-    $scheduledTime: String
-    $actualTime: String
+    $scheduledTimeEpoch: Int
+    $actualTimeEpoch: Int
     $reason: String
     $notes: String
     $compensationDate: String
@@ -56,8 +56,8 @@ export const UPDATE_WORK_EXCEPTION_MUTATION = gql`
       id: $id
       type: $type
       date: $date
-      scheduledTime: $scheduledTime
-      actualTime: $actualTime
+      scheduledTimeEpoch: $scheduledTimeEpoch
+      actualTimeEpoch: $actualTimeEpoch
       reason: $reason
       notes: $notes
       compensationDate: $compensationDate
@@ -66,8 +66,8 @@ export const UPDATE_WORK_EXCEPTION_MUTATION = gql`
       userId
       type
       date
-      scheduledTime
-      actualTime
+      scheduledTimeEpoch
+      actualTimeEpoch
       reason
       notes
       compensationDate
@@ -107,8 +107,8 @@ export const WORK_EXCEPTIONS_QUERY = gql`
       userId
       type
       date
-      scheduledTime
-      actualTime
+      scheduledTimeEpoch
+      actualTimeEpoch
       reason
       notes
       compensationDate

@@ -277,27 +277,31 @@ interface AvailabilityScoreInfoModalProps {
   exceptions: Array<{
     type: string;
     date: string;
+    scheduledTimeEpoch?: number;
+    actualTimeEpoch?: number;
   }>;
 }
 
 const exceptionWeights: Record<string, number> = {
+  UNAUTHORIZED_ABSENCE: 1.5,
   FULL_DAY_LEAVE: 1.0,
-  HALF_DAY_LEAVE: 0.5,
   SICK_LEAVE: 0.8,
   EMERGENCY_LEAVE: 0.7,
+  HALF_DAY_LEAVE: 0.5,
+  LATE_ARRIVAL: 0.01,
+  EARLY_EXIT: 0.01,
   WORK_FROM_HOME: 0.15,
-  LATE_ARRIVAL: 0.3,
-  EARLY_EXIT: 0.3,
 };
 
 const exceptionLabels: Record<string, string> = {
+  UNAUTHORIZED_ABSENCE: 'Unauthorized Absence',
   FULL_DAY_LEAVE: 'Full Day Leave',
-  HALF_DAY_LEAVE: 'Half Day Leave',
   SICK_LEAVE: 'Sick Leave',
   EMERGENCY_LEAVE: 'Emergency Leave',
-  WORK_FROM_HOME: 'Work From Home',
+  HALF_DAY_LEAVE: 'Half Day Leave',
   LATE_ARRIVAL: 'Late Arrival',
   EARLY_EXIT: 'Early Exit',
+  WORK_FROM_HOME: 'Work From Home',
 };
 
 export const AvailabilityScoreInfoModal: React.FC<AvailabilityScoreInfoModalProps> = ({
@@ -328,10 +332,45 @@ export const AvailabilityScoreInfoModal: React.FC<AvailabilityScoreInfoModalProp
       weight: number;
       penaltyDays: number;
       penaltyScore: number;
+      timeDiffMinutes?: number;
     }> = [];
 
     sortedExceptions.forEach((exception, index) => {
-      const weight = exceptionWeights[exception.type] || 0.5;
+      let weight = exceptionWeights[exception.type] || 0.5;
+      let timeDiffMinutes: number | undefined;
+
+      // For late arrival and early exit, calculate weight based on time difference
+      if (
+        (exception.type === 'LATE_ARRIVAL' || exception.type === 'EARLY_EXIT') &&
+        exception.scheduledTimeEpoch &&
+        exception.actualTimeEpoch
+      ) {
+        // Calculate time difference in minutes
+        timeDiffMinutes = Math.abs(
+          exception.actualTimeEpoch - exception.scheduledTimeEpoch
+        ) / 60;
+
+        // 1% penalty per 30 minutes = 0.01 working day per 30 minutes
+        const halfHourUnits = timeDiffMinutes / 30;
+        weight = halfHourUnits * 0.01;
+
+        // For late arrivals/early exits, apply penalty linearly (no Fibonacci progression)
+        const penaltyScore = weight * valuePerDay;
+
+        breakdown.push({
+          index: index + 1,
+          type: exception.type,
+          date: exception.date,
+          weight,
+          penaltyDays: weight, // Just the weight itself, no accumulation
+          penaltyScore,
+          timeDiffMinutes,
+        });
+
+        // Don't accumulate penalty days for late arrival/early exit
+        return;
+      }
+
       const penaltyDays = weight + currentPenalizedDays;
       const penaltyScore = penaltyDays * valuePerDay;
 
@@ -342,6 +381,7 @@ export const AvailabilityScoreInfoModal: React.FC<AvailabilityScoreInfoModalProp
         weight,
         penaltyDays,
         penaltyScore,
+        timeDiffMinutes,
       });
 
       currentPenalizedDays += penaltyDays;
@@ -411,8 +451,9 @@ export const AvailabilityScoreInfoModal: React.FC<AvailabilityScoreInfoModalProp
             <SectionTitle>How it Works</SectionTitle>
             <Description>
               The availability score is calculated based on work exceptions during the current billing cycle
-              (19th to 18th of each month). The system uses a <strong>Fibonacci-like exponential penalty</strong> where
-              each subsequent exception has a progressively larger impact.
+              (19th to 18th of each month). The system uses a <strong>Fibonacci-like exponential penalty</strong> for
+              full/half day leaves where each subsequent exception has a progressively larger impact.
+              <strong>Late arrivals are calculated linearly</strong> based on actual time difference without accumulation.
             </Description>
             <Description>
               <strong>Current Billing Cycle:</strong> {workingDays} working days (excluding weekends)
@@ -424,7 +465,11 @@ export const AvailabilityScoreInfoModal: React.FC<AvailabilityScoreInfoModalProp
               <CodeLine><strong>Calculation Formula:</strong></CodeLine>
               <CodeLine>valuePerDay = 100 / workingDaysInCycle</CodeLine>
               <CodeLine>&nbsp;</CodeLine>
-              <CodeLine>For each exception (chronologically):</CodeLine>
+              <CodeLine><strong>For Late Arrivals (Linear):</strong></CodeLine>
+              <CodeLine>&nbsp;&nbsp;weight = (minutes late / 30) × 0.01</CodeLine>
+              <CodeLine>&nbsp;&nbsp;penaltyScore = weight × valuePerDay</CodeLine>
+              <CodeLine>&nbsp;</CodeLine>
+              <CodeLine><strong>For Full/Half Day Leaves (Fibonacci):</strong></CodeLine>
               <CodeLine>&nbsp;&nbsp;penaltyDays = exceptionWeight + currentPenalizedDays</CodeLine>
               <CodeLine>&nbsp;&nbsp;penaltyScore = penaltyDays × valuePerDay</CodeLine>
               <CodeLine>&nbsp;&nbsp;currentPenalizedDays += penaltyDays</CodeLine>
@@ -436,7 +481,8 @@ export const AvailabilityScoreInfoModal: React.FC<AvailabilityScoreInfoModalProp
             <WarningBox>
               <strong>⚠️ Important Notes</strong>
               <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
-                <li><strong>Fibonacci-like Progression:</strong> Each exception has exponentially larger impact than the previous</li>
+                <li><strong>Fibonacci-like Progression:</strong> Full/Half day leaves have exponentially larger impact with each occurrence</li>
+                <li><strong>Linear Penalty for Late Arrivals:</strong> Late arrivals are calculated independently at 1% per 30 minutes, without accumulation from previous exceptions</li>
                 <li><strong>Compensation Opportunity:</strong> With admin approval and availability of tasks, you may get an opportunity to partially compensate for penalties received due to work exceptions. Note that compensation can never provide 100% recovery of the penalty.</li>
               </ul>
             </WarningBox>
@@ -457,12 +503,16 @@ export const AvailabilityScoreInfoModal: React.FC<AvailabilityScoreInfoModalProp
               </Thead>
               <tbody>
                 {Object.entries(exceptionWeights)
-                  .filter(([type]) => type === 'FULL_DAY_LEAVE' || type === 'HALF_DAY_LEAVE')
+                  .filter(([type]) => type === 'FULL_DAY_LEAVE' || type === 'HALF_DAY_LEAVE' || type === 'LATE_ARRIVAL')
                   .map(([type, weight]) => (
                     <Tr key={type}>
                       <Td>{exceptionLabels[type]}</Td>
                       <Td><WeightBadge>{weight.toFixed(2)}</WeightBadge></Td>
-                      <Td>{(weight * 100).toFixed(0)}% of a working day</Td>
+                      <Td>
+                        {type === 'LATE_ARRIVAL'
+                          ? '1% per 30 minutes (dynamic)'
+                          : `${(weight * 100).toFixed(0)}% of a working day`}
+                      </Td>
                     </Tr>
                   ))}
               </tbody>
@@ -478,6 +528,7 @@ export const AvailabilityScoreInfoModal: React.FC<AvailabilityScoreInfoModalProp
                     <Th>#</Th>
                     <Th>Type</Th>
                     <Th>Date</Th>
+                    <Th>Details</Th>
                     <Th>Penalty Days</Th>
                     <Th>Penalty Score</Th>
                   </tr>
@@ -488,6 +539,11 @@ export const AvailabilityScoreInfoModal: React.FC<AvailabilityScoreInfoModalProp
                       <Td>{item.index}</Td>
                       <Td>{exceptionLabels[item.type]}</Td>
                       <Td>{new Date(item.date).toLocaleDateString()}</Td>
+                      <Td>
+                        {item.timeDiffMinutes !== undefined
+                          ? `${Math.floor(item.timeDiffMinutes)} min late`
+                          : '-'}
+                      </Td>
                       <Td>{item.penaltyDays.toFixed(2)}</Td>
                       <Td>-{item.penaltyScore.toFixed(2)}</Td>
                     </Tr>
@@ -514,7 +570,7 @@ export const AvailabilityScoreInfoModal: React.FC<AvailabilityScoreInfoModalProp
                     onChange={(e) => setCalculatorType(e.target.value)}
                   >
                     {Object.entries(exceptionLabels)
-                      .filter(([value]) => value === 'FULL_DAY_LEAVE' || value === 'HALF_DAY_LEAVE')
+                      .filter(([value]) => value === 'FULL_DAY_LEAVE' || value === 'HALF_DAY_LEAVE' || value === 'LATE_ARRIVAL')
                       .map(([value, label]) => (
                         <option key={value} value={value}>
                           {label}

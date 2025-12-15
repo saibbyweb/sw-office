@@ -236,9 +236,13 @@ model WorkException {
   type          ExceptionType
   date          DateTime      // The date this happened
 
-  // Only for late arrival / early exit
+  // Only for late arrival / early exit (deprecated - use epoch versions)
   scheduledTime DateTime?
   actualTime    DateTime?
+
+  // New epoch-based time fields (in seconds)
+  scheduledTimeEpoch Int?
+  actualTimeEpoch    Int?
 
   reason        String?
   notes         String?       // Admin notes if needed

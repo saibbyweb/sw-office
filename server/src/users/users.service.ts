@@ -94,8 +94,8 @@ export class UsersService {
       SICK_LEAVE: 0.8, // 80% of a working day
       EMERGENCY_LEAVE: 0.7, // 70% of a working day
       HALF_DAY_LEAVE: 0.5, // 50% of a working day
-      LATE_ARRIVAL: 0.3, // 30% of a working day
-      EARLY_EXIT: 0.3, // 30% of a working day
+      LATE_ARRIVAL: 0.01, // 1% per 30 minutes (fallback if no epoch data)
+      EARLY_EXIT: 0.01, // 1% per 30 minutes (fallback if no epoch data)
       WORK_FROM_HOME: 0.15, // 15% of a working day
     };
 
@@ -112,7 +112,29 @@ export class UsersService {
 
     // Process each exception chronologically
     sortedExceptions.forEach((exception) => {
-      const exceptionDaysImpact = exceptionWeights[exception.type] || 0.5;
+      let exceptionDaysImpact = exceptionWeights[exception.type] || 0.5;
+
+      // For late arrival and early exit, calculate weight based on time difference
+      if (
+        (exception.type === 'LATE_ARRIVAL' || exception.type === 'EARLY_EXIT') &&
+        exception.scheduledTimeEpoch &&
+        exception.actualTimeEpoch
+      ) {
+        // Calculate time difference in minutes
+        const timeDiffMinutes = Math.abs(
+          exception.actualTimeEpoch - exception.scheduledTimeEpoch
+        ) / 60;
+
+        // 1% penalty per 30 minutes = 0.01 working day per 30 minutes
+        const halfHourUnits = timeDiffMinutes / 30;
+        exceptionDaysImpact = halfHourUnits * 0.01;
+
+        // For late arrivals/early exits, apply penalty linearly (no Fibonacci progression)
+        const penaltyScore = exceptionDaysImpact * valuePerDay;
+        totalPenalty += penaltyScore;
+        // Don't accumulate penalty days for late arrival/early exit
+        return;
+      }
 
       // Fibonacci-like progression: each exception adds (its weight + current penalized days)
       const penaltyDays = exceptionDaysImpact + currentPenalizedDays;

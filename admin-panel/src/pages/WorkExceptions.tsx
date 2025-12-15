@@ -75,7 +75,7 @@ export default function WorkExceptions({
 
   const [createException] = useMutation(CREATE_WORK_EXCEPTION_MUTATION, {
     onCompleted: () => {
-      toast.success('Work exception created successfully');
+      toast.success('Work exception created successfully', { duration: 3000 });
       setShowCreateModal(false);
       resetForm();
       refetchExceptions();
@@ -87,7 +87,8 @@ export default function WorkExceptions({
 
   const [updateException] = useMutation(UPDATE_WORK_EXCEPTION_MUTATION, {
     onCompleted: () => {
-      toast.success('Work exception updated successfully');
+      toast.success('Work exception updated successfully', { duration: 3000 });
+      setShowCreateModal(false);
       setEditException(null);
       resetForm();
       refetchExceptions();
@@ -143,8 +144,8 @@ export default function WorkExceptions({
     };
 
     if (isTimeBased) {
-      variables.scheduledTime = `${formData.date}T${formData.scheduledTime}:00.000Z`;
-      variables.actualTime = `${formData.date}T${formData.actualTime}:00.000Z`;
+      variables.scheduledTimeEpoch = Math.floor(new Date(`${formData.date}T${formData.scheduledTime}:00.000Z`).getTime() / 1000);
+      variables.actualTimeEpoch = Math.floor(new Date(`${formData.date}T${formData.actualTime}:00.000Z`).getTime() / 1000);
     }
 
     if (editException) {
@@ -162,8 +163,8 @@ export default function WorkExceptions({
       userId: exception.userId,
       type: exception.type,
       date: new Date(exception.date).toISOString().split('T')[0],
-      scheduledTime: isTimeBased && exception.scheduledTime ? new Date(exception.scheduledTime).toISOString().split('T')[1].substring(0, 5) : '',
-      actualTime: isTimeBased && exception.actualTime ? new Date(exception.actualTime).toISOString().split('T')[1].substring(0, 5) : '',
+      scheduledTime: isTimeBased && exception.scheduledTimeEpoch ? new Date(exception.scheduledTimeEpoch * 1000).toISOString().split('T')[1].substring(0, 5) : '',
+      actualTime: isTimeBased && exception.actualTimeEpoch ? new Date(exception.actualTimeEpoch * 1000).toISOString().split('T')[1].substring(0, 5) : '',
       reason: exception.reason || '',
       notes: exception.notes || '',
       compensationDate: exception.compensationDate ? new Date(exception.compensationDate).toISOString().split('T')[0] : '',
@@ -331,11 +332,11 @@ export default function WorkExceptions({
                     <span className="text-gray-700">{new Date(exception.date).toLocaleDateString()}</span>
                   </div>
 
-                  {isTimeException && exception.scheduledTime && exception.actualTime && (
+                  {isTimeException && exception.scheduledTimeEpoch && exception.actualTimeEpoch && (
                     <div className="flex items-center gap-2 text-sm">
                       <FiClock className="w-3.5 h-3.5 text-gray-500" />
                       <span className="text-gray-700">
-                        {new Date(exception.scheduledTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} → {new Date(exception.actualTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {new Date(exception.scheduledTimeEpoch * 1000).toISOString().substring(11, 16)} → {new Date(exception.actualTimeEpoch * 1000).toISOString().substring(11, 16)}
                       </span>
                     </div>
                   )}

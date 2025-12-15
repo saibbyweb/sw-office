@@ -10,8 +10,8 @@ export class WorkExceptionService {
     userId: string,
     type: ExceptionType,
     date: Date,
-    scheduledTime?: Date,
-    actualTime?: Date,
+    scheduledTimeEpoch?: number,
+    actualTimeEpoch?: number,
     reason?: string,
     notes?: string,
     compensationDate?: Date,
@@ -21,8 +21,8 @@ export class WorkExceptionService {
         userId,
         type,
         date,
-        scheduledTime,
-        actualTime,
+        scheduledTimeEpoch,
+        actualTimeEpoch,
         reason,
         notes,
         compensationDate,
@@ -79,8 +79,8 @@ export class WorkExceptionService {
     id: string,
     type?: ExceptionType,
     date?: Date,
-    scheduledTime?: Date,
-    actualTime?: Date,
+    scheduledTimeEpoch?: number,
+    actualTimeEpoch?: number,
     reason?: string,
     notes?: string,
     compensationDate?: Date,
@@ -89,8 +89,8 @@ export class WorkExceptionService {
 
     if (type !== undefined) data.type = type;
     if (date !== undefined) data.date = date;
-    if (scheduledTime !== undefined) data.scheduledTime = scheduledTime;
-    if (actualTime !== undefined) data.actualTime = actualTime;
+    if (scheduledTimeEpoch !== undefined) data.scheduledTimeEpoch = scheduledTimeEpoch;
+    if (actualTimeEpoch !== undefined) data.actualTimeEpoch = actualTimeEpoch;
     if (reason !== undefined) data.reason = reason;
     if (notes !== undefined) data.notes = notes;
     if (compensationDate !== undefined) data.compensationDate = compensationDate;

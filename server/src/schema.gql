@@ -134,6 +134,7 @@ enum ExceptionType {
   HALF_DAY_LEAVE
   LATE_ARRIVAL
   SICK_LEAVE
+  UNAUTHORIZED_ABSENCE
   WORK_FROM_HOME
 }
 
@@ -222,7 +223,7 @@ type Mutation {
   createOrUpdateDailyScore(input: CreateDailyScoreInput!): DailyOutputScore!
   createStabilityIncident(input: CreateStabilityIncidentInput!): StabilityIncident!
   createTask(input: CreateTaskInputType!, userId: String): Task!
-  createWorkException(actualTime: String, compensationDate: String, date: String!, notes: String, reason: String, scheduledTime: String, type: ExceptionType!, userId: String!): WorkException!
+  createWorkException(actualTimeEpoch: Int, compensationDate: String, date: String!, notes: String, reason: String, scheduledTimeEpoch: Int, type: ExceptionType!, userId: String!): WorkException!
   deleteDailyScore(id: String!): DailyOutputScore!
   deleteStabilityIncident(id: String!): Boolean!
   deleteSuggestedTask(taskId: String!): Boolean!
@@ -259,7 +260,7 @@ type Mutation {
   updateTask(input: UpdateTaskInputType!, taskId: String!): Task!
   updateTaskScore(score: Float!, taskId: String!): Task!
   updateTaskStatus(status: String!, taskId: String!, userId: String!): Task!
-  updateWorkException(actualTime: String, compensationDate: String, date: String, id: String!, notes: String, reason: String, scheduledTime: String, type: ExceptionType): WorkException!
+  updateWorkException(actualTimeEpoch: Int, compensationDate: String, date: String, id: String!, notes: String, reason: String, scheduledTimeEpoch: Int, type: ExceptionType): WorkException!
   updateWorkLog(input: UpdateWorkLogInput!): WorkLog!
 }
 
@@ -768,6 +769,7 @@ type UserStatistics {
 
 type WorkException {
   actualTime: DateTime
+  actualTimeEpoch: Int
   compensationDate: DateTime
   createdAt: DateTime!
   date: DateTime!
@@ -775,6 +777,7 @@ type WorkException {
   notes: String
   reason: String
   scheduledTime: DateTime
+  scheduledTimeEpoch: Int
   type: ExceptionType!
   updatedAt: DateTime!
   user: User!
