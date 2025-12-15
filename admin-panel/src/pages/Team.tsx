@@ -76,12 +76,12 @@ const UPDATE_SLACK_ID_MUTATION = gql`
   }
 `;
 
-const UPDATE_SALARY_MUTATION = gql`
-  mutation AdminUpdateUserSalary($userId: ID!, $salaryINR: Int) {
-    adminUpdateUserSalary(userId: $userId, salaryINR: $salaryINR) {
+const UPDATE_COMPENSATION_MUTATION = gql`
+  mutation AdminUpdateUserCompensation($userId: ID!, $compensationINR: Int) {
+    adminUpdateUserCompensation(userId: $userId, compensationINR: $compensationINR) {
       id
       name
-      salaryINR
+      compensationINR
     }
   }
 `;
@@ -91,7 +91,7 @@ export default function Team() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showSlackIdModal, setShowSlackIdModal] = useState(false);
-  const [showSalaryModal, setShowSalaryModal] = useState(false);
+  const [showCompensationModal, setShowCompensationModal] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [confirmAction, setConfirmAction] = useState<'archive' | 'unarchive' | null>(null);
@@ -116,13 +116,13 @@ export default function Team() {
     avatarUrl: '',
   });
 
-  const [salaryData, setSalaryData] = useState('');
+  const [compensationData, setCompensationData] = useState('');
 
   const { data, loading, refetch } = useQuery<AdminUsersData>(ADMIN_USERS_QUERY);
   const [register, { loading: registerLoading }] = useMutation(REGISTER_MUTATION);
   const [updatePassword, { loading: updatePasswordLoading }] = useMutation(UPDATE_PASSWORD_MUTATION);
   const [updateSlackId, { loading: updateSlackIdLoading }] = useMutation(UPDATE_SLACK_ID_MUTATION);
-  const [updateSalary, { loading: updateSalaryLoading }] = useMutation(UPDATE_SALARY_MUTATION);
+  const [updateCompensation, { loading: updateCompensationLoading }] = useMutation(UPDATE_COMPENSATION_MUTATION);
   const [archiveUser, { loading: archiveLoading }] = useMutation(ARCHIVE_USER_MUTATION);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -247,33 +247,33 @@ export default function Team() {
     setOpenMenuId(null);
   };
 
-  const openSalaryDialog = (user: AdminUser) => {
+  const openCompensationDialog = (user: AdminUser) => {
     setSelectedUser(user);
-    setSalaryData(user.salaryINR?.toString() || '');
-    setShowSalaryModal(true);
+    setCompensationData(user.compensationINR?.toString() || '');
+    setShowCompensationModal(true);
     setOpenMenuId(null);
   };
 
-  const handleSalaryChange = async (e: React.FormEvent) => {
+  const handleCompensationChange = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const toastId = toast.loading('Updating salary...');
+    const toastId = toast.loading('Updating compensation...');
     try {
-      const salaryValue = salaryData.trim() === '' ? null : parseInt(salaryData);
-      await updateSalary({
+      const compensationValue = compensationData.trim() === '' ? null : parseInt(compensationData);
+      await updateCompensation({
         variables: {
           userId: selectedUser!.id,
-          salaryINR: salaryValue,
+          compensationINR: compensationValue,
         },
       });
-      setShowSalaryModal(false);
-      setSalaryData('');
+      setShowCompensationModal(false);
+      setCompensationData('');
       setSelectedUser(null);
       refetch();
-      toast.success('Salary updated successfully!', { id: toastId });
+      toast.success('Compensation updated successfully!', { id: toastId });
     } catch (error: any) {
-      console.error('Salary update error:', error);
-      toast.error(error.message || 'Failed to update salary', { id: toastId });
+      console.error('Compensation update error:', error);
+      toast.error(error.message || 'Failed to update compensation', { id: toastId });
     }
   };
 
@@ -349,21 +349,24 @@ export default function Team() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredUsers.map((user) => (
               <div
                 key={user.id}
-                className={`bg-white/40 backdrop-blur-md rounded-lg p-6 border border-white/20 hover:shadow-lg hover:border-white/40 transition-all duration-300 group relative ${
+                className={`bg-gradient-to-br from-white to-gray-50 rounded-3xl p-6 border border-gray-200 hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 group relative overflow-hidden ${
                   user.archived ? 'opacity-60' : ''
                 }`}
               >
+                {/* Decorative Elements */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-violet-100/30 to-transparent rounded-full blur-2xl" />
+
                 {/* Menu Button */}
-                <div className="absolute top-3 right-3">
+                <div className="absolute top-4 left-4 z-10">
                   <button
                     onClick={() => setOpenMenuId(openMenuId === user.id ? null : user.id)}
-                    className="p-2 hover:bg-white/60 rounded-lg transition-colors"
+                    className="p-2 bg-black/5 hover:bg-black/10 rounded-xl transition-colors backdrop-blur-sm"
                   >
-                    <FiMoreVertical className="w-4 h-4 text-gray-600" />
+                    <FiMoreVertical className="w-4 h-4 text-gray-700" />
                   </button>
 
                   {/* Dropdown Menu */}
@@ -373,7 +376,7 @@ export default function Team() {
                         className="fixed inset-0 z-10"
                         onClick={() => setOpenMenuId(null)}
                       />
-                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
+                      <div className="absolute left-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-20">
                         <button
                           onClick={() => openPasswordDialog(user)}
                           className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2 text-gray-700"
@@ -389,11 +392,11 @@ export default function Team() {
                           Edit Slack ID
                         </button>
                         <button
-                          onClick={() => openSalaryDialog(user)}
+                          onClick={() => openCompensationDialog(user)}
                           className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2 text-gray-700"
                         >
                           <FiDollarSign className="w-4 h-4" />
-                          Edit Salary
+                          Edit Compensation
                         </button>
                         <button
                           onClick={() => openArchiveDialog(user, user.archived ? 'unarchive' : 'archive')}
@@ -407,35 +410,53 @@ export default function Team() {
                   )}
                 </div>
 
-                <div className="flex flex-col items-center">
+                {/* Status Badge */}
+                <div className="absolute top-4 right-4 z-10">
+                  <div className={`w-3 h-3 rounded-full ${user.isOnline ? 'bg-emerald-400' : 'bg-gray-300'} ring-4 ring-white`} />
+                </div>
+
+                {/* Avatar */}
+                <div className="flex justify-center mt-8 mb-6">
                   {user.avatarUrl ? (
                     <img
                       src={user.avatarUrl}
                       alt={user.name}
-                      className="w-20 h-20 rounded-full ring-4 ring-white/50 group-hover:ring-violet-500/30 transition-all mb-4"
+                      className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
                     />
                   ) : (
-                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-violet-100 to-fuchsia-100 flex items-center justify-center ring-4 ring-white/50 group-hover:ring-violet-500/30 transition-all mb-4">
-                      <FiUser className="w-10 h-10 text-violet-600" />
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-violet-400 to-fuchsia-400 flex items-center justify-center border-4 border-white shadow-lg">
+                      <span className="text-3xl font-bold text-white">{user.name.charAt(0).toUpperCase()}</span>
                     </div>
                   )}
-                  <h3 className="text-lg font-semibold text-gray-800 mb-1 text-center">
-                    {user.name}
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-3 text-center">{user.email}</p>
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${user.isOnline ? 'bg-emerald-500' : 'bg-gray-300'}`} />
-                    <span className="text-xs text-gray-600">
-                      {user.isOnline ? 'Online' : 'Offline'}
-                    </span>
+                </div>
+
+                {/* Name - Bold and Large */}
+                <h3 className="text-2xl font-bold text-gray-900 mb-1 tracking-tight">
+                  {user.name}
+                </h3>
+
+                {/* Email - Small and Subtle */}
+                <p className="text-xs text-gray-500 mb-6">{user.email}</p>
+
+                {/* Compensation - Bold Display */}
+                {user.compensationINR && (
+                  <div className="mb-4">
+                    <div className="text-4xl font-black text-gray-900 tracking-tight">
+                      ₹{user.compensationINR.toLocaleString('en-IN')}
+                    </div>
+                    <div className="text-xs font-medium text-gray-500 mt-1">Monthly Compensation</div>
                   </div>
+                )}
+
+                {/* Status Tags */}
+                <div className="flex flex-wrap gap-2 mt-4">
                   {user.currentStatus && (
-                    <div className="mt-2 px-3 py-1 bg-violet-100 text-violet-700 rounded-full text-xs font-medium">
+                    <div className="px-3 py-1 bg-violet-100 text-violet-700 rounded-full text-xs font-medium">
                       {user.currentStatus}
                     </div>
                   )}
                   {user.archived && (
-                    <div className="mt-2 px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                    <div className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
                       Archived
                     </div>
                   )}
@@ -730,20 +751,20 @@ export default function Team() {
         </div>
       )}
 
-      {/* Edit Salary Modal */}
-      {showSalaryModal && selectedUser && (
+      {/* Edit Compensation Modal */}
+      {showCompensationModal && selectedUser && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
             <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-6 text-white">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold">Edit Salary</h2>
+                  <h2 className="text-xl font-bold">Edit Compensation</h2>
                   <p className="text-sm text-green-100 mt-1">{selectedUser.name}</p>
                 </div>
                 <button
                   onClick={() => {
-                    setShowSalaryModal(false);
-                    setSalaryData('');
+                    setShowCompensationModal(false);
+                    setCompensationData('');
                     setSelectedUser(null);
                   }}
                   className="p-1 hover:bg-white/20 rounded-lg transition-colors"
@@ -753,24 +774,24 @@ export default function Team() {
               </div>
             </div>
 
-            <form onSubmit={handleSalaryChange} className="p-6 space-y-4">
+            <form onSubmit={handleCompensationChange} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Salary (INR) <span className="text-gray-400 text-xs">(Optional)</span>
+                  Compensation (INR) <span className="text-gray-400 text-xs">(Optional)</span>
                 </label>
                 <div className="relative">
                   <FiDollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
                     type="number"
-                    value={salaryData}
-                    onChange={(e) => setSalaryData(e.target.value)}
+                    value={compensationData}
+                    onChange={(e) => setCompensationData(e.target.value)}
                     className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
                     placeholder="50000"
                     min="0"
                   />
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  Monthly salary in Indian Rupees. Leave empty to clear.
+                  Monthly compensation in Indian Rupees. Leave empty to clear.
                 </p>
               </div>
 
@@ -778,8 +799,8 @@ export default function Team() {
                 <button
                   type="button"
                   onClick={() => {
-                    setShowSalaryModal(false);
-                    setSalaryData('');
+                    setShowCompensationModal(false);
+                    setCompensationData('');
                     setSelectedUser(null);
                   }}
                   className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
@@ -788,10 +809,10 @@ export default function Team() {
                 </button>
                 <button
                   type="submit"
-                  disabled={updateSalaryLoading}
+                  disabled={updateCompensationLoading}
                   className="flex-1 px-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {updateSalaryLoading ? 'Updating...' : 'Update Salary'}
+                  {updateCompensationLoading ? 'Updating...' : 'Update Compensation'}
                 </button>
               </div>
             </form>

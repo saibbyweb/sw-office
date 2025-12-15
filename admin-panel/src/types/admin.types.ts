@@ -8,6 +8,9 @@ export interface AdminUser {
   archived: boolean;
   slackUserId?: string;
   salaryINR?: number;
+  compensationINR?: number;
+  role?: string;
+  createdAt?: string;
 }
 
 export interface Project {

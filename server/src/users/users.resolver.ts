@@ -45,9 +45,14 @@ export class UsersResolver {
     return this.usersService.findAll();
   }
   @Query(() => [TeamUser])
-  @UseGuards(JwtGuard)
-  getTeamUsers(): Promise<TeamUser[]> {
-    return this.usersService.getTeamUsers();
+  getTeamUsers(
+    @Args('startDate', { nullable: true }) startDate?: string,
+    @Args('endDate', { nullable: true }) endDate?: string,
+  ): Promise<TeamUser[]> {
+    return this.usersService.getTeamUsers(
+      startDate ? new Date(startDate) : undefined,
+      endDate ? new Date(endDate) : undefined,
+    );
   }
   @Query(() => UserProfile)
   @UseGuards(JwtGuard)

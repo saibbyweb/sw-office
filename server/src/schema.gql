@@ -211,6 +211,7 @@ type MeetingStatus {
 type Mutation {
   addWorkLog(input: AddWorkLogInput!): WorkLog!
   adminArchiveUser(archived: Boolean!, userId: ID!): User!
+  adminUpdateUserCompensation(compensationINR: Int, userId: ID!): User!
   adminUpdateUserPassword(newPassword: String!, userId: ID!): User!
   adminUpdateUserSalary(salaryINR: Int, userId: ID!): User!
   adminUpdateUserSlackId(avatarUrl: String, slackUserId: String, userId: ID!): User!
@@ -350,7 +351,7 @@ type Query {
   getAllUsers: [TeamsUser!]!
   getAllUsersWithPresence: [TeamsUserWithPresence!]!
   getBreakNotificationConfig: NotificationConfig!
-  getTeamUsers: [TeamUser!]!
+  getTeamUsers(endDate: String, startDate: String): [TeamUser!]!
   getUserMeetingHistory(endDate: String!, startDate: String!, userId: String!): [MeetingHistoryItem!]!
   getUserMeetings(userId: String!): [OrganizationMeeting!]!
   getUserProfile(userId: String!): UserProfile!
@@ -602,10 +603,12 @@ type TeamUser {
   activeSession: Session
   availabilityScore: Float!
   avatarUrl: String
+  compensationINR: Int
   currentStatus: String
   email: String!
   id: String!
   isOnline: Boolean
+  monthlyOutputScore: Float!
   name: String!
   stabilityIncidents: [StabilityIncident!]
   stabilityScore: Float!
@@ -688,6 +691,7 @@ type User {
   assignedScores: [DailyOutputScore!]
   avatarUrl: String
   breaks: [Break!]
+  compensationINR: Int
   createdAt: DateTime!
   currentStatus: String
   dailyOutputScores: [DailyOutputScore!]

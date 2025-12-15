@@ -1,4 +1,4 @@
-import { FiUsers, FiGitBranch, FiBarChart2, FiUserPlus, FiCheckSquare, FiCalendar, FiAward, FiAlertTriangle } from 'react-icons/fi';
+import { FiUsers, FiGitBranch, FiBarChart2, FiUserPlus, FiCheckSquare, FiCalendar, FiAward, FiAlertTriangle, FiDollarSign } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 
 const pages = [
@@ -49,6 +49,14 @@ const pages = [
     icon: FiAlertTriangle,
     gradient: 'from-red-600 to-orange-600',
     bgGradient: 'from-red-500/20 to-orange-500/20',
+  },
+  {
+    title: 'Team Payouts',
+    description: 'Performance metrics and compensation overview',
+    path: '/payouts',
+    icon: FiDollarSign,
+    gradient: 'from-green-600 to-emerald-600',
+    bgGradient: 'from-green-500/20 to-emerald-500/20',
   },
   {
     title: 'Workflow View',

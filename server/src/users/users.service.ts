@@ -407,7 +407,7 @@ export class UsersService {
     };
   }
 
-  async getTeamUsers(): Promise<TeamUser[]> {
+  async getTeamUsers(startDate?: Date, endDate?: Date): Promise<TeamUser[]> {
     const users = await this.prisma.user.findMany({
       where: {
         archived: false,
@@ -431,11 +431,17 @@ export class UsersService {
       },
     });
 
-    const { startDate, endDate } = this.getCurrentBillingCycle();
-    const workingDaysInCycle = this.calculateWorkingDays(startDate, endDate);
+    // Use provided dates or current billing cycle
+    const billingCycle = startDate && endDate
+      ? { startDate, endDate }
+      : this.getCurrentBillingCycle();
 
-    const startEpoch = Math.floor(startDate.getTime() / 1000);
-    const endEpoch = Math.floor(endDate.getTime() / 1000);
+    const cycleStartDate = billingCycle.startDate;
+    const cycleEndDate = billingCycle.endDate;
+    const workingDaysInCycle = this.calculateWorkingDays(cycleStartDate, cycleEndDate);
+
+    const startEpoch = Math.floor(cycleStartDate.getTime() / 1000);
+    const endEpoch = Math.floor(cycleEndDate.getTime() / 1000);
 
     const teamUsers: TeamUser[] = await Promise.all(
       users.map(async (user) => {
@@ -443,8 +449,8 @@ export class UsersService {
           where: {
             userId: user.id,
             date: {
-              gte: startDate,
-              lte: endDate,
+              gte: cycleStartDate,
+              lte: cycleEndDate,
             },
           },
         });
@@ -464,6 +470,42 @@ export class UsersService {
           },
         );
 
+        // Check if user has any tasks assigned in the cycle
+        const anyTasksInCycle = await this.prisma.task.findFirst({
+          where: {
+            assignedToId: user.id,
+            OR: [
+              {
+                completedDate: {
+                  gte: cycleStartDate,
+                  lte: cycleEndDate,
+                },
+              },
+              {
+                createdAt: {
+                  gte: cycleStartDate,
+                  lte: cycleEndDate,
+                },
+              },
+            ],
+          },
+        });
+
+        // Fetch completed tasks for monthly output score
+        const completedTasksInCycle = await this.prisma.task.findMany({
+          where: {
+            assignedToId: user.id,
+            status: 'COMPLETED',
+            completedDate: {
+              gte: cycleStartDate,
+              lte: cycleEndDate,
+            },
+          },
+          select: {
+            score: true,
+          },
+        });
+
         const availabilityScore = this.calculateAvailabilityScore(
           workExceptions,
           workingDaysInCycle,
@@ -471,6 +513,23 @@ export class UsersService {
 
         const stabilityScore =
           this.calculateStabilityScore(stabilityIncidents);
+
+        // Calculate monthly output score
+        let monthlyOutputScore: number;
+
+        if (!anyTasksInCycle) {
+          // No tasks assigned at all - give 100%
+          monthlyOutputScore = 100;
+        } else {
+          const ratedTasksInCycle = completedTasksInCycle.filter(
+            (task) => task.score !== null,
+          );
+          monthlyOutputScore =
+            ratedTasksInCycle.length > 0
+              ? ratedTasksInCycle.reduce((sum, task) => sum + (task.score || 0), 0) /
+                ratedTasksInCycle.length
+              : 0;
+        }
 
         return {
           id: user.id,
@@ -480,8 +539,10 @@ export class UsersService {
           isOnline: user.sessions?.[0] && user.sessions[0].breaks.length === 0,
           currentStatus: user.currentStatus || undefined,
           activeSession: user.sessions?.[0] || undefined,
+          compensationINR: user.compensationINR || undefined,
           availabilityScore,
           stabilityScore,
+          monthlyOutputScore,
           workingDaysInCycle,
           workExceptions,
           stabilityIncidents: stabilityIncidents as any,

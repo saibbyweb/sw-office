@@ -412,7 +412,19 @@ function IncidentCard({ incident, index, onEdit, onDelete, onResolve, onUnresolv
         </div>
         <div className="flex items-center gap-2 text-xs text-gray-600">
           <FiCalendar className="w-3 h-3" />
-          <span>{new Date(incident.incidentDate * 1000).toLocaleDateString()}</span>
+          <span>
+            {(() => {
+              const date = new Date(incident.incidentDate * 1000);
+              const day = date.getUTCDate().toString().padStart(2, '0');
+              const month = date.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
+              const year = date.getUTCFullYear();
+              const hours = date.getUTCHours();
+              const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+              const ampm = hours >= 12 ? 'PM' : 'AM';
+              const displayHours = hours % 12 || 12;
+              return `${day} ${month} ${year} ${displayHours}:${minutes} ${ampm}`;
+            })()}
+          </span>
         </div>
         {incident.task && (
           <div className="text-xs text-violet-600">
@@ -590,7 +602,7 @@ function IncidentModal({ formData, setFormData, isEdit, users, tasks, onClose, o
             <input
               type="datetime-local"
               value={new Date(formData.incidentDate * 1000).toISOString().slice(0, 16)}
-              onChange={(e) => setFormData({ ...formData, incidentDate: Math.floor(new Date(e.target.value).getTime() / 1000) })}
+              onChange={(e) => setFormData({ ...formData, incidentDate: Math.floor(new Date(e.target.value + ':00.000Z').getTime() / 1000) })}
               className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-violet-500 focus:ring-4 focus:ring-violet-100 transition-all outline-none"
             />
           </div>

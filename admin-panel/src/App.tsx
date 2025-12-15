@@ -12,6 +12,7 @@ import Workflow from './pages/Workflow';
 import WorkExceptions from './pages/WorkExceptions';
 import DailyOutputScore from './pages/DailyOutputScore';
 import StabilityIncidents from './pages/StabilityIncidents';
+import Payouts from './pages/Payouts';
 
 function AppRoutes() {
   const { login } = useAuth();
@@ -93,6 +94,14 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/payouts"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <Payouts />
+          </ProtectedRoute>
+        }
+      />
       {/* HR Routes */}
       <Route
         path="/hr"
@@ -107,6 +116,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['hr']}>
             <WorkExceptions disableDelete={true} backPath="/hr" title="Employee Work Exceptions" />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/payouts"
+        element={
+          <ProtectedRoute allowedRoles={['hr']}>
+            <Payouts />
           </ProtectedRoute>
         }
       />

@@ -24,11 +24,17 @@ export class TeamUser {
   @Field(() => Session, { nullable: true })
   activeSession?: Session;
 
+  @Field(() => Int, { nullable: true })
+  compensationINR?: number;
+
   @Field(() => Float)
   availabilityScore: number;
 
   @Field(() => Float)
   stabilityScore: number;
+
+  @Field(() => Float)
+  monthlyOutputScore: number;
 
   @Field(() => Int)
   workingDaysInCycle: number;

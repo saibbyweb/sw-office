@@ -54,6 +54,7 @@ model User {
   currentStatus String?
   slackUserId   String?
   salaryINR     Int?
+  compensationINR Int?
   sessions      Session[]
   breaks        Break[]
   workLogs      WorkLog[]

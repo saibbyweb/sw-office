@@ -106,4 +106,15 @@ export class AdminResolver {
       data: { salaryINR },
     });
   }
+
+  @Mutation(() => User)
+  async adminUpdateUserCompensation(
+    @Args('userId', { type: () => ID }) userId: string,
+    @Args('compensationINR', { type: () => Int, nullable: true }) compensationINR: number | null,
+  ): Promise<User> {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { compensationINR },
+    });
+  }
 }

@@ -12,6 +12,9 @@ export const ADMIN_USERS_QUERY = gql`
       archived
       slackUserId
       salaryINR
+      compensationINR
+      role
+      createdAt
     }
   }
 `;
