@@ -451,11 +451,61 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
     fetchPolicy: 'network-only',
   });
 
+  // Helper to get current billing cycle dates
+  const getCurrentBillingCycleDates = () => {
+    const today = new Date();
+    const dayOfMonth = today.getDate();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+
+    let startDate: Date;
+    let endDate: Date;
+
+    if (dayOfMonth >= 19) {
+      // Current billing cycle: 19th of this month to 18th of next month
+      startDate = new Date(currentYear, currentMonth, 19);
+      endDate = new Date(currentYear, currentMonth + 1, 18);
+    } else {
+      // Current billing cycle: 19th of last month to 18th of this month
+      startDate = new Date(currentYear, currentMonth - 1, 19);
+      endDate = new Date(currentYear, currentMonth, 18);
+    }
+
+    return {
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0],
+    };
+  };
+
+  // State for selected billing cycle dates - initialize with current cycle
+  const [payoutCycleDates, setPayoutCycleDates] = React.useState<{ startDate: string; endDate: string } | null>(
+    getCurrentBillingCycleDates()
+  );
+
   // Get payout details for logged-in user only
-  const { data: payoutData } = useQuery(GET_USER_PAYOUT_DETAILS, {
-    variables: { userId },
+  const { data: payoutData, loading: payoutLoading, error: payoutError } = useQuery(GET_USER_PAYOUT_DETAILS, {
+    variables: {
+      userId,
+      startDate: payoutCycleDates?.startDate,
+      endDate: payoutCycleDates?.endDate,
+    },
     skip: !isOwnProfile,
   });
+
+  // Debug logging
+  console.log('PayoutCard Debug:', {
+    isOwnProfile,
+    payoutCycleDates,
+    hasPayoutData: !!payoutData,
+    payoutLoading,
+    payoutError: payoutError?.message,
+    getTeamUsers: payoutData?.getTeamUsers,
+  });
+
+  // Handler for when PayoutCard cycle changes
+  const handlePayoutCycleChange = (startDate: string, endDate: string) => {
+    setPayoutCycleDates({ startDate, endDate });
+  };
 
   React.useEffect(() => {
     const interval = setInterval(() => {
@@ -600,14 +650,22 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
                 </UserMeta>
               </UserDetails>
             </UserInfoSection>
-            {isOwnProfile && payoutData && (
-              <PayoutCard
-                compensation={payoutData.me.compensationINR || 0}
-                monthlyOutputScore={payoutData.getUserProfile.statistics.monthlyOutputScore}
-                availabilityScore={payoutData.getUserProfile.statistics.availabilityScore}
-                stabilityScore={payoutData.getUserProfile.statistics.stabilityScore}
-              />
-            )}
+            {isOwnProfile && payoutData && (() => {
+              // Find current user in team users array
+              const currentUserData = payoutData.getTeamUsers?.find((u: any) => u.id === userId);
+
+              if (!currentUserData) return null;
+
+              return (
+                <PayoutCard
+                  compensation={payoutData.me.compensationINR || 0}
+                  monthlyOutputScore={currentUserData.monthlyOutputScore}
+                  availabilityScore={currentUserData.availabilityScore}
+                  stabilityScore={currentUserData.stabilityScore}
+                  onCycleChange={handlePayoutCycleChange}
+                />
+              );
+            })()}
           </ProfileSection>
 
           <TabsContainer>

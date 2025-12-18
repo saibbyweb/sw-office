@@ -1,7 +1,7 @@
 {
   "name": "sw-office",
   "productName": "SW Office",
-  "version": "1.0.20",
+  "version": "1.0.21",
   "description": "SW Office - Modern Office Management Solution",
   "main": "dist/main/main.js",
   "scripts": {

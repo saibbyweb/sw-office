@@ -23,7 +23,7 @@ export const ME = gql`
 `;
 
 export const GET_USER_PAYOUT_DETAILS = gql`
-  query GetUserPayoutDetails($userId: String!) {
+  query GetUserPayoutDetails($userId: String!, $startDate: String, $endDate: String) {
     me {
       id
       name
@@ -31,14 +31,12 @@ export const GET_USER_PAYOUT_DETAILS = gql`
       avatarUrl
       compensationINR
     }
-    getUserProfile(userId: $userId) {
+    getTeamUsers(startDate: $startDate, endDate: $endDate) {
       id
-      statistics {
-        availabilityScore
-        monthlyOutputScore
-        stabilityScore
-        workingDaysInCycle
-      }
+      availabilityScore
+      monthlyOutputScore
+      stabilityScore
+      workingDaysInCycle
     }
   }
 `;

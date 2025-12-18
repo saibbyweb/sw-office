@@ -94,6 +94,14 @@ export const PayoutCard: React.FC<PayoutCardProps> = ({
   const [isBlurred, setIsBlurred] = useState(true);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
+  // Initialize with current cycle on mount
+  React.useEffect(() => {
+    if (onCycleChange && billingCycles.length > 0) {
+      const cycle = billingCycles[0];
+      onCycleChange(cycle.startDate, cycle.endDate);
+    }
+  }, [onCycleChange, billingCycles]);
+
   const handleCycleChange = (index: number) => {
     setSelectedCycle(index);
     const cycle = billingCycles[index];

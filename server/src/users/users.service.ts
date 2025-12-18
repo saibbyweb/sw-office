@@ -362,7 +362,10 @@ export class UsersService {
         },
       },
       select: {
+        id: true,
+        title: true,
         score: true,
+        completedDate: true,
       },
     });
 
@@ -373,11 +376,37 @@ export class UsersService {
     );
     const totalRatedTasksInCycle = ratedTasksInCycle.length;
 
+    const scoresArray = ratedTasksInCycle.map(task => task.score);
+    const sumOfScores = ratedTasksInCycle.reduce((sum, task) => sum + (task.score || 0), 0);
+
     const monthlyOutputScore =
       totalRatedTasksInCycle > 0
-        ? ratedTasksInCycle.reduce((sum, task) => sum + (task.score || 0), 0) /
-          totalRatedTasksInCycle
+        ? sumOfScores / totalRatedTasksInCycle
         : 0;
+
+    // LOG: getUserProfile monthly output calculation (only for imran@saibbyweb.com)
+    if (user.email === 'imran@saibbyweb.com') {
+      console.log('=== getUserProfile Monthly Output Calculation ===');
+      console.log('User ID:', userId);
+      console.log('User Email:', user.email);
+      console.log('Method: getUserProfile');
+      console.log('Billing Cycle:', {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      });
+      console.log('Completed Tasks in Cycle:', totalTasksInCycle);
+      console.log('Rated Tasks in Cycle:', totalRatedTasksInCycle);
+      console.log('Tasks Details:', completedTasksInCycle.map(t => ({
+        id: t.id,
+        title: t.title,
+        score: t.score,
+        completedDate: t.completedDate?.toISOString(),
+      })));
+      console.log('Scores Array:', scoresArray);
+      console.log('Sum of Scores:', sumOfScores);
+      console.log('Monthly Output Score:', monthlyOutputScore);
+      console.log('=== End getUserProfile Calculation ===\n');
+    }
 
     return {
       id: user.id,
@@ -502,7 +531,10 @@ export class UsersService {
             },
           },
           select: {
+            id: true,
+            title: true,
             score: true,
+            completedDate: true,
           },
         });
 
@@ -524,11 +556,39 @@ export class UsersService {
           const ratedTasksInCycle = completedTasksInCycle.filter(
             (task) => task.score !== null,
           );
+          const scoresArray = ratedTasksInCycle.map(task => task.score);
+          const sumOfScores = ratedTasksInCycle.reduce((sum, task) => sum + (task.score || 0), 0);
+
           monthlyOutputScore =
             ratedTasksInCycle.length > 0
-              ? ratedTasksInCycle.reduce((sum, task) => sum + (task.score || 0), 0) /
-                ratedTasksInCycle.length
+              ? sumOfScores / ratedTasksInCycle.length
               : 0;
+
+          // LOG: getTeamUsers monthly output calculation (only for imran@saibbyweb.com)
+          if (user.email === 'imran@saibbyweb.com') {
+            console.log('=== getTeamUsers Monthly Output Calculation ===');
+            console.log('User ID:', user.id);
+            console.log('User Name:', user.name);
+            console.log('User Email:', user.email);
+            console.log('Method: getTeamUsers');
+            console.log('Billing Cycle:', {
+              startDate: cycleStartDate.toISOString(),
+              endDate: cycleEndDate.toISOString(),
+            });
+            console.log('Any Tasks In Cycle:', !!anyTasksInCycle);
+            console.log('Completed Tasks in Cycle:', completedTasksInCycle.length);
+            console.log('Rated Tasks in Cycle:', ratedTasksInCycle.length);
+            console.log('Tasks Details:', completedTasksInCycle.map(t => ({
+              id: t.id,
+              title: t.title,
+              score: t.score,
+              completedDate: t.completedDate?.toISOString(),
+            })));
+            console.log('Scores Array:', scoresArray);
+            console.log('Sum of Scores:', sumOfScores);
+            console.log('Monthly Output Score:', monthlyOutputScore);
+            console.log('=== End getTeamUsers Calculation ===\n');
+          }
         }
 
         return {

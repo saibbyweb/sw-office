@@ -75,15 +75,17 @@ const getBillingCycles = () => {
       break;
     }
 
-    const startDate = new Date(cycleYear, cycleMonth, 19);
-    const endDate = new Date(cycleYear, cycleMonth + 1, 18);
+    // Start date: 19th at 00:00:00
+    const startDate = new Date(cycleYear, cycleMonth, 19, 0, 0, 0, 0);
+    // End date: 18th at 23:59:59.999 (to include the full day)
+    const endDate = new Date(cycleYear, cycleMonth + 1, 18, 23, 59, 59, 999);
 
     const label = `${startDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} (${startDate.getDate()}th - ${endDate.getDate()}th)`;
 
     cycles.push({
       label,
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
     });
   }
 
