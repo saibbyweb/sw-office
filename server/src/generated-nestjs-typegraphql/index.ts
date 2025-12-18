@@ -241,6 +241,24 @@ export enum BreakType {
     OTHER = "OTHER"
 }
 
+export enum PayoutSnapshotScalarFieldEnum {
+    id = "id",
+    userId = "userId",
+    billingCycleStart = "billingCycleStart",
+    billingCycleEnd = "billingCycleEnd",
+    monthlyOutputScore = "monthlyOutputScore",
+    availabilityScore = "availabilityScore",
+    stabilityScore = "stabilityScore",
+    baseCompensationINR = "baseCompensationINR",
+    expectedPayoutINR = "expectedPayoutINR",
+    differenceINR = "differenceINR",
+    workingDaysInCycle = "workingDaysInCycle",
+    snapshotDate = "snapshotDate",
+    syncedById = "syncedById",
+    createdAt = "createdAt",
+    updatedAt = "updatedAt"
+}
+
 export enum DailyOutputScoreScalarFieldEnum {
     id = "id",
     userId = "userId",
@@ -271,6 +289,7 @@ export enum BreakScalarFieldEnum {
 
 registerEnumType(BreakScalarFieldEnum, { name: 'BreakScalarFieldEnum', description: undefined })
 registerEnumType(DailyOutputScoreScalarFieldEnum, { name: 'DailyOutputScoreScalarFieldEnum', description: undefined })
+registerEnumType(PayoutSnapshotScalarFieldEnum, { name: 'PayoutSnapshotScalarFieldEnum', description: undefined })
 registerEnumType(BreakType, { name: 'BreakType', description: undefined })
 registerEnumType(ExceptionType, { name: 'ExceptionType', description: undefined })
 registerEnumType(IncidentSeverity, { name: 'IncidentSeverity', description: undefined })
@@ -360,6 +379,44 @@ export class DailyOutputScore {
     user?: InstanceType<typeof User>;
     @Field(() => User, {nullable:true})
     assignedBy?: InstanceType<typeof User> | null;
+}
+
+@ObjectType()
+export class PayoutSnapshot {
+    @Field(() => ID, {nullable:false})
+    id!: string;
+    @Field(() => String, {nullable:false})
+    userId!: string;
+    @Field(() => Date, {nullable:false})
+    billingCycleStart!: Date;
+    @Field(() => Date, {nullable:false})
+    billingCycleEnd!: Date;
+    @Field(() => Float, {nullable:false})
+    monthlyOutputScore!: number;
+    @Field(() => Float, {nullable:false})
+    availabilityScore!: number;
+    @Field(() => Float, {nullable:false})
+    stabilityScore!: number;
+    @Field(() => Float, {nullable:false})
+    baseCompensationINR!: number;
+    @Field(() => Float, {nullable:false})
+    expectedPayoutINR!: number;
+    @Field(() => Float, {nullable:false})
+    differenceINR!: number;
+    @Field(() => Int, {nullable:false})
+    workingDaysInCycle!: number;
+    @Field(() => Date, {nullable:false})
+    snapshotDate!: Date;
+    @Field(() => String, {nullable:true})
+    syncedById!: string | null;
+    @Field(() => Date, {nullable:false})
+    createdAt!: Date;
+    @Field(() => Date, {nullable:false})
+    updatedAt!: Date;
+    @Field(() => User, {nullable:false})
+    user?: InstanceType<typeof User>;
+    @Field(() => User, {nullable:true})
+    syncedBy?: InstanceType<typeof User> | null;
 }
 
 @ObjectType()
@@ -644,6 +701,10 @@ export class UserCount {
     stabilityIncidents?: number;
     @Field(() => Int, {nullable:false})
     reportedIncidents?: number;
+    @Field(() => Int, {nullable:false})
+    payoutSnapshots?: number;
+    @Field(() => Int, {nullable:false})
+    syncedPayoutSnapshots?: number;
 }
 
 @ObjectType()
@@ -698,6 +759,10 @@ export class User {
     stabilityIncidents?: Array<StabilityIncident>;
     @Field(() => [StabilityIncident], {nullable:true})
     reportedIncidents?: Array<StabilityIncident>;
+    @Field(() => [PayoutSnapshot], {nullable:true})
+    payoutSnapshots?: Array<PayoutSnapshot>;
+    @Field(() => [PayoutSnapshot], {nullable:true})
+    syncedPayoutSnapshots?: Array<PayoutSnapshot>;
     @Field(() => UserCount, {nullable:false})
     _count?: InstanceType<typeof UserCount>;
 }

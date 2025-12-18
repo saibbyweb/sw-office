@@ -351,38 +351,78 @@ export class UsersService {
     // Calculate stability score
     const stabilityScore = this.calculateStabilityScore(stabilityIncidents);
 
-    // Fetch completed tasks in current billing cycle for monthly output score
-    const completedTasksInCycle = await this.prisma.task.findMany({
+    // Fetch ALL tasks for this user to check if any tasks exist in cycle
+    const allTasksForUser = await this.prisma.task.findMany({
       where: {
         assignedToId: userId,
-        status: 'COMPLETED',
-        completedDate: {
-          gte: startDate,
-          lte: endDate,
-        },
       },
       select: {
         id: true,
         title: true,
         score: true,
+        status: true,
+        createdAt: true,
         completedDate: true,
+        completedSessionId: true,
+        completedSession: {
+          select: {
+            startTime: true,
+          },
+        },
       },
     });
 
+    // Check if user has any tasks assigned/completed in the cycle
+    // Use session start time for completed tasks, createdAt for others
+    const anyTasksInCycle = allTasksForUser.some(task => {
+      // For completed tasks, use session start time (or completedDate as fallback)
+      if (task.status === 'COMPLETED') {
+        const relevantDate = task.completedSession?.startTime || task.completedDate;
+        return relevantDate && relevantDate >= startDate && relevantDate <= endDate;
+      }
+
+      // For non-completed tasks, use createdAt
+      return task.createdAt >= startDate && task.createdAt <= endDate;
+    });
+
+    // Filter completed tasks by session start time (or completedDate as fallback)
+    const completedTasksInCycle = allTasksForUser.filter(task => {
+      if (task.status !== 'COMPLETED') return false;
+
+      // Prefer session start time if available, otherwise use completed date
+      const relevantDate = task.completedSession?.startTime || task.completedDate;
+
+      if (!relevantDate) return false;
+
+      return relevantDate >= startDate && relevantDate <= endDate;
+    });
+
     // Calculate monthly output score
+    let monthlyOutputScore: number;
+
+    if (!anyTasksInCycle) {
+      // No tasks assigned at all - give 100%
+      monthlyOutputScore = 100;
+    } else {
+      const totalTasksInCycle = completedTasksInCycle.length;
+      const ratedTasksInCycle = completedTasksInCycle.filter(
+        (task) => task.score !== null,
+      );
+      const totalRatedTasksInCycle = ratedTasksInCycle.length;
+
+      const scoresArray = ratedTasksInCycle.map(task => task.score);
+      const sumOfScores = ratedTasksInCycle.reduce((sum, task) => sum + (task.score || 0), 0);
+
+      monthlyOutputScore =
+        totalRatedTasksInCycle > 0
+          ? sumOfScores / totalRatedTasksInCycle
+          : 0;
+    }
+
     const totalTasksInCycle = completedTasksInCycle.length;
-    const ratedTasksInCycle = completedTasksInCycle.filter(
+    const totalRatedTasksInCycle = completedTasksInCycle.filter(
       (task) => task.score !== null,
-    );
-    const totalRatedTasksInCycle = ratedTasksInCycle.length;
-
-    const scoresArray = ratedTasksInCycle.map(task => task.score);
-    const sumOfScores = ratedTasksInCycle.reduce((sum, task) => sum + (task.score || 0), 0);
-
-    const monthlyOutputScore =
-      totalRatedTasksInCycle > 0
-        ? sumOfScores / totalRatedTasksInCycle
-        : 0;
+    ).length;
 
     // LOG: getUserProfile monthly output calculation (only for imran@saibbyweb.com)
     if (user.email === 'imran@saibbyweb.com') {
@@ -394,16 +434,19 @@ export class UsersService {
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
       });
-      console.log('Completed Tasks in Cycle:', totalTasksInCycle);
+      console.log('Any Tasks In Cycle:', anyTasksInCycle);
+      console.log('All Tasks for User:', allTasksForUser.length);
+      console.log('All Completed Tasks:', allTasksForUser.filter(t => t.status === 'COMPLETED').length);
+      console.log('Completed Tasks in Cycle (after filtering):', totalTasksInCycle);
       console.log('Rated Tasks in Cycle:', totalRatedTasksInCycle);
       console.log('Tasks Details:', completedTasksInCycle.map(t => ({
         id: t.id,
         title: t.title,
         score: t.score,
         completedDate: t.completedDate?.toISOString(),
+        sessionStartTime: t.completedSession?.startTime?.toISOString(),
+        usedDate: (t.completedSession?.startTime || t.completedDate)?.toISOString(),
       })));
-      console.log('Scores Array:', scoresArray);
-      console.log('Sum of Scores:', sumOfScores);
       console.log('Monthly Output Score:', monthlyOutputScore);
       console.log('=== End getUserProfile Calculation ===\n');
     }
@@ -436,7 +479,7 @@ export class UsersService {
     };
   }
 
-  async getTeamUsers(startDate?: Date, endDate?: Date): Promise<TeamUser[]> {
+  async getTeamUsers(startDate?: Date, endDate?: Date, forceCalculate: boolean = false): Promise<TeamUser[]> {
     const users = await this.prisma.user.findMany({
       where: {
         archived: false,
@@ -469,6 +512,38 @@ export class UsersService {
     const cycleEndDate = billingCycle.endDate;
     const workingDaysInCycle = this.calculateWorkingDays(cycleStartDate, cycleEndDate);
 
+    // Check if snapshots exist for this billing cycle (only if not forcing calculation)
+    if (!forceCalculate) {
+      const snapshots = await this.prisma.payoutSnapshot.findMany({
+        where: {
+          billingCycleStart: cycleStartDate,
+          billingCycleEnd: cycleEndDate,
+        },
+      });
+
+      // If snapshots exist for all users, return snapshot data
+      if (snapshots.length === users.length) {
+      return snapshots.map((snapshot) => {
+        const user = users.find((u) => u.id === snapshot.userId);
+        return {
+          id: snapshot.userId,
+          name: user?.name || '',
+          email: user?.email || '',
+          avatarUrl: user?.avatarUrl || undefined,
+          isOnline: user?.sessions?.[0] && user.sessions[0].breaks.length === 0,
+          compensationINR: snapshot.baseCompensationINR,
+          availabilityScore: snapshot.availabilityScore,
+          stabilityScore: snapshot.stabilityScore,
+          monthlyOutputScore: snapshot.monthlyOutputScore,
+          workingDaysInCycle: snapshot.workingDaysInCycle,
+          workExceptions: [],
+          stabilityIncidents: [],
+        };
+      });
+      }
+    }
+
+    // Otherwise, calculate live data
     const startEpoch = Math.floor(cycleStartDate.getTime() / 1000);
     const endEpoch = Math.floor(cycleEndDate.getTime() / 1000);
 
@@ -499,43 +574,51 @@ export class UsersService {
           },
         );
 
-        // Check if user has any tasks assigned in the cycle
-        const anyTasksInCycle = await this.prisma.task.findFirst({
+        // Fetch ALL tasks for this user to check for tasks in cycle
+        const allTasksForUser = await this.prisma.task.findMany({
           where: {
             assignedToId: user.id,
-            OR: [
-              {
-                completedDate: {
-                  gte: cycleStartDate,
-                  lte: cycleEndDate,
-                },
-              },
-              {
-                createdAt: {
-                  gte: cycleStartDate,
-                  lte: cycleEndDate,
-                },
-              },
-            ],
-          },
-        });
-
-        // Fetch completed tasks for monthly output score
-        const completedTasksInCycle = await this.prisma.task.findMany({
-          where: {
-            assignedToId: user.id,
-            status: 'COMPLETED',
-            completedDate: {
-              gte: cycleStartDate,
-              lte: cycleEndDate,
-            },
           },
           select: {
             id: true,
             title: true,
             score: true,
+            status: true,
+            createdAt: true,
             completedDate: true,
+            completedSessionId: true,
+            completedSession: {
+              select: {
+                startTime: true,
+              },
+            },
           },
+        });
+
+        // Check if user has any tasks assigned/completed in the cycle
+        // Use session start time for completed tasks, createdAt for others
+        const anyTasksInCycle = allTasksForUser.some(task => {
+          // For completed tasks, use session start time (or completedDate as fallback)
+          if (task.status === 'COMPLETED') {
+            const relevantDate = task.completedSession?.startTime || task.completedDate;
+            return relevantDate && relevantDate >= cycleStartDate && relevantDate <= cycleEndDate;
+          }
+
+          // For non-completed tasks, use createdAt
+          return task.createdAt >= cycleStartDate && task.createdAt <= cycleEndDate;
+        });
+
+        // Filter completed tasks by session start time (or completedDate as fallback)
+        // This ensures tasks completed after midnight but worked on during the cycle are counted
+        const completedTasksInCycle = allTasksForUser.filter(task => {
+          if (task.status !== 'COMPLETED') return false;
+
+          // Prefer session start time if available, otherwise use completed date
+          const relevantDate = task.completedSession?.startTime || task.completedDate;
+
+          if (!relevantDate) return false;
+
+          return relevantDate >= cycleStartDate && relevantDate <= cycleEndDate;
         });
 
         const availabilityScore = this.calculateAvailabilityScore(
@@ -575,14 +658,18 @@ export class UsersService {
               startDate: cycleStartDate.toISOString(),
               endDate: cycleEndDate.toISOString(),
             });
-            console.log('Any Tasks In Cycle:', !!anyTasksInCycle);
-            console.log('Completed Tasks in Cycle:', completedTasksInCycle.length);
+            console.log('Any Tasks In Cycle:', anyTasksInCycle);
+            console.log('All Tasks for User:', allTasksForUser.length);
+            console.log('All Completed Tasks:', allTasksForUser.filter(t => t.status === 'COMPLETED').length);
+            console.log('Completed Tasks in Cycle (after filtering):', completedTasksInCycle.length);
             console.log('Rated Tasks in Cycle:', ratedTasksInCycle.length);
             console.log('Tasks Details:', completedTasksInCycle.map(t => ({
               id: t.id,
               title: t.title,
               score: t.score,
               completedDate: t.completedDate?.toISOString(),
+              sessionStartTime: t.completedSession?.startTime?.toISOString(),
+              usedDate: (t.completedSession?.startTime || t.completedDate)?.toISOString(),
             })));
             console.log('Scores Array:', scoresArray);
             console.log('Sum of Scores:', sumOfScores);
@@ -611,5 +698,95 @@ export class UsersService {
     );
 
     return teamUsers;
+  }
+
+  async syncPayoutSnapshots(
+    startDate: Date,
+    endDate: Date,
+    syncedById: string | null,
+  ): Promise<void> {
+    // Get team users data for the billing cycle
+    const teamUsers = await this.getTeamUsers(startDate, endDate);
+
+    // Upsert snapshot for each user
+    for (const teamUser of teamUsers) {
+      const outputMultiplier = teamUser.monthlyOutputScore / 100;
+      const availabilityMultiplier = teamUser.availabilityScore / 100;
+      const stabilityMultiplier = teamUser.stabilityScore / 100;
+
+      const baseCompensation = teamUser.compensationINR || 0;
+      const expectedPayout =
+        baseCompensation *
+        outputMultiplier *
+        availabilityMultiplier *
+        stabilityMultiplier;
+      const difference = expectedPayout - baseCompensation;
+
+      await this.prisma.payoutSnapshot.upsert({
+        where: {
+          userId_billingCycleStart_billingCycleEnd: {
+            userId: teamUser.id,
+            billingCycleStart: startDate,
+            billingCycleEnd: endDate,
+          },
+        },
+        create: {
+          userId: teamUser.id,
+          billingCycleStart: startDate,
+          billingCycleEnd: endDate,
+          monthlyOutputScore: teamUser.monthlyOutputScore,
+          availabilityScore: teamUser.availabilityScore,
+          stabilityScore: teamUser.stabilityScore,
+          baseCompensationINR: baseCompensation,
+          expectedPayoutINR: expectedPayout,
+          differenceINR: difference,
+          workingDaysInCycle: teamUser.workingDaysInCycle,
+          syncedById: syncedById,
+        },
+        update: {
+          monthlyOutputScore: teamUser.monthlyOutputScore,
+          availabilityScore: teamUser.availabilityScore,
+          stabilityScore: teamUser.stabilityScore,
+          baseCompensationINR: baseCompensation,
+          expectedPayoutINR: expectedPayout,
+          differenceINR: difference,
+          workingDaysInCycle: teamUser.workingDaysInCycle,
+          syncedById: syncedById,
+          snapshotDate: new Date(), // Update snapshot date on resync
+        },
+      });
+    }
+  }
+
+  async getPayoutSnapshots(
+    startDate: Date,
+    endDate: Date,
+  ): Promise<any[]> {
+    return this.prisma.payoutSnapshot.findMany({
+      where: {
+        billingCycleStart: startDate,
+        billingCycleEnd: endDate,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatarUrl: true,
+          },
+        },
+        syncedBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+    });
   }
 }

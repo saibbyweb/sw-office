@@ -23,7 +23,7 @@ export const ME = gql`
 `;
 
 export const GET_USER_PAYOUT_DETAILS = gql`
-  query GetUserPayoutDetails($userId: String!, $startDate: String, $endDate: String) {
+  query GetUserPayoutDetails($startDate: String, $endDate: String) {
     me {
       id
       name

@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@apollo/client';
+import { useQuery, useMutation } from '@apollo/client';
 import { gql } from '@apollo/client';
-import { FiArrowLeft, FiCalendar, FiUser, FiTrendingUp, FiShield, FiCheckCircle } from 'react-icons/fi';
+import { FiArrowLeft, FiCalendar, FiUser, FiTrendingUp, FiShield, FiCheckCircle, FiRefreshCw, FiDatabase } from 'react-icons/fi';
 
 const TEAM_USERS_QUERY = gql`
-  query GetTeamUsers($startDate: String, $endDate: String) {
-    getTeamUsers(startDate: $startDate, endDate: $endDate) {
+  query GetTeamUsers($startDate: String, $endDate: String, $forceCalculate: Boolean) {
+    getTeamUsers(startDate: $startDate, endDate: $endDate, forceCalculate: $forceCalculate) {
       id
       name
       email
@@ -16,6 +16,42 @@ const TEAM_USERS_QUERY = gql`
       stabilityScore
       monthlyOutputScore
       workingDaysInCycle
+    }
+  }
+`;
+
+const SYNC_PAYOUT_SNAPSHOTS = gql`
+  mutation SyncPayoutSnapshots($startDate: String!, $endDate: String!) {
+    syncPayoutSnapshots(startDate: $startDate, endDate: $endDate)
+  }
+`;
+
+const GET_PAYOUT_SNAPSHOTS = gql`
+  query GetPayoutSnapshots($startDate: String!, $endDate: String!) {
+    getPayoutSnapshots(startDate: $startDate, endDate: $endDate) {
+      id
+      userId
+      billingCycleStart
+      billingCycleEnd
+      monthlyOutputScore
+      availabilityScore
+      stabilityScore
+      baseCompensationINR
+      expectedPayoutINR
+      differenceINR
+      workingDaysInCycle
+      snapshotDate
+      user {
+        id
+        name
+        email
+        avatarUrl
+      }
+      syncedBy {
+        id
+        name
+        email
+      }
     }
   }
 `;
@@ -97,18 +133,51 @@ export default function Payouts() {
   const billingCycles = useMemo(() => getBillingCycles(), []);
 
   const [selectedCycle, setSelectedCycle] = useState(0); // Index of current cycle
+  const [activeTab, setActiveTab] = useState<'live' | 'snapshots'>('live');
   const cycle = billingCycles[selectedCycle];
 
   const { data, loading } = useQuery<TeamUsersData>(TEAM_USERS_QUERY, {
     variables: {
       startDate: cycle.startDate,
       endDate: cycle.endDate,
+      forceCalculate: true, // Always force calculation for admin panel Live Data
     },
+    skip: activeTab === 'snapshots',
   });
+
+  const { data: snapshotsData, loading: snapshotsLoading, refetch: refetchSnapshots } = useQuery(GET_PAYOUT_SNAPSHOTS, {
+    variables: {
+      startDate: cycle.startDate,
+      endDate: cycle.endDate,
+    },
+    skip: activeTab === 'live',
+  });
+
+  const [syncSnapshots, { loading: syncing }] = useMutation(SYNC_PAYOUT_SNAPSHOTS);
 
   const teamUsers = (data?.getTeamUsers || []).filter(
     (user) => user.email !== 'hello@saibbyweb.com'
   );
+
+  const snapshotUsers = snapshotsData?.getPayoutSnapshots || [];
+
+  const handleSyncSnapshots = async () => {
+    try {
+      await syncSnapshots({
+        variables: {
+          startDate: cycle.startDate,
+          endDate: cycle.endDate,
+        },
+      });
+      alert('Snapshots synced successfully!');
+      if (activeTab === 'snapshots') {
+        refetchSnapshots();
+      }
+    } catch (error) {
+      console.error('Error syncing snapshots:', error);
+      alert('Failed to sync snapshots');
+    }
+  };
 
   // Calculate summary statistics
   const summaryStats = useMemo(() => {
@@ -117,12 +186,13 @@ export default function Payouts() {
     let totalDeductions = 0;
     let totalExpectedPayout = 0;
 
-    teamUsers.forEach((user) => {
-      const compensation = user.compensationINR || 0;
-      const outputMultiplier = user.monthlyOutputScore / 100;
-      const availabilityMultiplier = user.availabilityScore / 100;
-      const stabilityMultiplier = user.stabilityScore / 100;
-      const expectedPayout = compensation * outputMultiplier * availabilityMultiplier * stabilityMultiplier;
+    const users = activeTab === 'live' ? teamUsers : snapshotUsers;
+
+    users.forEach((user: any) => {
+      const compensation = activeTab === 'live' ? (user.compensationINR || 0) : user.baseCompensationINR;
+      const expectedPayout = activeTab === 'live'
+        ? compensation * (user.monthlyOutputScore / 100) * (user.availabilityScore / 100) * (user.stabilityScore / 100)
+        : user.expectedPayoutINR;
       const difference = expectedPayout - compensation;
 
       totalBaseCompensation += compensation;
@@ -141,7 +211,7 @@ export default function Payouts() {
       totalAdditional,
       totalDeductions,
     };
-  }, [teamUsers]);
+  }, [teamUsers, snapshotUsers, activeTab]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-8">
@@ -160,23 +230,61 @@ export default function Payouts() {
           </div>
         </div>
 
-        {/* Billing Cycle Selector */}
+        {/* Billing Cycle Selector & Controls */}
         <div className="bg-white/60 backdrop-blur-md rounded-2xl p-6 border border-white/40 mb-6">
-          <div className="flex items-center gap-3 mb-3">
-            <FiCalendar className="w-5 h-5 text-violet-600" />
-            <label className="text-sm font-semibold text-gray-700">Billing Cycle</label>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <FiCalendar className="w-5 h-5 text-violet-600" />
+              <label className="text-sm font-semibold text-gray-700">Billing Cycle</label>
+            </div>
+            <button
+              onClick={handleSyncSnapshots}
+              disabled={syncing}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl hover:from-violet-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-lg shadow-violet-500/30"
+            >
+              <FiRefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+              {syncing ? 'Syncing...' : 'Sync Snapshots'}
+            </button>
           </div>
-          <select
-            value={selectedCycle}
-            onChange={(e) => setSelectedCycle(parseInt(e.target.value))}
-            className="w-full md:w-auto px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition-all text-gray-900 font-medium"
-          >
-            {billingCycles.map((cycle, index) => (
-              <option key={index} value={index}>
-                {cycle.label}
-              </option>
-            ))}
-          </select>
+
+          <div className="flex gap-4 items-center">
+            <select
+              value={selectedCycle}
+              onChange={(e) => setSelectedCycle(parseInt(e.target.value))}
+              className="flex-1 md:flex-none md:w-auto px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition-all text-gray-900 font-medium"
+            >
+              {billingCycles.map((cycle, index) => (
+                <option key={index} value={index}>
+                  {cycle.label}
+                </option>
+              ))}
+            </select>
+
+            {/* Tab Selector */}
+            <div className="flex gap-2 bg-gray-100 p-1 rounded-xl">
+              <button
+                onClick={() => setActiveTab('live')}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  activeTab === 'live'
+                    ? 'bg-white text-violet-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Live Data
+              </button>
+              <button
+                onClick={() => setActiveTab('snapshots')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                  activeTab === 'snapshots'
+                    ? 'bg-white text-violet-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <FiDatabase className="w-4 h-4" />
+                Snapshots
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Summary Statistics */}
@@ -218,7 +326,7 @@ export default function Payouts() {
 
       {/* Team Cards */}
       <div className="max-w-7xl mx-auto">
-        {loading ? (
+        {(loading || snapshotsLoading) ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="bg-white/40 backdrop-blur-md rounded-3xl p-6 border border-gray-200 animate-pulse">
@@ -235,17 +343,18 @@ export default function Payouts() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {teamUsers.map((user) => {
-              // Use compensation or 0 if not set
-              const compensation = user.compensationINR || 0;
-
-              // Calculate multipliers
-              const outputMultiplier = user.monthlyOutputScore / 100; // Convert percentage to multiplier
-              const availabilityMultiplier = user.availabilityScore / 100; // Convert percentage to multiplier
-              const stabilityMultiplier = user.stabilityScore / 100; // Convert percentage to multiplier
+            {(activeTab === 'live' ? teamUsers : snapshotUsers).map((item: any) => {
+              // Handle both live data and snapshots
+              const user = activeTab === 'live' ? item : item.user;
+              const compensation = activeTab === 'live' ? (item.compensationINR || 0) : item.baseCompensationINR;
+              const monthlyOutputScore = activeTab === 'live' ? item.monthlyOutputScore : item.monthlyOutputScore;
+              const availabilityScore = activeTab === 'live' ? item.availabilityScore : item.availabilityScore;
+              const stabilityScore = activeTab === 'live' ? item.stabilityScore : item.stabilityScore;
 
               // Calculate expected payout
-              const expectedPayout = compensation * outputMultiplier * availabilityMultiplier * stabilityMultiplier;
+              const expectedPayout = activeTab === 'live'
+                ? compensation * (monthlyOutputScore / 100) * (availabilityScore / 100) * (stabilityScore / 100)
+                : item.expectedPayoutINR;
               const difference = expectedPayout - compensation;
 
               return (
@@ -286,7 +395,7 @@ export default function Payouts() {
                         <span className="text-xs font-medium text-blue-700">Output</span>
                       </div>
                       <div className="text-xl font-black text-blue-900">
-                        {user.monthlyOutputScore.toFixed(1)}
+                        {monthlyOutputScore.toFixed(1)}
                         <span className="text-xs text-blue-600 font-normal ml-0.5">%</span>
                       </div>
                     </div>
@@ -298,7 +407,7 @@ export default function Payouts() {
                         <span className="text-xs font-medium text-green-700">Avail.</span>
                       </div>
                       <div className="text-xl font-black text-green-900">
-                        {user.availabilityScore.toFixed(1)}
+                        {availabilityScore.toFixed(1)}
                         <span className="text-xs text-green-600 font-normal ml-0.5">%</span>
                       </div>
                     </div>
@@ -310,7 +419,7 @@ export default function Payouts() {
                         <span className="text-xs font-medium text-purple-700">Stability</span>
                       </div>
                       <div className="text-xl font-black text-purple-900">
-                        {user.stabilityScore.toFixed(1)}
+                        {stabilityScore.toFixed(1)}
                         <span className="text-xs text-purple-600 font-normal ml-0.5">%</span>
                       </div>
                     </div>
@@ -325,11 +434,11 @@ export default function Payouts() {
                     {/* Calculation Formula */}
                     <div className="text-xs text-gray-600 mb-2 font-mono">
                       ₹{compensation.toLocaleString('en-IN')} × {
-                        outputMultiplier.toFixed(3).replace(/\.?0+$/, '')
+                        (monthlyOutputScore / 100).toFixed(3).replace(/\.?0+$/, '')
                       } × {
-                        availabilityMultiplier.toFixed(3).replace(/\.?0+$/, '')
+                        (availabilityScore / 100).toFixed(3).replace(/\.?0+$/, '')
                       } × {
-                        stabilityMultiplier.toFixed(3).replace(/\.?0+$/, '')
+                        (stabilityScore / 100).toFixed(3).replace(/\.?0+$/, '')
                       }
                     </div>
 

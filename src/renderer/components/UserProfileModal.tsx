@@ -33,17 +33,17 @@ const ModalOverlay = styled.div`
 
 const ModalContainer = styled.div`
   background: ${props => props.theme.colors.background};
-  border-radius: 16px;
-  width: 90%;
-  max-width: 900px;
-  max-height: 85vh;
+  border-radius: 24px;
+  width: 95%;
+  max-width: 1200px;
+  max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  animation: slideUp 0.3s ease;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 
   @keyframes slideUp {
     from {
-      transform: translateY(30px);
+      transform: translateY(40px);
       opacity: 0;
     }
     to {
@@ -56,35 +56,36 @@ const ModalContainer = styled.div`
 const ModalHeader = styled.div`
   position: sticky;
   top: 0;
-  background: ${props => props.theme.colors.cardBackground};
-  border-bottom: 1px solid ${props => props.theme.colors.border};
-  padding: 20px 24px;
+  background: ${props => props.theme.colors.background};
+  padding: 0;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  justify-content: flex-end;
+  align-items: flex-start;
   z-index: 10;
+  border-radius: 24px 24px 0 0;
 `;
 
 const ModalTitle = styled.h2`
   margin: 0;
   font-size: 1.5rem;
   font-weight: 600;
-  color: ${props => props.theme.colors.text};
+  color: white;
 `;
 
 const CloseButton = styled.button`
-  background: transparent;
-  border: none;
+  background: ${props => props.theme.colors.cardBackground};
+  border: 1px solid ${props => props.theme.colors.border};
   color: ${props => props.theme.colors.text};
   cursor: pointer;
   display: flex;
   align-items: center;
-  padding: 8px;
-  border-radius: 8px;
-  transition: background 0.2s;
+  padding: 12px;
+  border-radius: 0 24px 0 12px;
+  transition: all 0.2s;
 
   &:hover {
-    background: ${props => props.theme.colors.background};
+    background: ${props => props.theme.colors.border};
+    transform: scale(1.05);
   }
 `;
 
@@ -138,36 +139,69 @@ const CalendarWrapper = styled.div`
 `;
 
 const ProfileSection = styled.div`
+  position: relative;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  margin: -24px -24px 32px -24px;
+  padding: 48px 40px 40px 40px;
   display: flex;
+  flex-direction: column;
   gap: 24px;
-  margin-bottom: 32px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid ${props => props.theme.colors.border};
-  align-items: flex-start;
+  border-radius: 24px 24px 0 0;
 `;
 
 const UserInfoSection = styled.div`
   display: flex;
-  gap: 24px;
+  gap: 28px;
   flex: 1;
+  align-items: center;
 `;
 
 const AvatarSection = styled.div`
   flex-shrink: 0;
+  position: relative;
 `;
 
 const Avatar = styled.div`
-  width: 120px;
-  height: 120px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, ${props => props.theme.colors.primary}, ${props => props.theme.colors.secondary});
+  width: 140px;
+  height: 140px;
+  border-radius: 28px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.15));
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 3rem;
-  font-weight: 600;
+  font-size: 4rem;
+  font-weight: 700;
   color: white;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s ease;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+`;
+
+const OnlineIndicator = styled.div<{ isOnline: boolean }>`
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: ${props => props.isOnline ? '#10b981' : '#6b7280'};
+  border: 4px solid #667eea;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  animation: ${props => props.isOnline ? 'pulse 2s infinite' : 'none'};
+
+  @keyframes pulse {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    }
+    50% {
+      box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+    }
+  }
 `;
 
 const UserDetails = styled.div`
@@ -175,112 +209,138 @@ const UserDetails = styled.div`
   display: flex;
   flex-direction: column;
   gap: 8px;
+  color: white;
 `;
 
 const UserName = styled.h3`
   margin: 0;
-  font-size: 1.75rem;
-  font-weight: 600;
-  color: ${props => props.theme.colors.text};
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: white;
+  letter-spacing: -0.5px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  line-height: 1.1;
 `;
 
 const UserEmail = styled.p`
   margin: 0;
-  font-size: 0.95rem;
-  color: ${props => props.theme.colors.text}80;
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 400;
+  letter-spacing: 0.2px;
 `;
 
 const UserMeta = styled.div`
   display: flex;
-  gap: 16px;
-  margin-top: 8px;
+  gap: 12px;
+  margin-top: 12px;
+  flex-wrap: wrap;
 `;
 
 const MetaBadge = styled.div<{ variant?: 'online' | 'offline' | 'role' }>`
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  background: ${props =>
-    props.variant === 'online' ? '#10b98120' :
-    props.variant === 'offline' ? '#ef444420' :
-    props.theme.colors.primary + '20'};
-  color: ${props =>
-    props.variant === 'online' ? '#10b981' :
-    props.variant === 'offline' ? '#ef4444' :
-    props.theme.colors.primary};
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+  }
 `;
 
 const StatusDot = styled.div<{ isOnline: boolean }>`
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: ${props => props.isOnline ? '#10b981' : '#ef4444'};
+  box-shadow: 0 0 8px ${props => props.isOnline ? '#10b981' : '#ef4444'};
 `;
 
-const StatsGrid = styled.div`
+const StatsGrid = styled.div<{ inHeader?: boolean }>`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-  margin-bottom: 32px;
+  grid-template-columns: ${props => props.inHeader ? 'repeat(6, 1fr)' : 'repeat(auto-fit, minmax(180px, 1fr))'};
+  gap: ${props => props.inHeader ? '12px' : '16px'};
+  margin-bottom: ${props => props.inHeader ? '0' : '32px'};
 `;
 
-const StatCard = styled.div`
-  background: ${props => props.theme.colors.cardBackground};
-  border: 1px solid ${props => props.theme.colors.border};
-  border-radius: 12px;
-  padding: 16px;
+const StatCard = styled.div<{ inHeader?: boolean }>`
+  background: ${props => props.inHeader ? 'rgba(255, 255, 255, 0.15)' : props.theme.colors.cardBackground};
+  border: ${props => props.inHeader ? '1px solid rgba(255, 255, 255, 0.2)' : `1px solid ${props.theme.colors.border}`};
+  border-radius: ${props => props.inHeader ? '16px' : '12px'};
+  padding: ${props => props.inHeader ? '12px' : '16px'};
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: ${props => props.inHeader ? '8px' : '12px'};
+  backdrop-filter: ${props => props.inHeader ? 'blur(10px)' : 'none'};
+  transition: all 0.2s;
+
+  &:hover {
+    background: ${props => props.inHeader ? 'rgba(255, 255, 255, 0.25)' : props.theme.colors.cardBackground};
+    transform: translateY(-2px);
+  }
 `;
 
-const StatIcon = styled.div<{ color: string }>`
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: ${props => props.color}20;
+const StatIcon = styled.div<{ color: string; inHeader?: boolean }>`
+  width: ${props => props.inHeader ? '32px' : '40px'};
+  height: ${props => props.inHeader ? '32px' : '40px'};
+  border-radius: ${props => props.inHeader ? '12px' : '10px'};
+  background: ${props => props.inHeader ? 'rgba(255, 255, 255, 0.2)' : `${props.color}20`};
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${props => props.color};
+  color: ${props => props.inHeader ? 'white' : props.color};
 `;
 
-const StatInfo = styled.div`
+const StatInfo = styled.div<{ inHeader?: boolean }>`
   flex: 1;
+  text-align: ${props => props.inHeader ? 'center' : 'left'};
+  width: 100%;
 `;
 
-const StatLabel = styled.div`
-  font-size: 0.8rem;
-  color: ${props => props.theme.colors.text}80;
-  margin-bottom: 4px;
+const StatLabel = styled.div<{ inHeader?: boolean }>`
+  font-size: ${props => props.inHeader ? '0.7rem' : '0.8rem'};
+  color: ${props => props.inHeader ? 'rgba(255, 255, 255, 0.85)' : `${props.theme.colors.text}80`};
+  margin-bottom: ${props => props.inHeader ? '2px' : '4px'};
+  font-weight: ${props => props.inHeader ? '500' : '400'};
 `;
 
-const StatValue = styled.div`
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: ${props => props.theme.colors.text};
+const StatValue = styled.div<{ inHeader?: boolean }>`
+  font-size: ${props => props.inHeader ? '1.8rem' : '1.5rem'};
+  font-weight: ${props => props.inHeader ? '800' : '700'};
+  color: ${props => props.inHeader ? 'white' : props.theme.colors.text};
+  text-shadow: ${props => props.inHeader ? '0 2px 8px rgba(0, 0, 0, 0.15)' : 'none'};
 `;
 
-const InfoButton = styled.button`
-  background: none;
+const InfoButton = styled.button<{ inHeader?: boolean }>`
+  background: ${props => props.inHeader ? 'rgba(255, 255, 255, 0.15)' : 'none'};
   border: none;
-  color: ${props => props.theme.colors.text}60;
+  color: ${props => props.inHeader ? 'rgba(255, 255, 255, 0.7)' : `${props.theme.colors.text}60`};
   cursor: pointer;
   padding: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: ${props => props.inHeader ? '8px' : '4px'};
   transition: all 0.2s ease;
-  margin-left: auto;
+  margin-left: ${props => props.inHeader ? '0' : 'auto'};
+  position: ${props => props.inHeader ? 'absolute' : 'static'};
+  top: ${props => props.inHeader ? '8px' : 'auto'};
+  right: ${props => props.inHeader ? '8px' : 'auto'};
 
   &:hover {
-    background: ${props => props.theme.colors.text}10;
-    color: ${props => props.theme.colors.primary};
+    background: ${props => props.inHeader ? 'rgba(255, 255, 255, 0.3)' : `${props.theme.colors.text}10`};
+    color: ${props => props.inHeader ? 'white' : props.theme.colors.primary};
   }
 `;
 
@@ -451,51 +511,98 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
     fetchPolicy: 'network-only',
   });
 
-  // Helper to get current billing cycle dates
-  const getCurrentBillingCycleDates = () => {
+  // Helper to calculate billing cycles (19th to 18th) - same as admin panel
+  const getBillingCycles = React.useMemo(() => {
+    const cycles: { label: string; startDate: string; endDate: string }[] = [];
     const today = new Date();
     const dayOfMonth = today.getDate();
-    const currentMonth = today.getMonth();
-    const currentYear = today.getFullYear();
 
-    let startDate: Date;
-    let endDate: Date;
+    // Payout system started from November 2025
+    const PAYOUT_START_MONTH = 10; // November (0-indexed)
+    const PAYOUT_START_YEAR = 2025;
 
-    if (dayOfMonth >= 19) {
-      // Current billing cycle: 19th of this month to 18th of next month
-      startDate = new Date(currentYear, currentMonth, 19);
-      endDate = new Date(currentYear, currentMonth + 1, 18);
-    } else {
-      // Current billing cycle: 19th of last month to 18th of this month
-      startDate = new Date(currentYear, currentMonth - 1, 19);
-      endDate = new Date(currentYear, currentMonth, 18);
+    // Determine current cycle month
+    let currentCycleMonth = today.getMonth();
+    let currentCycleYear = today.getFullYear();
+
+    // If we're before the 19th, the current cycle started last month
+    if (dayOfMonth < 19) {
+      currentCycleMonth -= 1;
+      if (currentCycleMonth < 0) {
+        currentCycleMonth = 11;
+        currentCycleYear -= 1;
+      }
     }
 
-    return {
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
-    };
-  };
+    // Generate billing cycles from current cycle back to November 2025
+    for (let i = 0; i < 24; i++) {
+      let cycleMonth = currentCycleMonth - i;
+      let cycleYear = currentCycleYear;
 
-  // State for selected billing cycle dates - initialize with current cycle
-  const [payoutCycleDates, setPayoutCycleDates] = React.useState<{ startDate: string; endDate: string } | null>(
-    getCurrentBillingCycleDates()
-  );
+      while (cycleMonth < 0) {
+        cycleMonth += 12;
+        cycleYear -= 1;
+      }
+
+      // Stop if we've gone before November 2025
+      if (
+        cycleYear < PAYOUT_START_YEAR ||
+        (cycleYear === PAYOUT_START_YEAR && cycleMonth < PAYOUT_START_MONTH)
+      ) {
+        break;
+      }
+
+      // Start date: 19th at 00:00:00
+      const startDate = new Date(cycleYear, cycleMonth, 19, 0, 0, 0, 0);
+      // End date: 18th at 23:59:59.999 (to include the full day)
+      const endDate = new Date(cycleYear, cycleMonth + 1, 18, 23, 59, 59, 999);
+
+      const label = `${startDate.toLocaleDateString('en-US', {
+        month: 'short',
+        year: 'numeric',
+      })} (${startDate.getDate()}th - ${endDate.getDate()}th)`;
+
+      cycles.push({
+        label,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      });
+    }
+
+    return cycles;
+  }, []);
+
+  // State for payout card blur - persisted across billing cycle changes
+  const [payoutCardBlurred, setPayoutCardBlurred] = React.useState(true);
+  const [isAuthenticating, setIsAuthenticating] = React.useState(false);
+
+  // State for selected billing cycle index - persisted across data refreshes
+  const [selectedCycleIndex, setSelectedCycleIndex] = React.useState(0);
+
+  // Get the current cycle based on selected index - same pattern as admin panel
+  const currentCycle = getBillingCycles[selectedCycleIndex];
 
   // Get payout details for logged-in user only
   const { data: payoutData, loading: payoutLoading, error: payoutError } = useQuery(GET_USER_PAYOUT_DETAILS, {
     variables: {
-      userId,
-      startDate: payoutCycleDates?.startDate,
-      endDate: payoutCycleDates?.endDate,
+      startDate: currentCycle?.startDate,
+      endDate: currentCycle?.endDate,
     },
     skip: !isOwnProfile,
+    fetchPolicy: 'network-only',
   });
+
+  // Keep the last valid payout data to prevent unmounting during refetches
+  const lastValidPayoutData = React.useRef<any>(null);
+  if (payoutData) {
+    lastValidPayoutData.current = payoutData;
+  }
 
   // Debug logging
   console.log('PayoutCard Debug:', {
     isOwnProfile,
-    payoutCycleDates,
+    selectedCycleIndex,
+    currentCycle,
     hasPayoutData: !!payoutData,
     payoutLoading,
     payoutError: payoutError?.message,
@@ -504,7 +611,46 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
 
   // Handler for when PayoutCard cycle changes
   const handlePayoutCycleChange = (startDate: string, endDate: string) => {
-    setPayoutCycleDates({ startDate, endDate });
+    // Not needed anymore - we just track the index
+    console.log('Cycle changed to:', startDate, endDate);
+  };
+
+  // Handler for payout card blur toggle
+  const handlePayoutBlurToggle = async () => {
+    if (!payoutCardBlurred) {
+      // If already unblurred, just blur it again
+      setPayoutCardBlurred(true);
+      return;
+    }
+
+    // Check if ipcRenderer is available
+    let ipcRenderer: any = null;
+    try {
+      ipcRenderer = window.require('electron').ipcRenderer;
+    } catch (error) {
+      console.error('ipcRenderer not available:', error);
+      // Silent fail - system authentication not available
+      return;
+    }
+
+    // Request system authentication
+    setIsAuthenticating(true);
+
+    try {
+      const result = await ipcRenderer.invoke('authenticate-system');
+
+      if (result.success) {
+        setPayoutCardBlurred(false);
+      } else {
+        // User cancelled or authentication failed - just log it, don't show error
+        console.log('Authentication cancelled or failed');
+      }
+    } catch (error) {
+      console.error('Authentication failed:', error);
+      // Silent fail - user cancelled authentication
+    } finally {
+      setIsAuthenticating(false);
+    }
   };
 
   React.useEffect(() => {
@@ -624,48 +770,161 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
     <ModalOverlay onClick={onClose}>
       <ModalContainer onClick={(e) => e.stopPropagation()}>
         <ModalHeader>
-          <ModalTitle>User Profile</ModalTitle>
           <CloseButton onClick={onClose}>
             <X size={24} />
           </CloseButton>
         </ModalHeader>
         <ModalContent>
           <ProfileSection>
-            <UserInfoSection>
-              <AvatarSection>
-                {user.avatarUrl ? (
-                  <Avatar as="img" src={user.avatarUrl} alt={user.name} />
-                ) : (
-                  <Avatar>{getInitials(user.name)}</Avatar>
-                )}
-              </AvatarSection>
-              <UserDetails>
-                <UserName>{user.name}</UserName>
-                <UserEmail>{user.email}</UserEmail>
-                <UserMeta>
-                  <MetaBadge variant="role">
-                    <UserIcon size={14} />
-                    {user.role}
-                  </MetaBadge>
-                </UserMeta>
-              </UserDetails>
-            </UserInfoSection>
-            {isOwnProfile && payoutData && (() => {
-              // Find current user in team users array
-              const currentUserData = payoutData.getTeamUsers?.find((u: any) => u.id === userId);
+            <div style={{ display: 'flex', gap: '32px', alignItems: 'flex-start' }}>
+              <UserInfoSection>
+                <AvatarSection>
+                  {user.avatarUrl ? (
+                    <Avatar as="img" src={user.avatarUrl} alt={user.name} />
+                  ) : (
+                    <Avatar>{getInitials(user.name)}</Avatar>
+                  )}
+                  <OnlineIndicator isOnline={user.isOnline} />
+                </AvatarSection>
+                <UserDetails>
+                  <UserName>{user.name}</UserName>
+                  <UserEmail>{user.email}</UserEmail>
+                  <UserMeta>
+                    <MetaBadge>
+                      <StatusDot isOnline={user.isOnline} />
+                      {user.isOnline ? 'Online' : 'Offline'}
+                    </MetaBadge>
+                    <MetaBadge variant="role">
+                      <UserIcon size={16} />
+                      {user.role}
+                    </MetaBadge>
+                  </UserMeta>
+                </UserDetails>
+              </UserInfoSection>
+              {isOwnProfile && (() => {
+                // Use current data or fall back to last valid data
+                const displayData = payoutData || lastValidPayoutData.current;
 
-              if (!currentUserData) return null;
+                // Show a placeholder only on very first load (no data at all)
+                if (!displayData && payoutLoading) {
+                  return (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '20px',
+                      color: '#666'
+                    }}>
+                      Loading payout details...
+                    </div>
+                  );
+                }
 
-              return (
-                <PayoutCard
-                  compensation={payoutData.me.compensationINR || 0}
-                  monthlyOutputScore={currentUserData.monthlyOutputScore}
-                  availabilityScore={currentUserData.availabilityScore}
-                  stabilityScore={currentUserData.stabilityScore}
-                  onCycleChange={handlePayoutCycleChange}
-                />
-              );
-            })()}
+                if (!displayData) {
+                  return null;
+                }
+
+                console.log('=== PayoutCard Rendering ===');
+                console.log('displayData:', displayData);
+                console.log('displayData.getTeamUsers:', displayData.getTeamUsers);
+                console.log('userId:', userId);
+
+                // Find current user in team users array
+                const currentUserData = displayData.getTeamUsers?.find((u: any) => u.id === userId);
+
+                console.log('currentUserData found:', currentUserData);
+
+                if (!currentUserData) {
+                  console.log('No current user data - returning null');
+                  return null;
+                }
+
+                console.log('Rendering PayoutCard component');
+                return (
+                  <PayoutCard
+                    compensation={displayData.me.compensationINR || 0}
+                    monthlyOutputScore={currentUserData.monthlyOutputScore}
+                    availabilityScore={currentUserData.availabilityScore}
+                    stabilityScore={currentUserData.stabilityScore}
+                    onCycleChange={handlePayoutCycleChange}
+                    isBlurred={payoutCardBlurred}
+                    onBlurToggle={handlePayoutBlurToggle}
+                    selectedCycleIndex={selectedCycleIndex}
+                    onCycleIndexChange={setSelectedCycleIndex}
+                    loading={payoutLoading}
+                  />
+                );
+              })()}
+            </div>
+
+            {user.statistics && (
+              <StatsGrid inHeader>
+                <StatCard inHeader>
+                  <StatIcon color="#3b82f6" inHeader>
+                    <List size={16} />
+                  </StatIcon>
+                  <StatInfo inHeader>
+                    <StatValue inHeader>{user.statistics.allottedTasks}</StatValue>
+                    <StatLabel inHeader>Allotted</StatLabel>
+                  </StatInfo>
+                </StatCard>
+                <StatCard inHeader>
+                  <StatIcon color="#10b981" inHeader>
+                    <CheckCircle size={16} />
+                  </StatIcon>
+                  <StatInfo inHeader>
+                    <StatValue inHeader>{user.statistics.completedTasks}</StatValue>
+                    <StatLabel inHeader>Completed</StatLabel>
+                  </StatInfo>
+                </StatCard>
+                <StatCard inHeader>
+                  <StatIcon color="#f59e0b" inHeader>
+                    <TrendingUp size={16} />
+                  </StatIcon>
+                  <StatInfo inHeader>
+                    <StatValue inHeader>{user.statistics.inProgressTasks}</StatValue>
+                    <StatLabel inHeader>In Progress</StatLabel>
+                  </StatInfo>
+                </StatCard>
+                <StatCard inHeader style={{ position: 'relative' }}>
+                  <StatIcon color="#10b981" inHeader>
+                    <Award size={16} />
+                  </StatIcon>
+                  <StatInfo inHeader>
+                    <StatValue inHeader>{user.statistics.availabilityScore.toFixed(1)}</StatValue>
+                    <StatLabel inHeader>Availability</StatLabel>
+                  </StatInfo>
+                  <InfoButton
+                    inHeader
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowAvailabilityInfo(true);
+                    }}
+                    title="View calculation details"
+                  >
+                    <Info size={14} />
+                  </InfoButton>
+                </StatCard>
+                <StatCard inHeader>
+                  <StatIcon color="#8b5cf6" inHeader>
+                    <Award size={16} />
+                  </StatIcon>
+                  <StatInfo inHeader>
+                    <StatValue inHeader>{user.statistics.stabilityScore.toFixed(1)}</StatValue>
+                    <StatLabel inHeader>Stability</StatLabel>
+                  </StatInfo>
+                </StatCard>
+                <StatCard inHeader>
+                  <StatIcon color="#10b981" inHeader>
+                    <Award size={16} />
+                  </StatIcon>
+                  <StatInfo inHeader>
+                    <StatValue inHeader>{user.statistics.monthlyOutputScore.toFixed(1)}</StatValue>
+                    <StatLabel inHeader>Output</StatLabel>
+                  </StatInfo>
+                </StatCard>
+              </StatsGrid>
+            )}
           </ProfileSection>
 
           <TabsContainer>
@@ -681,113 +940,6 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
 
           {activeTab === 'overview' && (
             <TabContent>
-              {user.activeSession && user.activeSession.segments && (
-            <>
-              <Section>
-                <SectionTitle>
-                  <Clock size={18} />
-                  Current Session
-                </SectionTitle>
-                <StatsGrid>
-                  <StatCard>
-                    <StatIcon color="#3b82f6">
-                      <TrendingUp size={20} />
-                    </StatIcon>
-                    <StatInfo>
-                      <StatLabel>Active Time</StatLabel>
-                      <StatValue>{formatDuration(calculateTotalDuration(user.activeSession.segments, 'WORK') * 1000)}</StatValue>
-                    </StatInfo>
-                  </StatCard>
-                  <StatCard>
-                    <StatIcon color="#f59e0b">
-                      <Clock size={20} />
-                    </StatIcon>
-                    <StatInfo>
-                      <StatLabel>Break Time</StatLabel>
-                      <StatValue>{formatDuration(calculateTotalDuration(user.activeSession.segments, 'BREAK') * 1000)}</StatValue>
-                    </StatInfo>
-                  </StatCard>
-                </StatsGrid>
-              </Section>
-            </>
-          )}
-
-          {user.statistics && (
-            <StatsGrid>
-              <StatCard>
-                <StatIcon color="#3b82f6">
-                  <List size={20} />
-                </StatIcon>
-                <StatInfo>
-                  <StatLabel>Allotted Tasks</StatLabel>
-                  <StatValue>{user.statistics.allottedTasks}</StatValue>
-                </StatInfo>
-              </StatCard>
-              <StatCard>
-                <StatIcon color="#10b981">
-                  <CheckCircle size={20} />
-                </StatIcon>
-                <StatInfo>
-                  <StatLabel>Completed</StatLabel>
-                  <StatValue>{user.statistics.completedTasks}</StatValue>
-                </StatInfo>
-              </StatCard>
-              <StatCard>
-                <StatIcon color="#f59e0b">
-                  <TrendingUp size={20} />
-                </StatIcon>
-                <StatInfo>
-                  <StatLabel>In Progress</StatLabel>
-                  <StatValue>{user.statistics.inProgressTasks}</StatValue>
-                </StatInfo>
-              </StatCard>
-              <StatCard>
-                <StatIcon color={user.statistics.availabilityScore >= 90 ? "#10b981" : user.statistics.availabilityScore >= 75 ? "#f59e0b" : "#ef4444"}>
-                  <Award size={20} />
-                </StatIcon>
-                <StatInfo>
-                  <StatLabel>Availability Score</StatLabel>
-                  <StatValue>{user.statistics.availabilityScore.toFixed(1)}</StatValue>
-                </StatInfo>
-                <InfoButton
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowAvailabilityInfo(true);
-                  }}
-                  title="View calculation details"
-                >
-                  <Info size={18} />
-                </InfoButton>
-              </StatCard>
-              <StatCard>
-                <StatIcon color={user.statistics.stabilityScore >= 90 ? "#8b5cf6" : user.statistics.stabilityScore >= 75 ? "#f59e0b" : "#ef4444"}>
-                  <Award size={20} />
-                </StatIcon>
-                <StatInfo>
-                  <StatLabel>Stability Score</StatLabel>
-                  <StatValue>{user.statistics.stabilityScore.toFixed(1)}</StatValue>
-                  {user.stabilityIncidents && user.stabilityIncidents.length > 0 && (
-                    <StatLabel style={{ fontSize: '11px', marginTop: '4px', opacity: 0.7 }}>
-                      {user.stabilityIncidents.length} incident{user.stabilityIncidents.length !== 1 ? 's' : ''} this cycle
-                    </StatLabel>
-                  )}
-                </StatInfo>
-              </StatCard>
-              <StatCard>
-                <StatIcon color={user.statistics.monthlyOutputScore >= 150 ? "#10b981" : user.statistics.monthlyOutputScore >= 100 ? "#f59e0b" : "#ef4444"}>
-                  <Award size={20} />
-                </StatIcon>
-                <StatInfo>
-                  <StatLabel>Monthly Output Score</StatLabel>
-                  <StatValue>{user.statistics.monthlyOutputScore.toFixed(1)}</StatValue>
-                  <StatLabel style={{ fontSize: '11px', marginTop: '4px', opacity: 0.7 }}>
-                    {user.statistics.totalRatedTasksInCycle}/{user.statistics.totalTasksInCycle} tasks rated
-                  </StatLabel>
-                </StatInfo>
-              </StatCard>
-            </StatsGrid>
-          )}
-
           <Section>
             <SectionTitle>
               <CheckCircle size={18} />

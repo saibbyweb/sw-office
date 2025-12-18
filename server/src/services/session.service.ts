@@ -249,7 +249,7 @@ export class SessionService {
         },
       }),
       ...(endDate && {
-        endTime: {
+        startTime: {
           lte: endDate,
         },
       }),

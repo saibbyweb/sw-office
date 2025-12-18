@@ -14,6 +14,7 @@ import { UsersService } from './users.service';
 import { UpdateProfileInput } from './dto/update-profile.input';
 import { UserProfile } from './dto/user-profile.output';
 import { TeamUser } from './dto/team-user.output';
+import { PayoutSnapshot } from 'src/generated-nestjs-typegraphql';
 
 interface RequestWithUser {
   user: {
@@ -48,10 +49,12 @@ export class UsersResolver {
   getTeamUsers(
     @Args('startDate', { nullable: true }) startDate?: string,
     @Args('endDate', { nullable: true }) endDate?: string,
+    @Args('forceCalculate', { nullable: true, defaultValue: false }) forceCalculate?: boolean,
   ): Promise<TeamUser[]> {
     return this.usersService.getTeamUsers(
       startDate ? new Date(startDate) : undefined,
       endDate ? new Date(endDate) : undefined,
+      forceCalculate,
     );
   }
   @Query(() => UserProfile)
@@ -73,5 +76,29 @@ export class UsersResolver {
     @Parent() user: User & { sessions: Session[] },
   ): Session | null {
     return user.sessions?.[0] || null;
+  }
+
+  @Mutation(() => String)
+  async syncPayoutSnapshots(
+    @Args('startDate') startDate: string,
+    @Args('endDate') endDate: string,
+  ): Promise<string> {
+    await this.usersService.syncPayoutSnapshots(
+      new Date(startDate),
+      new Date(endDate),
+      null, // No userId since auth guard removed
+    );
+    return 'Snapshots synced successfully';
+  }
+
+  @Query(() => [PayoutSnapshot])
+  async getPayoutSnapshots(
+    @Args('startDate') startDate: string,
+    @Args('endDate') endDate: string,
+  ): Promise<PayoutSnapshot[]> {
+    return this.usersService.getPayoutSnapshots(
+      new Date(startDate),
+      new Date(endDate),
+    );
   }
 }

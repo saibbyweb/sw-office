@@ -249,6 +249,7 @@ type Mutation {
   suggestTask(input: CreateTaskInputType!): Task!
   switchProject(input: SwitchProjectInput!): Session!
   syncAllSlackUserIds: [User!]!
+  syncPayoutSnapshots(endDate: String!, startDate: String!): String!
   syncSlackUserIds: String!
   testInitiateCall(callerId: String!, receiverId: String!): Call!
   unapproveTask(taskId: String!): Task!
@@ -311,6 +312,26 @@ type ParsedTaskOutput {
   title: String!
 }
 
+type PayoutSnapshot {
+  availabilityScore: Float!
+  baseCompensationINR: Float!
+  billingCycleEnd: DateTime!
+  billingCycleStart: DateTime!
+  createdAt: DateTime!
+  differenceINR: Float!
+  expectedPayoutINR: Float!
+  id: ID!
+  monthlyOutputScore: Float!
+  snapshotDate: DateTime!
+  stabilityScore: Float!
+  syncedBy: User
+  syncedById: String
+  updatedAt: DateTime!
+  user: User!
+  userId: String!
+  workingDaysInCycle: Int!
+}
+
 type Project {
   _count: ProjectCount!
   createdAt: DateTime!
@@ -351,7 +372,8 @@ type Query {
   getAllUsers: [TeamsUser!]!
   getAllUsersWithPresence: [TeamsUserWithPresence!]!
   getBreakNotificationConfig: NotificationConfig!
-  getTeamUsers(endDate: String, startDate: String): [TeamUser!]!
+  getPayoutSnapshots(endDate: String!, startDate: String!): [PayoutSnapshot!]!
+  getTeamUsers(endDate: String, forceCalculate: Boolean = false, startDate: String): [TeamUser!]!
   getUserMeetingHistory(endDate: String!, startDate: String!, userId: String!): [MeetingHistoryItem!]!
   getUserMeetings(userId: String!): [OrganizationMeeting!]!
   getUserProfile(userId: String!): UserProfile!
@@ -700,12 +722,14 @@ type User {
   isOnline: Boolean!
   name: String!
   password: String!
+  payoutSnapshots: [PayoutSnapshot!]
   reportedIncidents: [StabilityIncident!]
   role: UserRole!
   salaryINR: Int
   sessions: [Session!]
   slackUserId: String
   stabilityIncidents: [StabilityIncident!]
+  syncedPayoutSnapshots: [PayoutSnapshot!]
   taskApprovals: [Task!]
   taskAssignments: [Task!]
   taskSuggestions: [Task!]
@@ -718,9 +742,11 @@ type UserCount {
   assignedScores: Int!
   breaks: Int!
   dailyOutputScores: Int!
+  payoutSnapshots: Int!
   reportedIncidents: Int!
   sessions: Int!
   stabilityIncidents: Int!
+  syncedPayoutSnapshots: Int!
   taskApprovals: Int!
   taskAssignments: Int!
   taskSuggestions: Int!

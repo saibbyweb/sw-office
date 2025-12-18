@@ -21,6 +21,11 @@ interface PayoutCardProps {
   availabilityScore: number;
   stabilityScore: number;
   onCycleChange?: (startDate: string, endDate: string) => void;
+  isBlurred?: boolean;
+  onBlurToggle?: () => void;
+  selectedCycleIndex?: number;
+  onCycleIndexChange?: (index: number) => void;
+  loading?: boolean;
 }
 
 // Helper to calculate billing cycles (19th to 18th)
@@ -64,8 +69,10 @@ const getBillingCycles = () => {
       break;
     }
 
-    const startDate = new Date(cycleYear, cycleMonth, 19);
-    const endDate = new Date(cycleYear, cycleMonth + 1, 18);
+    // Start date: 19th at 00:00:00
+    const startDate = new Date(cycleYear, cycleMonth, 19, 0, 0, 0, 0);
+    // End date: 18th at 23:59:59.999 (to include the full day)
+    const endDate = new Date(cycleYear, cycleMonth + 1, 18, 23, 59, 59, 999);
 
     const label = `${startDate.toLocaleDateString('en-US', {
       month: 'short',
@@ -74,8 +81,8 @@ const getBillingCycles = () => {
 
     cycles.push({
       label,
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
     });
   }
 
@@ -88,11 +95,22 @@ export const PayoutCard: React.FC<PayoutCardProps> = ({
   availabilityScore,
   stabilityScore,
   onCycleChange,
+  isBlurred: externalIsBlurred,
+  onBlurToggle,
+  selectedCycleIndex: externalSelectedCycle,
+  onCycleIndexChange,
+  loading = false,
 }) => {
   const billingCycles = useMemo(() => getBillingCycles(), []);
-  const [selectedCycle, setSelectedCycle] = useState(0);
-  const [isBlurred, setIsBlurred] = useState(true);
+  const [internalSelectedCycle, setInternalSelectedCycle] = useState(0);
+  const [internalIsBlurred, setInternalIsBlurred] = useState(true);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+
+  // Use external blur state if provided, otherwise use internal
+  const isBlurred = externalIsBlurred !== undefined ? externalIsBlurred : internalIsBlurred;
+
+  // Use external selected cycle if provided, otherwise use internal
+  const selectedCycle = externalSelectedCycle !== undefined ? externalSelectedCycle : internalSelectedCycle;
 
   // Initialize with current cycle on mount
   React.useEffect(() => {
@@ -103,7 +121,14 @@ export const PayoutCard: React.FC<PayoutCardProps> = ({
   }, [onCycleChange, billingCycles]);
 
   const handleCycleChange = (index: number) => {
-    setSelectedCycle(index);
+    // Update cycle index
+    if (onCycleIndexChange) {
+      onCycleIndexChange(index);
+    } else {
+      setInternalSelectedCycle(index);
+    }
+
+    // Notify parent of date change
     const cycle = billingCycles[index];
     if (onCycleChange) {
       onCycleChange(cycle.startDate, cycle.endDate);
@@ -113,9 +138,16 @@ export const PayoutCard: React.FC<PayoutCardProps> = ({
   const handleToggleBlur = async () => {
     console.log('handleToggleBlur called, isBlurred:', isBlurred);
 
+    // If external handler is provided, use it
+    if (onBlurToggle) {
+      onBlurToggle();
+      return;
+    }
+
+    // Otherwise use internal logic
     if (!isBlurred) {
       // If already unblurred, just blur it again
-      setIsBlurred(true);
+      setInternalIsBlurred(true);
       return;
     }
 
@@ -134,7 +166,7 @@ export const PayoutCard: React.FC<PayoutCardProps> = ({
       console.log('Authentication result:', result);
 
       if (result.success) {
-        setIsBlurred(false);
+        setInternalIsBlurred(false);
       } else {
         alert('Authentication failed: ' + (result.error || 'Unknown error'));
       }
@@ -195,6 +227,12 @@ export const PayoutCard: React.FC<PayoutCardProps> = ({
           <BlurOverlay>
             <LockMessage>Click the eye icon to unlock</LockMessage>
           </BlurOverlay>
+        )}
+        {loading && (
+          <LoadingOverlay>
+            <LoadingSpinner />
+            <LoadingText>Loading...</LoadingText>
+          </LoadingOverlay>
         )}
         <ScoreGrid>
           <ScoreCard>
@@ -361,6 +399,44 @@ const BlurOverlay = styled.div`
   justify-content: center;
   z-index: 10;
   border-radius: 0 0 12px 12px;
+`;
+
+const LoadingOverlay = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(249, 250, 251, 0.95);
+  backdrop-filter: blur(4px);
+  z-index: 15;
+  border-radius: 0 0 12px 12px;
+  gap: 8px;
+`;
+
+const LoadingSpinner = styled.div`
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(99, 102, 241, 0.2);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+`;
+
+const LoadingText = styled.div`
+  font-size: 12px;
+  color: #6366f1;
+  font-weight: 500;
 `;
 
 const LockMessage = styled.div`

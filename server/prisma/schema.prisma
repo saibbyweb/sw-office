@@ -69,6 +69,8 @@ model User {
   assignedScores DailyOutputScore[] @relation("AssignedScores")
   stabilityIncidents StabilityIncident[] @relation("UserStabilityIncidents")
   reportedIncidents StabilityIncident[] @relation("ReportedStabilityIncidents")
+  payoutSnapshots PayoutSnapshot[] @relation("UserPayoutSnapshots")
+  syncedPayoutSnapshots PayoutSnapshot[] @relation("PayoutSnapshotsSyncedBy")
 
   @@map("users")
 }
@@ -399,4 +401,40 @@ model StabilityIncident {
   updatedAt         DateTime          @updatedAt
 
   @@map("stability_incidents")
+}
+
+model PayoutSnapshot {
+  id                   String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId               String   @db.ObjectId
+  user                 User     @relation("UserPayoutSnapshots", fields: [userId], references: [id])
+
+  // Billing cycle dates (stored as ISO DateTime)
+  billingCycleStart    DateTime
+  billingCycleEnd      DateTime
+
+  // Frozen scores at snapshot time
+  monthlyOutputScore   Float
+  availabilityScore    Float
+  stabilityScore       Float
+
+  // Frozen compensation values
+  baseCompensationINR  Float
+  expectedPayoutINR    Float
+  differenceINR        Float    // expectedPayout - baseCompensation
+
+  // Working days calculated at snapshot time
+  workingDaysInCycle   Int
+
+  // Audit metadata
+  snapshotDate         DateTime  @default(now())
+  syncedById           String?   @db.ObjectId
+  syncedBy             User?     @relation("PayoutSnapshotsSyncedBy", fields: [syncedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  // Ensure one snapshot per user per billing cycle
+  @@unique([userId, billingCycleStart, billingCycleEnd])
+  @@index([billingCycleStart, billingCycleEnd])
+  @@map("payout_snapshots")
 }
