@@ -22,6 +22,27 @@ export const ME = gql`
   }
 `;
 
+export const GET_USER_PAYOUT_DETAILS = gql`
+  query GetUserPayoutDetails($userId: String!) {
+    me {
+      id
+      name
+      email
+      avatarUrl
+      compensationINR
+    }
+    getUserProfile(userId: $userId) {
+      id
+      statistics {
+        availabilityScore
+        monthlyOutputScore
+        stabilityScore
+        workingDaysInCycle
+      }
+    }
+  }
+`;
+
 export const ACTIVE_SESSION = gql`
   query ActiveSession {
     activeSession {

@@ -2,9 +2,10 @@ import React from 'react';
 import styled from 'styled-components';
 import { useQuery } from '@apollo/client';
 import { X, User as UserIcon, Clock, CheckCircle, TrendingUp, Calendar as CalendarIcon, List, Award, Info } from 'react-feather';
-import { GET_USER_PROFILE, GET_USER_SESSION_DATES } from '../../graphql/queries';
+import { GET_USER_PROFILE, GET_USER_SESSION_DATES, ME, GET_USER_PAYOUT_DETAILS } from '../../graphql/queries';
 import { BillingCycleCalendar } from './common/BillingCycleCalendar';
 import { AvailabilityScoreInfoModal } from './modals/AvailabilityScoreInfoModal';
+import { PayoutCard } from './PayoutCard';
 
 const ModalOverlay = styled.div`
   position: fixed;
@@ -142,6 +143,13 @@ const ProfileSection = styled.div`
   margin-bottom: 32px;
   padding-bottom: 24px;
   border-bottom: 1px solid ${props => props.theme.colors.border};
+  align-items: flex-start;
+`;
+
+const UserInfoSection = styled.div`
+  display: flex;
+  gap: 24px;
+  flex: 1;
 `;
 
 const AvatarSection = styled.div`
@@ -421,6 +429,11 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
     [currentCycleDate]
   );
 
+  // Get current logged-in user
+  const { data: meData } = useQuery(ME);
+  const loggedInUserId = meData?.me?.id;
+  const isOwnProfile = loggedInUserId === userId;
+
   const { data, loading, error } = useQuery(GET_USER_PROFILE, {
     variables: { userId },
     skip: !userId,
@@ -438,6 +451,12 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
     fetchPolicy: 'network-only',
   });
 
+  // Get payout details for logged-in user only
+  const { data: payoutData } = useQuery(GET_USER_PAYOUT_DETAILS, {
+    variables: { userId },
+    skip: !isOwnProfile,
+  });
+
   React.useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(Date.now());
@@ -445,6 +464,17 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
 
     return () => clearInterval(interval);
   }, []);
+
+  // Debug logging
+  React.useEffect(() => {
+    console.log('UserProfileModal Debug:', {
+      isOwnProfile,
+      loggedInUserId,
+      userId,
+      hasPayoutData: !!payoutData,
+      payoutData
+    });
+  }, [isOwnProfile, loggedInUserId, userId, payoutData]);
 
   const getInitials = (name: string) => {
     return name
@@ -551,23 +581,33 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
         </ModalHeader>
         <ModalContent>
           <ProfileSection>
-            <AvatarSection>
-              {user.avatarUrl ? (
-                <Avatar as="img" src={user.avatarUrl} alt={user.name} />
-              ) : (
-                <Avatar>{getInitials(user.name)}</Avatar>
-              )}
-            </AvatarSection>
-            <UserDetails>
-              <UserName>{user.name}</UserName>
-              <UserEmail>{user.email}</UserEmail>
-              <UserMeta>
-                <MetaBadge variant="role">
-                  <UserIcon size={14} />
-                  {user.role}
-                </MetaBadge>
-              </UserMeta>
-            </UserDetails>
+            <UserInfoSection>
+              <AvatarSection>
+                {user.avatarUrl ? (
+                  <Avatar as="img" src={user.avatarUrl} alt={user.name} />
+                ) : (
+                  <Avatar>{getInitials(user.name)}</Avatar>
+                )}
+              </AvatarSection>
+              <UserDetails>
+                <UserName>{user.name}</UserName>
+                <UserEmail>{user.email}</UserEmail>
+                <UserMeta>
+                  <MetaBadge variant="role">
+                    <UserIcon size={14} />
+                    {user.role}
+                  </MetaBadge>
+                </UserMeta>
+              </UserDetails>
+            </UserInfoSection>
+            {isOwnProfile && payoutData && (
+              <PayoutCard
+                compensation={payoutData.me.compensationINR || 0}
+                monthlyOutputScore={payoutData.getUserProfile.statistics.monthlyOutputScore}
+                availabilityScore={payoutData.getUserProfile.statistics.availabilityScore}
+                stabilityScore={payoutData.getUserProfile.statistics.stabilityScore}
+              />
+            )}
           </ProfileSection>
 
           <TabsContainer>

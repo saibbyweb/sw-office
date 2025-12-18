@@ -4,6 +4,10 @@ import log from "electron-log";
 import { autoUpdater } from "electron-updater";
 import { setupAutoUpdater } from "./autoUpdater";
 import { ipcMain } from "electron";
+import { exec } from "child_process";
+import { promisify } from "util";
+
+const execAsync = promisify(exec);
 
 log.transports.file.level = "debug";
 autoUpdater.logger = log;
@@ -63,6 +67,7 @@ const registerIpcHandlers = () => {
   ipcMain.removeHandler("get-app-version");
   ipcMain.removeHandler("open-external-link");
   ipcMain.removeHandler("get-audio-path");
+  ipcMain.removeHandler("authenticate-system");
 
   // Register new handler
   ipcMain.handle("get-app-version", () => {
@@ -100,6 +105,32 @@ const registerIpcHandlers = () => {
     } else {
       // In production, use the path relative to the app's resources
       return path.join(process.resourcesPath, "app", "public", "assets", "ring.mp3");
+    }
+  });
+
+  // Add system authentication handler
+  ipcMain.handle("authenticate-system", async () => {
+    try {
+      if (process.platform === "darwin") {
+        // On macOS, use osascript with administrator privileges
+        // This will prompt for the user's system password
+        const script = `osascript -e 'do shell script "echo authenticated" with prompt "SW Office requires authentication to view payout details." with administrator privileges'`;
+        await execAsync(script);
+        return { success: true };
+      } else if (process.platform === "win32") {
+        // On Windows, use PowerShell to prompt for credentials
+        const script = `powershell -Command "Start-Process powershell -Verb RunAs -ArgumentList '-Command', 'exit' -WindowStyle Hidden"`;
+        await execAsync(script);
+        return { success: true };
+      } else {
+        // On Linux, use pkexec for authentication
+        const script = `pkexec echo "authenticated"`;
+        await execAsync(script);
+        return { success: true };
+      }
+    } catch (error) {
+      log.error("Authentication failed:", error);
+      return { success: false, error: (error as Error).message };
     }
   });
 };
