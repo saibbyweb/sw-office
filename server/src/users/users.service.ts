@@ -72,12 +72,12 @@ export class UsersService {
     const currentDate = new Date(startDate);
 
     while (currentDate <= endDate) {
-      const dayOfWeek = currentDate.getDay();
+      const dayOfWeek = currentDate.getUTCDay();
       // 0 = Sunday, 6 = Saturday
       if (dayOfWeek !== 0 && dayOfWeek !== 6) {
         workingDays++;
       }
-      currentDate.setDate(currentDate.getDate() + 1);
+      currentDate.setUTCDate(currentDate.getUTCDate() + 1);
     }
 
     return workingDays;
@@ -217,21 +217,21 @@ export class UsersService {
 
   private getCurrentBillingCycle(): { startDate: Date; endDate: Date } {
     const now = new Date();
-    const currentDay = now.getDate();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
+    const currentDay = now.getUTCDate();
+    const currentMonth = now.getUTCMonth();
+    const currentYear = now.getUTCFullYear();
 
     let startDate: Date;
     let endDate: Date;
 
     if (currentDay >= 19) {
-      // Current billing cycle: 19th of this month to 18th of next month
-      startDate = new Date(currentYear, currentMonth, 19, 0, 0, 0, 0);
-      endDate = new Date(currentYear, currentMonth + 1, 18, 23, 59, 59, 999);
+      // Current billing cycle: 19th of this month to 18th of next month (UTC)
+      startDate = new Date(Date.UTC(currentYear, currentMonth, 19, 0, 0, 0, 0));
+      endDate = new Date(Date.UTC(currentYear, currentMonth + 1, 18, 23, 59, 59, 999));
     } else {
-      // Current billing cycle: 19th of last month to 18th of this month
-      startDate = new Date(currentYear, currentMonth - 1, 19, 0, 0, 0, 0);
-      endDate = new Date(currentYear, currentMonth, 18, 23, 59, 59, 999);
+      // Current billing cycle: 19th of last month to 18th of this month (UTC)
+      startDate = new Date(Date.UTC(currentYear, currentMonth - 1, 19, 0, 0, 0, 0));
+      endDate = new Date(Date.UTC(currentYear, currentMonth, 18, 23, 59, 59, 999));
     }
 
     return { startDate, endDate };
@@ -642,10 +642,13 @@ export class UsersService {
           const scoresArray = ratedTasksInCycle.map(task => task.score);
           const sumOfScores = ratedTasksInCycle.reduce((sum, task) => sum + (task.score || 0), 0);
 
-          monthlyOutputScore =
-            ratedTasksInCycle.length > 0
-              ? sumOfScores / ratedTasksInCycle.length
-              : 0;
+          if (ratedTasksInCycle.length > 0) {
+            // Has rated tasks - calculate average
+            monthlyOutputScore = sumOfScores / ratedTasksInCycle.length;
+          } else {
+            // Has tasks but none are rated yet - give 100% (benefit of doubt)
+            monthlyOutputScore = 100;
+          }
 
           // LOG: getTeamUsers monthly output calculation (only for imran@saibbyweb.com)
           if (user.email === 'imran@saibbyweb.com') {

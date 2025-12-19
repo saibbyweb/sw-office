@@ -1,4 +1,4 @@
-import { FiUsers, FiGitBranch, FiBarChart2, FiUserPlus, FiCheckSquare, FiCalendar, FiAward, FiAlertTriangle, FiDollarSign } from 'react-icons/fi';
+import { FiUsers, FiGitBranch, FiBarChart2, FiUserPlus, FiCheckSquare, FiCalendar, FiAward, FiAlertTriangle, FiDollarSign, FiCreditCard } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 
 const pages = [
@@ -57,6 +57,14 @@ const pages = [
     icon: FiDollarSign,
     gradient: 'from-green-600 to-emerald-600',
     bgGradient: 'from-green-500/20 to-emerald-500/20',
+  },
+  {
+    title: 'Expenses',
+    description: 'Track company expenses, reimbursements, and perks',
+    path: '/expenses',
+    icon: FiCreditCard,
+    gradient: 'from-cyan-600 to-blue-600',
+    bgGradient: 'from-cyan-500/20 to-blue-500/20',
   },
   {
     title: 'Workflow View',

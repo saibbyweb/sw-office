@@ -20,6 +20,7 @@ import { SlackModule } from './slack/slack.module';
 import { WorkExceptionModule } from './work-exceptions/work-exception.module';
 import { DailyOutputScoreModule } from './daily-output-score/daily-output-score.module';
 import { StabilityIncidentsModule } from './stability-incidents/stability-incidents.module';
+import { ExpensesModule } from './expenses/expenses.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { StabilityIncidentsModule } from './stability-incidents/stability-incide
     WorkExceptionModule,
     DailyOutputScoreModule,
     StabilityIncidentsModule,
+    ExpensesModule,
   ],
 })
 export class AppModule {}

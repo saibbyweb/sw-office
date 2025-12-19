@@ -1,4 +1,4 @@
-import { FiCalendar, FiDollarSign } from 'react-icons/fi';
+import { FiCalendar, FiDollarSign, FiCreditCard } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 
 const pages = [
@@ -17,6 +17,14 @@ const pages = [
     icon: FiDollarSign,
     gradient: 'from-amber-600 to-yellow-600',
     bgGradient: 'from-amber-500/20 to-yellow-500/20',
+  },
+  {
+    title: 'Expenses',
+    description: 'Track company expenses, reimbursements, and employee perks',
+    path: '/hr/expenses',
+    icon: FiCreditCard,
+    gradient: 'from-cyan-600 to-blue-600',
+    bgGradient: 'from-cyan-500/20 to-blue-500/20',
   },
 ];
 

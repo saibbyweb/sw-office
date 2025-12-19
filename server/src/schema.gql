@@ -78,6 +78,21 @@ input CreateDailyScoreInput {
   userId: String!
 }
 
+input CreateExpenseInput {
+  amount: Float!
+  category: ExpenseCategory!
+  currency: String
+  description: String!
+  expenseDate: Int!
+  expenseType: ExpenseType!
+  invoiceNumber: String
+  notes: String
+  receiptUrl: String
+  reimbursementStatus: ReimbursementStatus
+  relatedEmployeeId: ID
+  vendor: String
+}
+
 input CreateStabilityIncidentInput {
   adminNotes: String
   description: String!
@@ -136,6 +151,61 @@ enum ExceptionType {
   SICK_LEAVE
   UNAUTHORIZED_ABSENCE
   WORK_FROM_HOME
+}
+
+type Expense {
+  amount: Float!
+  approvedBy: User
+  approvedById: String
+  approvedDate: Int
+  category: ExpenseCategory!
+  createdAt: DateTime!
+  createdBy: User!
+  createdById: String!
+  currency: String!
+  description: String!
+  expenseDate: Int!
+  expenseType: ExpenseType!
+  id: ID!
+  invoiceNumber: String
+  notes: String
+  receiptUrl: String
+  reimbursedDate: Int
+  reimbursementStatus: ReimbursementStatus!
+  relatedEmployee: User
+  relatedEmployeeId: String
+  updatedAt: DateTime!
+  vendor: String
+}
+
+enum ExpenseCategory {
+  EMPLOYEE_PERKS
+  EQUIPMENT
+  INTERNET_PHONE
+  MARKETING
+  MEALS_ENTERTAINMENT
+  MISCELLANEOUS
+  OFFICE_SUPPLIES
+  PROFESSIONAL_SERVICES
+  RENT
+  SOFTWARE_LICENSES
+  TRAVEL
+  UTILITIES
+}
+
+input ExpenseFiltersInput {
+  category: ExpenseCategory
+  endDate: Int
+  expenseType: ExpenseType
+  reimbursementStatus: ReimbursementStatus
+  relatedEmployeeId: ID
+  startDate: Int
+}
+
+enum ExpenseType {
+  COMPANY_EXPENSE
+  EMPLOYEE_BENEFIT
+  REIMBURSEMENT
 }
 
 input GetSessionDatesInput {
@@ -215,17 +285,20 @@ type Mutation {
   adminUpdateUserPassword(newPassword: String!, userId: ID!): User!
   adminUpdateUserSalary(salaryINR: Int, userId: ID!): User!
   adminUpdateUserSlackId(avatarUrl: String, slackUserId: String, userId: ID!): User!
+  approveExpense(approvedById: ID!, id: ID!): Expense!
   approveTask(approvedById: String!, taskId: String!): Task!
   assignTask(taskId: String!, userId: String): Task!
   cancelCall(callId: String!): Call!
   cleanupInconsistentBreaks: String!
   completeTask(taskId: String!): Task!
+  createExpense(createdById: ID!, input: CreateExpenseInput!): Expense!
   createOnlineMeeting(endTime: String!, startTime: String!, subject: String!, userId: String!): OnlineMeeting!
   createOrUpdateDailyScore(input: CreateDailyScoreInput!): DailyOutputScore!
   createStabilityIncident(input: CreateStabilityIncidentInput!): StabilityIncident!
   createTask(input: CreateTaskInputType!, userId: String): Task!
   createWorkException(actualTimeEpoch: Int, compensationDate: String, date: String!, notes: String, reason: String, scheduledTimeEpoch: Int, type: ExceptionType!, userId: String!): WorkException!
   deleteDailyScore(id: String!): DailyOutputScore!
+  deleteExpense(id: ID!): Expense!
   deleteStabilityIncident(id: String!): Boolean!
   deleteSuggestedTask(taskId: String!): Boolean!
   deleteWorkException(id: String!): WorkException!
@@ -239,6 +312,7 @@ type Mutation {
   initiateCall(receiverId: String!): Call!
   login(input: LoginInput!): AuthPayload!
   logout: Boolean!
+  markExpenseAsPaid(id: ID!): Expense!
   parseTaskFromNaturalLanguage(input: ParseTaskInput!): ParsedTaskOutput!
   register(input: RegisterInput!): AuthPayload!
   registerSeedUser: AuthPayload!
@@ -256,6 +330,7 @@ type Mutation {
   uncompleteTask(taskId: String!): Task!
   unresolveStabilityIncident(id: String!): StabilityIncident!
   updateDailyScore(id: String!, input: UpdateDailyScoreInput!): DailyOutputScore!
+  updateExpense(id: ID!, input: UpdateExpenseInput!): Expense!
   updatePrLinks(input: UpdatePrLinksInput!): Task!
   updateProfile(input: UpdateProfileInput!): User!
   updateStabilityIncident(id: String!, input: UpdateStabilityIncidentInput!): StabilityIncident!
@@ -369,6 +444,8 @@ type Query {
   dailyScoresByDate(date: String!): [DailyOutputScore!]!
   dailyScoresByUser(endDate: String, startDate: String, userId: String!): [DailyOutputScore!]!
   debugData: String!
+  expense(id: ID!): Expense!
+  expenses(filters: ExpenseFiltersInput): [Expense!]!
   getAllUsers: [TeamsUser!]!
   getAllUsersWithPresence: [TeamsUserWithPresence!]!
   getBreakNotificationConfig: NotificationConfig!
@@ -406,6 +483,14 @@ input RegisterInput {
   password: String!
   salaryINR: Int
   slackUserId: String
+}
+
+enum ReimbursementStatus {
+  APPROVED
+  NOT_APPLICABLE
+  PAID
+  PENDING
+  REJECTED
 }
 
 type Segment {
@@ -663,6 +748,22 @@ input UpdateDailyScoreInput {
   tasksCompleted: Int
 }
 
+input UpdateExpenseInput {
+  amount: Float
+  category: ExpenseCategory
+  currency: String
+  description: String
+  expenseDate: Int
+  expenseType: ExpenseType
+  invoiceNumber: String
+  notes: String
+  receiptUrl: String
+  reimbursedDate: Int
+  reimbursementStatus: ReimbursementStatus
+  relatedEmployeeId: ID
+  vendor: String
+}
+
 input UpdatePrLinksInput {
   prLinks: [String!]!
   taskId: String!
@@ -718,6 +819,9 @@ type User {
   currentStatus: String
   dailyOutputScores: [DailyOutputScore!]
   email: String!
+  expensesApproved: [Expense!]
+  expensesCreated: [Expense!]
+  expensesRelated: [Expense!]
   id: ID!
   isOnline: Boolean!
   name: String!
@@ -742,6 +846,9 @@ type UserCount {
   assignedScores: Int!
   breaks: Int!
   dailyOutputScores: Int!
+  expensesApproved: Int!
+  expensesCreated: Int!
+  expensesRelated: Int!
   payoutSnapshots: Int!
   reportedIncidents: Int!
   sessions: Int!

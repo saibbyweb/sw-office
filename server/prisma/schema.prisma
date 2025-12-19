@@ -71,6 +71,9 @@ model User {
   reportedIncidents StabilityIncident[] @relation("ReportedStabilityIncidents")
   payoutSnapshots PayoutSnapshot[] @relation("UserPayoutSnapshots")
   syncedPayoutSnapshots PayoutSnapshot[] @relation("PayoutSnapshotsSyncedBy")
+  expensesRelated Expense[] @relation("ExpenseEmployee")
+  expensesApproved Expense[] @relation("ExpenseApprover")
+  expensesCreated Expense[] @relation("ExpenseCreator")
 
   @@map("users")
 }
@@ -228,6 +231,35 @@ enum IncidentType {
   CODE_QUALITY_ISSUE
   HOTFIX_REQUIRED
   REGRESSION
+}
+
+enum ExpenseType {
+  COMPANY_EXPENSE
+  REIMBURSEMENT
+  EMPLOYEE_BENEFIT
+}
+
+enum ExpenseCategory {
+  OFFICE_SUPPLIES
+  EQUIPMENT
+  SOFTWARE_LICENSES
+  TRAVEL
+  MEALS_ENTERTAINMENT
+  UTILITIES
+  INTERNET_PHONE
+  RENT
+  MARKETING
+  PROFESSIONAL_SERVICES
+  EMPLOYEE_PERKS
+  MISCELLANEOUS
+}
+
+enum ReimbursementStatus {
+  PENDING
+  APPROVED
+  PAID
+  REJECTED
+  NOT_APPLICABLE
 }
 
 
@@ -437,4 +469,44 @@ model PayoutSnapshot {
   @@unique([userId, billingCycleStart, billingCycleEnd])
   @@index([billingCycleStart, billingCycleEnd])
   @@map("payout_snapshots")
+}
+
+model Expense {
+  id                  String              @id @default(auto()) @map("_id") @db.ObjectId
+
+  // Basic Info
+  expenseType         ExpenseType
+  category            ExpenseCategory
+  amount              Float
+  currency            String              @default("INR")
+  description         String
+  expenseDate         Int                 // Epoch seconds
+
+  // Employee Association
+  // Used for both reimbursements AND employee benefits
+  relatedEmployeeId   String?             @db.ObjectId
+  relatedEmployee     User?               @relation("ExpenseEmployee", fields: [relatedEmployeeId], references: [id])
+
+  // Reimbursement Info (only for REIMBURSEMENT type)
+  reimbursementStatus ReimbursementStatus @default(NOT_APPLICABLE)
+  reimbursedDate      Int?                // Epoch seconds when reimbursement was paid
+
+  // Documentation
+  receiptUrl          String?
+  invoiceNumber       String?
+  vendor              String?
+
+  // Approval
+  approvedById        String?             @db.ObjectId
+  approvedBy          User?               @relation("ExpenseApprover", fields: [approvedById], references: [id])
+  approvedDate        Int?                // Epoch seconds
+
+  // Metadata
+  notes               String?
+  createdById         String              @db.ObjectId
+  createdBy           User                @relation("ExpenseCreator", fields: [createdById], references: [id])
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@map("expenses")
 }

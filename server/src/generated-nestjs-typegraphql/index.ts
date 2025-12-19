@@ -197,6 +197,14 @@ export enum SegmentType {
     BREAK = "BREAK"
 }
 
+export enum ReimbursementStatus {
+    PENDING = "PENDING",
+    APPROVED = "APPROVED",
+    PAID = "PAID",
+    REJECTED = "REJECTED",
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+}
+
 export enum QueryMode {
     'default' = "default",
     insensitive = "insensitive"
@@ -221,6 +229,27 @@ export enum IncidentSeverity {
     MEDIUM = "MEDIUM",
     LOW = "LOW",
     NEGLIGIBLE = "NEGLIGIBLE"
+}
+
+export enum ExpenseType {
+    COMPANY_EXPENSE = "COMPANY_EXPENSE",
+    REIMBURSEMENT = "REIMBURSEMENT",
+    EMPLOYEE_BENEFIT = "EMPLOYEE_BENEFIT"
+}
+
+export enum ExpenseCategory {
+    OFFICE_SUPPLIES = "OFFICE_SUPPLIES",
+    EQUIPMENT = "EQUIPMENT",
+    SOFTWARE_LICENSES = "SOFTWARE_LICENSES",
+    TRAVEL = "TRAVEL",
+    MEALS_ENTERTAINMENT = "MEALS_ENTERTAINMENT",
+    UTILITIES = "UTILITIES",
+    INTERNET_PHONE = "INTERNET_PHONE",
+    RENT = "RENT",
+    MARKETING = "MARKETING",
+    PROFESSIONAL_SERVICES = "PROFESSIONAL_SERVICES",
+    EMPLOYEE_PERKS = "EMPLOYEE_PERKS",
+    MISCELLANEOUS = "MISCELLANEOUS"
 }
 
 export enum ExceptionType {
@@ -259,6 +288,28 @@ export enum PayoutSnapshotScalarFieldEnum {
     updatedAt = "updatedAt"
 }
 
+export enum ExpenseScalarFieldEnum {
+    id = "id",
+    expenseType = "expenseType",
+    category = "category",
+    amount = "amount",
+    currency = "currency",
+    description = "description",
+    expenseDate = "expenseDate",
+    relatedEmployeeId = "relatedEmployeeId",
+    reimbursementStatus = "reimbursementStatus",
+    reimbursedDate = "reimbursedDate",
+    receiptUrl = "receiptUrl",
+    invoiceNumber = "invoiceNumber",
+    vendor = "vendor",
+    approvedById = "approvedById",
+    approvedDate = "approvedDate",
+    notes = "notes",
+    createdById = "createdById",
+    createdAt = "createdAt",
+    updatedAt = "updatedAt"
+}
+
 export enum DailyOutputScoreScalarFieldEnum {
     id = "id",
     userId = "userId",
@@ -289,12 +340,16 @@ export enum BreakScalarFieldEnum {
 
 registerEnumType(BreakScalarFieldEnum, { name: 'BreakScalarFieldEnum', description: undefined })
 registerEnumType(DailyOutputScoreScalarFieldEnum, { name: 'DailyOutputScoreScalarFieldEnum', description: undefined })
+registerEnumType(ExpenseScalarFieldEnum, { name: 'ExpenseScalarFieldEnum', description: undefined })
 registerEnumType(PayoutSnapshotScalarFieldEnum, { name: 'PayoutSnapshotScalarFieldEnum', description: undefined })
 registerEnumType(BreakType, { name: 'BreakType', description: undefined })
 registerEnumType(ExceptionType, { name: 'ExceptionType', description: undefined })
+registerEnumType(ExpenseCategory, { name: 'ExpenseCategory', description: undefined })
+registerEnumType(ExpenseType, { name: 'ExpenseType', description: undefined })
 registerEnumType(IncidentSeverity, { name: 'IncidentSeverity', description: undefined })
 registerEnumType(IncidentType, { name: 'IncidentType', description: undefined })
 registerEnumType(QueryMode, { name: 'QueryMode', description: undefined })
+registerEnumType(ReimbursementStatus, { name: 'ReimbursementStatus', description: undefined })
 registerEnumType(SegmentType, { name: 'SegmentType', description: undefined })
 registerEnumType(SessionStatus, { name: 'SessionStatus', description: undefined })
 registerEnumType(SortOrder, { name: 'SortOrder', description: undefined })
@@ -379,6 +434,54 @@ export class DailyOutputScore {
     user?: InstanceType<typeof User>;
     @Field(() => User, {nullable:true})
     assignedBy?: InstanceType<typeof User> | null;
+}
+
+@ObjectType()
+export class Expense {
+    @Field(() => ID, {nullable:false})
+    id!: string;
+    @Field(() => ExpenseType, {nullable:false})
+    expenseType!: `${ExpenseType}`;
+    @Field(() => ExpenseCategory, {nullable:false})
+    category!: `${ExpenseCategory}`;
+    @Field(() => Float, {nullable:false})
+    amount!: number;
+    @Field(() => String, {defaultValue:'INR',nullable:false})
+    currency!: string;
+    @Field(() => String, {nullable:false})
+    description!: string;
+    @Field(() => Int, {nullable:false})
+    expenseDate!: number;
+    @Field(() => String, {nullable:true})
+    relatedEmployeeId!: string | null;
+    @Field(() => ReimbursementStatus, {defaultValue:'NOT_APPLICABLE',nullable:false})
+    reimbursementStatus!: `${ReimbursementStatus}`;
+    @Field(() => Int, {nullable:true})
+    reimbursedDate!: number | null;
+    @Field(() => String, {nullable:true})
+    receiptUrl!: string | null;
+    @Field(() => String, {nullable:true})
+    invoiceNumber!: string | null;
+    @Field(() => String, {nullable:true})
+    vendor!: string | null;
+    @Field(() => String, {nullable:true})
+    approvedById!: string | null;
+    @Field(() => Int, {nullable:true})
+    approvedDate!: number | null;
+    @Field(() => String, {nullable:true})
+    notes!: string | null;
+    @Field(() => String, {nullable:false})
+    createdById!: string;
+    @Field(() => Date, {nullable:false})
+    createdAt!: Date;
+    @Field(() => Date, {nullable:false})
+    updatedAt!: Date;
+    @Field(() => User, {nullable:true})
+    relatedEmployee?: InstanceType<typeof User> | null;
+    @Field(() => User, {nullable:true})
+    approvedBy?: InstanceType<typeof User> | null;
+    @Field(() => User, {nullable:false})
+    createdBy?: InstanceType<typeof User>;
 }
 
 @ObjectType()
@@ -705,6 +808,12 @@ export class UserCount {
     payoutSnapshots?: number;
     @Field(() => Int, {nullable:false})
     syncedPayoutSnapshots?: number;
+    @Field(() => Int, {nullable:false})
+    expensesRelated?: number;
+    @Field(() => Int, {nullable:false})
+    expensesApproved?: number;
+    @Field(() => Int, {nullable:false})
+    expensesCreated?: number;
 }
 
 @ObjectType()
@@ -763,6 +872,12 @@ export class User {
     payoutSnapshots?: Array<PayoutSnapshot>;
     @Field(() => [PayoutSnapshot], {nullable:true})
     syncedPayoutSnapshots?: Array<PayoutSnapshot>;
+    @Field(() => [Expense], {nullable:true})
+    expensesRelated?: Array<Expense>;
+    @Field(() => [Expense], {nullable:true})
+    expensesApproved?: Array<Expense>;
+    @Field(() => [Expense], {nullable:true})
+    expensesCreated?: Array<Expense>;
     @Field(() => UserCount, {nullable:false})
     _count?: InstanceType<typeof UserCount>;
 }

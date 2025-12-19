@@ -13,6 +13,7 @@ import WorkExceptions from './pages/WorkExceptions';
 import DailyOutputScore from './pages/DailyOutputScore';
 import StabilityIncidents from './pages/StabilityIncidents';
 import Payouts from './pages/Payouts';
+import Expenses from './pages/Expenses';
 
 function AppRoutes() {
   const { login } = useAuth();
@@ -102,6 +103,14 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/expenses"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <Expenses />
+          </ProtectedRoute>
+        }
+      />
       {/* HR Routes */}
       <Route
         path="/hr"
@@ -124,6 +133,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['hr']}>
             <Payouts />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/hr/expenses"
+        element={
+          <ProtectedRoute allowedRoles={['hr']}>
+            <Expenses />
           </ProtectedRoute>
         }
       />
