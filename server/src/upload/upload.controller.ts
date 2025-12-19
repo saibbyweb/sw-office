@@ -41,4 +41,34 @@ export class UploadController {
     const fileUrl = `/uploads/${file.filename}`;
     return { url: fileUrl };
   }
+
+  @Post('receipt')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: './uploads',
+        filename: (req, file, callback) => {
+          const uniqueSuffix = uuidv4();
+          callback(
+            null,
+            `receipt-${uniqueSuffix}${extname(file.originalname)}`,
+          );
+        },
+      }),
+      fileFilter: (req, file, callback) => {
+        // Allow images and PDFs
+        if (!file.originalname.match(/\.(jpg|jpeg|png|gif|pdf)$/i)) {
+          return callback(new Error('Only image and PDF files are allowed!'), false);
+        }
+        callback(null, true);
+      },
+      limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB limit
+      },
+    }),
+  )
+  async uploadReceipt(@UploadedFile() file: Express.Multer.File) {
+    const fileUrl = `/uploads/${file.filename}`;
+    return { url: fileUrl };
+  }
 }

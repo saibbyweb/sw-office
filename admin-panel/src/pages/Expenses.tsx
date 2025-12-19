@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@apollo/client';
-import { FiArrowLeft, FiPlus, FiX, FiDollarSign, FiEdit2, FiTrash2, FiFilter, FiCheck } from 'react-icons/fi';
+import { FiArrowLeft, FiPlus, FiX, FiDollarSign, FiEdit2, FiTrash2, FiFilter, FiCheck, FiUpload, FiFileText, FiImage } from 'react-icons/fi';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ADMIN_USERS_QUERY } from '../graphql/admin.queries';
@@ -25,7 +25,8 @@ const categoryConfig = {
   EQUIPMENT: { label: 'Equipment', icon: '💻' },
   SOFTWARE_LICENSES: { label: 'Software Licenses', icon: '⚙️' },
   TRAVEL: { label: 'Travel', icon: '✈️' },
-  MEALS_ENTERTAINMENT: { label: 'Meals & Entertainment', icon: '🍽️' },
+  MEALS: { label: 'Meals', icon: '🍽️' },
+  ENTERTAINMENT: { label: 'Entertainment', icon: '🎉' },
   UTILITIES: { label: 'Utilities', icon: '💡' },
   INTERNET_PHONE: { label: 'Internet & Phone', icon: '📱' },
   RENT: { label: 'Rent', icon: '🏢' },
@@ -53,6 +54,14 @@ export default function Expenses() {
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
+  const [uploadingFile, setUploadingFile] = useState(false);
+
+  // Confirmation dialog state
+  const [confirmAction, setConfirmAction] = useState<{
+    type: 'approve' | 'paid' | 'delete';
+    id: string;
+    title: string;
+  } | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -104,28 +113,40 @@ export default function Expenses() {
     onError: (error) => toast.error(error.message),
   });
 
-  const [deleteExpense] = useMutation(DELETE_EXPENSE_MUTATION, {
+  const [deleteExpense, { loading: deleteLoading }] = useMutation(DELETE_EXPENSE_MUTATION, {
     onCompleted: () => {
       toast.success('Expense deleted successfully');
+      setConfirmAction(null);
       refetchExpenses();
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => {
+      toast.error(error.message);
+      setConfirmAction(null);
+    },
   });
 
-  const [approveExpense] = useMutation(APPROVE_EXPENSE_MUTATION, {
+  const [approveExpense, { loading: approveLoading }] = useMutation(APPROVE_EXPENSE_MUTATION, {
     onCompleted: () => {
       toast.success('Expense approved');
+      setConfirmAction(null);
       refetchExpenses();
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => {
+      toast.error(error.message);
+      setConfirmAction(null);
+    },
   });
 
-  const [markAsPaid] = useMutation(MARK_EXPENSE_AS_PAID_MUTATION, {
+  const [markAsPaid, { loading: paidLoading }] = useMutation(MARK_EXPENSE_AS_PAID_MUTATION, {
     onCompleted: () => {
       toast.success('Marked as paid');
+      setConfirmAction(null);
       refetchExpenses();
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => {
+      toast.error(error.message);
+      setConfirmAction(null);
+    },
   });
 
   const resetForm = () => {
@@ -142,6 +163,32 @@ export default function Expenses() {
       vendor: '',
       notes: '',
     });
+  };
+
+  const handleFileUpload = async (file: File) => {
+    setUploadingFile(true);
+    const formDataUpload = new FormData();
+    formDataUpload.append('file', file);
+
+    try {
+      const response = await fetch('http://localhost:3000/upload/receipt', {
+        method: 'POST',
+        body: formDataUpload,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
+      setFormData({ ...formData, receiptUrl: data.url });
+      toast.success('File uploaded successfully');
+    } catch (error) {
+      toast.error('Failed to upload file');
+      console.error(error);
+    } finally {
+      setUploadingFile(false);
+    }
   };
 
   const handleSubmit = () => {
@@ -167,7 +214,6 @@ export default function Expenses() {
     if (editExpense) {
       updateExpense({ variables: { id: editExpense.id, input } });
     } else {
-      // Use a mock admin user ID - in production, get from auth context
       createExpense({ variables: { input, createdById: usersData?.adminUsers[0]?.id || '123' } });
     }
   };
@@ -190,19 +236,32 @@ export default function Expenses() {
     setShowCreateModal(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this expense?')) {
-      deleteExpense({ variables: { id } });
+  const confirmDelete = (id: string, description: string) => {
+    setConfirmAction({ type: 'delete', id, title: description });
+  };
+
+  const confirmApprove = (id: string, description: string) => {
+    setConfirmAction({ type: 'approve', id, title: description });
+  };
+
+  const confirmMarkPaid = (id: string, description: string) => {
+    setConfirmAction({ type: 'paid', id, title: description });
+  };
+
+  const executeConfirmedAction = () => {
+    if (!confirmAction) return;
+
+    switch (confirmAction.type) {
+      case 'approve':
+        approveExpense({ variables: { id: confirmAction.id, approvedById: usersData?.adminUsers[0]?.id || '123' } });
+        break;
+      case 'paid':
+        markAsPaid({ variables: { id: confirmAction.id } });
+        break;
+      case 'delete':
+        deleteExpense({ variables: { id: confirmAction.id } });
+        break;
     }
-  };
-
-  const handleApprove = (id: string) => {
-    // Use mock admin user ID
-    approveExpense({ variables: { id, approvedById: usersData?.adminUsers[0]?.id || '123' } });
-  };
-
-  const handleMarkPaid = (id: string) => {
-    markAsPaid({ variables: { id } });
   };
 
   const expenses = expensesData?.expenses || [];
@@ -211,6 +270,8 @@ export default function Expenses() {
     value: user.id,
     label: user.name,
   })) || [];
+
+  const actionLoading = approveLoading || paidLoading || deleteLoading;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-8">
@@ -334,8 +395,8 @@ export default function Expenses() {
           )}
         </div>
 
-        {/* Expense List */}
-        <div className="grid grid-cols-1 gap-4">
+        {/* Expense Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {expenses.map((expense: any) => {
             const typeConfig = expenseTypeConfig[expense.expenseType as keyof typeof expenseTypeConfig];
             const catConfig = categoryConfig[expense.category as keyof typeof categoryConfig];
@@ -344,105 +405,182 @@ export default function Expenses() {
             return (
               <div
                 key={expense.id}
-                className="bg-white/80 backdrop-blur-md rounded-2xl p-6 border border-gray-200 hover:shadow-xl transition-all"
+                className="bg-white/80 backdrop-blur-md rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-all"
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold bg-gradient-to-r ${typeConfig.color} text-white`}>
-                        {typeConfig.label}
-                      </span>
-                      <span className="text-sm text-gray-600">
-                        {catConfig.icon} {catConfig.label}
-                      </span>
-                      <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${statConfig.bgColor} ${statConfig.color} ${statConfig.borderColor} border`}>
-                        {statConfig.label}
-                      </span>
-                    </div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">{expense.description}</h3>
-
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <span className="text-gray-500">Amount:</span>
-                        <div className="font-bold text-gray-900">
-                          {expense.currency} {expense.amount.toLocaleString()}
-                        </div>
-                      </div>
-
-                      {expense.relatedEmployee && (
-                        <div>
-                          <span className="text-gray-500">Employee:</span>
-                          <div className="font-medium text-gray-900">{expense.relatedEmployee.name}</div>
-                        </div>
-                      )}
-
-                      <div>
-                        <span className="text-gray-500">Date:</span>
-                        <div className="font-medium text-gray-900">
-                          {new Date(expense.expenseDate * 1000).toLocaleDateString()}
-                        </div>
-                      </div>
-
-                      {expense.vendor && (
-                        <div>
-                          <span className="text-gray-500">Vendor:</span>
-                          <div className="font-medium text-gray-900">{expense.vendor}</div>
-                        </div>
-                      )}
-                    </div>
-
-                    {expense.notes && (
-                      <div className="mt-3 text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
-                        {expense.notes}
-                      </div>
-                    )}
+                {/* Header */}
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1 min-w-0">
+                    <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold bg-gradient-to-r ${typeConfig.color} text-white mb-2`}>
+                      {typeConfig.label}
+                    </span>
+                    <h3 className="text-sm font-bold text-gray-900 truncate">{expense.description}</h3>
                   </div>
-
-                  <div className="flex gap-2 ml-4">
+                  <div className="flex gap-1 ml-2">
                     {expense.expenseType === 'REIMBURSEMENT' && expense.reimbursementStatus === 'PENDING' && (
                       <button
-                        onClick={() => handleApprove(expense.id)}
-                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                        onClick={() => confirmApprove(expense.id, expense.description)}
+                        className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                         title="Approve"
                       >
-                        <FiCheck className="w-4 h-4" />
+                        <FiCheck className="w-3.5 h-3.5" />
                       </button>
                     )}
                     {expense.expenseType === 'REIMBURSEMENT' && expense.reimbursementStatus === 'APPROVED' && (
                       <button
-                        onClick={() => handleMarkPaid(expense.id)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        onClick={() => confirmMarkPaid(expense.id, expense.description)}
+                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                         title="Mark as Paid"
                       >
-                        <FiDollarSign className="w-4 h-4" />
+                        <FiDollarSign className="w-3.5 h-3.5" />
                       </button>
                     )}
                     <button
                       onClick={() => handleEdit(expense)}
-                      className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                      className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                     >
-                      <FiEdit2 className="w-4 h-4" />
+                      <FiEdit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
-                      onClick={() => handleDelete(expense.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      onClick={() => confirmDelete(expense.id, expense.description)}
+                      className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                     >
-                      <FiTrash2 className="w-4 h-4" />
+                      <FiTrash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
+
+                {/* Amount & Status */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-2xl font-black text-gray-900">
+                    {expense.currency} {expense.amount.toLocaleString()}
+                  </div>
+                  <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${statConfig.bgColor} ${statConfig.color} ${statConfig.borderColor} border`}>
+                    {statConfig.label}
+                  </span>
+                </div>
+
+                {/* Category & Date */}
+                <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
+                  <span>{catConfig.icon} {catConfig.label}</span>
+                  <span>•</span>
+                  <span>{new Date(expense.expenseDate * 1000).toLocaleDateString()}</span>
+                </div>
+
+                {/* Employee */}
+                {expense.relatedEmployee && (
+                  <div className="text-xs text-gray-600 mb-2">
+                    👤 {expense.relatedEmployee.name}
+                  </div>
+                )}
+
+                {/* Vendor */}
+                {expense.vendor && (
+                  <div className="text-xs text-gray-600 mb-2">
+                    🏪 {expense.vendor}
+                  </div>
+                )}
+
+                {/* Receipt/Invoice */}
+                {expense.receiptUrl && (
+                  <div className="text-xs text-violet-600 mb-2 flex items-center gap-1">
+                    {expense.receiptUrl.endsWith('.pdf') ? (
+                      <FiFileText className="w-3 h-3" />
+                    ) : (
+                      <FiImage className="w-3 h-3" />
+                    )}
+                    <a href={`http://localhost:3000${expense.receiptUrl}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                      View Receipt
+                    </a>
+                  </div>
+                )}
+
+                {/* Notes */}
+                {expense.notes && (
+                  <div className="text-xs text-gray-500 bg-gray-50 rounded-lg p-2 mt-2">
+                    {expense.notes}
+                  </div>
+                )}
               </div>
             );
           })}
 
           {expenses.length === 0 && (
-            <div className="text-center py-12 text-gray-500">
+            <div className="col-span-full text-center py-12 text-gray-500">
               <FiDollarSign className="w-16 h-16 mx-auto mb-4 opacity-20" />
               <p>No expenses found</p>
             </div>
           )}
         </div>
       </div>
+
+      {/* Confirmation Dialog */}
+      <AnimatePresence>
+        {confirmAction && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => !actionLoading && setConfirmAction(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
+            >
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                {confirmAction.type === 'approve' && 'Approve Expense?'}
+                {confirmAction.type === 'paid' && 'Mark as Paid?'}
+                {confirmAction.type === 'delete' && 'Delete Expense?'}
+              </h3>
+              <p className="text-gray-600 mb-6">
+                {confirmAction.type === 'approve' && `Are you sure you want to approve "${confirmAction.title}"?`}
+                {confirmAction.type === 'paid' && `Are you sure you want to mark "${confirmAction.title}" as paid?`}
+                {confirmAction.type === 'delete' && `Are you sure you want to delete "${confirmAction.title}"? This action cannot be undone.`}
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmAction(null)}
+                  disabled={actionLoading}
+                  className="flex-1 px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={executeConfirmedAction}
+                  disabled={actionLoading}
+                  className={`flex-1 px-4 py-2 rounded-xl transition-all font-medium text-white disabled:opacity-50 ${
+                    confirmAction.type === 'delete'
+                      ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800'
+                      : confirmAction.type === 'approve'
+                      ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
+                      : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800'
+                  }`}
+                >
+                  {actionLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Processing...
+                    </span>
+                  ) : (
+                    <>
+                      {confirmAction.type === 'approve' && 'Approve'}
+                      {confirmAction.type === 'paid' && 'Mark Paid'}
+                      {confirmAction.type === 'delete' && 'Delete'}
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Create/Edit Modal */}
       <AnimatePresence>
@@ -583,7 +721,7 @@ export default function Expenses() {
                   />
                 </div>
 
-                {/* Invoice Number & Receipt URL */}
+                {/* Invoice Number & File Upload */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Invoice Number</label>
@@ -596,16 +734,30 @@ export default function Expenses() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Receipt URL</label>
-                    <input
-                      type="url"
-                      value={formData.receiptUrl}
-                      onChange={(e) => setFormData({ ...formData, receiptUrl: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-violet-500 focus:ring-4 focus:ring-violet-100 transition-all outline-none"
-                      placeholder="https://..."
-                    />
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Receipt/Invoice</label>
+                    <label className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl border-2 border-gray-200 hover:border-violet-500 transition-all cursor-pointer bg-gray-50 hover:bg-gray-100">
+                      <FiUpload className="w-4 h-4" />
+                      {uploadingFile ? 'Uploading...' : formData.receiptUrl ? 'Change File' : 'Upload File'}
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileUpload(file);
+                        }}
+                        className="hidden"
+                      />
+                    </label>
                   </div>
                 </div>
+
+                {/* Receipt URL Preview */}
+                {formData.receiptUrl && (
+                  <div className="text-xs text-green-600 flex items-center gap-1">
+                    <FiCheck className="w-3 h-3" />
+                    File uploaded successfully
+                  </div>
+                )}
 
                 {/* Notes */}
                 <div>
