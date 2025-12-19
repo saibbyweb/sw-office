@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@apollo/client';
-import { FiArrowLeft, FiPlus, FiX, FiDollarSign, FiEdit2, FiTrash2, FiFilter, FiCheck, FiUpload, FiFileText, FiImage } from 'react-icons/fi';
+import { FiArrowLeft, FiPlus, FiX, FiDollarSign, FiEdit2, FiTrash2, FiFilter, FiCheck, FiUpload, FiFileText, FiImage, FiGrid, FiList } from 'react-icons/fi';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ADMIN_USERS_QUERY } from '../graphql/admin.queries';
@@ -55,6 +55,8 @@ export default function Expenses() {
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
 
   // Confirmation dialog state
   const [confirmAction, setConfirmAction] = useState<{
@@ -95,8 +97,6 @@ export default function Expenses() {
   const [createExpense] = useMutation(CREATE_EXPENSE_MUTATION, {
     onCompleted: () => {
       toast.success('Expense created successfully', { duration: 3000 });
-      setShowCreateModal(false);
-      resetForm();
       refetchExpenses();
     },
     onError: (error) => toast.error(error.message),
@@ -105,9 +105,6 @@ export default function Expenses() {
   const [updateExpense] = useMutation(UPDATE_EXPENSE_MUTATION, {
     onCompleted: () => {
       toast.success('Expense updated successfully', { duration: 3000 });
-      setShowCreateModal(false);
-      setEditExpense(null);
-      resetForm();
       refetchExpenses();
     },
     onError: (error) => toast.error(error.message),
@@ -211,6 +208,13 @@ export default function Expenses() {
       notes: formData.notes || undefined,
     };
 
+    // Hide modal immediately to avoid confusion
+    setShowCreateModal(false);
+    resetForm();
+    if (editExpense) {
+      setEditExpense(null);
+    }
+
     if (editExpense) {
       updateExpense({ variables: { id: editExpense.id, input } });
     } else {
@@ -264,7 +268,11 @@ export default function Expenses() {
     }
   };
 
-  const expenses = expensesData?.expenses || [];
+  const expenses = [...(expensesData?.expenses || [])].sort((a: any, b: any) => {
+    const dateA = new Date(a.createdAt).getTime();
+    const dateB = new Date(b.createdAt).getTime();
+    return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+  });
 
   const userOptions = usersData?.adminUsers?.map((user: any) => ({
     value: user.id,
@@ -292,17 +300,54 @@ export default function Expenses() {
               <p className="text-gray-600 mt-1">Manage company expenses, reimbursements, and employee benefits</p>
             </div>
           </div>
-          <button
-            onClick={() => {
-              resetForm();
-              setEditExpense(null);
-              setShowCreateModal(true);
-            }}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl hover:from-violet-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl"
-          >
-            <FiPlus className="w-5 h-5" />
-            Add Expense
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Sort Order */}
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as 'desc' | 'asc')}
+              className="px-4 py-2 rounded-xl border-2 border-gray-200 bg-white/60 backdrop-blur-md focus:border-violet-500 focus:ring-4 focus:ring-violet-100 transition-all outline-none text-sm font-medium"
+            >
+              <option value="desc">Newest First</option>
+              <option value="asc">Oldest First</option>
+            </select>
+
+            {/* View Toggle */}
+            <div className="flex items-center gap-1 bg-white/60 backdrop-blur-md rounded-xl p-1 border border-white/40">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-2 rounded-lg transition-all ${
+                  viewMode === 'grid'
+                    ? 'bg-violet-600 text-white shadow-md'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+                title="Grid View"
+              >
+                <FiGrid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-2 rounded-lg transition-all ${
+                  viewMode === 'list'
+                    ? 'bg-violet-600 text-white shadow-md'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+                title="List View"
+              >
+                <FiList className="w-4 h-4" />
+              </button>
+            </div>
+            <button
+              onClick={() => {
+                resetForm();
+                setEditExpense(null);
+                setShowCreateModal(true);
+              }}
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl hover:from-violet-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl"
+            >
+              <FiPlus className="w-5 h-5" />
+              Add Expense
+            </button>
+          </div>
         </div>
 
         {/* Filters */}
@@ -395,122 +440,250 @@ export default function Expenses() {
           )}
         </div>
 
-        {/* Expense Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {expenses.map((expense: any) => {
-            const typeConfig = expenseTypeConfig[expense.expenseType as keyof typeof expenseTypeConfig];
-            const catConfig = categoryConfig[expense.category as keyof typeof categoryConfig];
-            const statConfig = statusConfig[expense.reimbursementStatus as keyof typeof statusConfig];
+        {/* Expense Display */}
+        {viewMode === 'grid' ? (
+          /* Grid View */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {expenses.map((expense: any) => {
+              const typeConfig = expenseTypeConfig[expense.expenseType as keyof typeof expenseTypeConfig];
+              const catConfig = categoryConfig[expense.category as keyof typeof categoryConfig];
+              const statConfig = statusConfig[expense.reimbursementStatus as keyof typeof statusConfig];
 
-            return (
-              <div
-                key={expense.id}
-                className="bg-white/80 backdrop-blur-md rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-all"
-              >
-                {/* Header */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1 min-w-0">
-                    <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold bg-gradient-to-r ${typeConfig.color} text-white mb-2`}>
+              return (
+                <div
+                  key={expense.id}
+                  className="bg-white/80 backdrop-blur-md rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-all"
+                >
+                  {/* Header */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1 min-w-0">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold bg-gradient-to-r ${typeConfig.color} text-white mb-2`}>
+                        {typeConfig.label}
+                      </span>
+                      <h3 className="text-sm font-bold text-gray-900 truncate">{expense.description}</h3>
+                    </div>
+                    <div className="flex gap-1 ml-2">
+                      {expense.expenseType === 'REIMBURSEMENT' && expense.reimbursementStatus === 'PENDING' && (
+                        <button
+                          onClick={() => confirmApprove(expense.id, expense.description)}
+                          className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                          title="Approve"
+                        >
+                          <FiCheck className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {expense.expenseType === 'REIMBURSEMENT' && expense.reimbursementStatus === 'APPROVED' && (
+                        <button
+                          onClick={() => confirmMarkPaid(expense.id, expense.description)}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Mark as Paid"
+                        >
+                          <FiDollarSign className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleEdit(expense)}
+                        className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                        <FiEdit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => confirmDelete(expense.id, expense.description)}
+                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <FiTrash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Amount & Status */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-2xl font-black text-gray-900">
+                      {expense.currency} {expense.amount.toLocaleString()}
+                    </div>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${statConfig.bgColor} ${statConfig.color} ${statConfig.borderColor} border`}>
+                      {statConfig.label}
+                    </span>
+                  </div>
+
+                  {/* Category & Date */}
+                  <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
+                    <span>{catConfig.icon} {catConfig.label}</span>
+                    <span>•</span>
+                    <span>{new Date(expense.expenseDate * 1000).toLocaleDateString()}</span>
+                  </div>
+
+                  {/* Employee */}
+                  {expense.relatedEmployee && (
+                    <div className="text-xs text-gray-600 mb-2">
+                      👤 {expense.relatedEmployee.name}
+                    </div>
+                  )}
+
+                  {/* Vendor */}
+                  {expense.vendor && (
+                    <div className="text-xs text-gray-600 mb-2">
+                      🏪 {expense.vendor}
+                    </div>
+                  )}
+
+                  {/* Receipt/Invoice */}
+                  {expense.receiptUrl && (
+                    <div className="text-xs text-violet-600 mb-2 flex items-center gap-1">
+                      {expense.receiptUrl.endsWith('.pdf') ? (
+                        <FiFileText className="w-3 h-3" />
+                      ) : (
+                        <FiImage className="w-3 h-3" />
+                      )}
+                      <a href={`http://localhost:3000${expense.receiptUrl}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                        View Receipt
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  {expense.notes && (
+                    <div className="text-xs text-gray-500 bg-gray-50 rounded-lg p-2 mt-2">
+                      {expense.notes}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {expenses.length === 0 && (
+              <div className="col-span-full text-center py-12 text-gray-500">
+                <FiDollarSign className="w-16 h-16 mx-auto mb-4 opacity-20" />
+                <p>No expenses found</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* List View */
+          <div className="space-y-3">
+            {expenses.map((expense: any) => {
+              const typeConfig = expenseTypeConfig[expense.expenseType as keyof typeof expenseTypeConfig];
+              const catConfig = categoryConfig[expense.category as keyof typeof categoryConfig];
+              const statConfig = statusConfig[expense.reimbursementStatus as keyof typeof statusConfig];
+
+              return (
+                <div
+                  key={expense.id}
+                  className="bg-white/80 backdrop-blur-md rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-all"
+                >
+                  <div className="flex items-center gap-4">
+                    {/* Type Badge */}
+                    <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r ${typeConfig.color} text-white whitespace-nowrap shrink-0`}>
                       {typeConfig.label}
                     </span>
-                    <h3 className="text-sm font-bold text-gray-900 truncate">{expense.description}</h3>
-                  </div>
-                  <div className="flex gap-1 ml-2">
-                    {expense.expenseType === 'REIMBURSEMENT' && expense.reimbursementStatus === 'PENDING' && (
-                      <button
-                        onClick={() => confirmApprove(expense.id, expense.description)}
-                        className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                        title="Approve"
+
+                    {/* Description & Category */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base font-bold text-gray-900 truncate mb-0.5">{expense.description}</h3>
+                      <div className="text-sm text-gray-600">
+                        {catConfig.icon} {catConfig.label}
+                      </div>
+                    </div>
+
+                    {/* Date */}
+                    <div className="text-sm font-medium text-gray-700 whitespace-nowrap shrink-0">
+                      {new Date(expense.expenseDate * 1000).toLocaleDateString()}
+                    </div>
+
+                    {/* Employee (if exists) */}
+                    {expense.relatedEmployee && (
+                      <div className="text-sm font-medium text-gray-700 whitespace-nowrap shrink-0 min-w-[120px]">
+                        👤 {expense.relatedEmployee.name}
+                      </div>
+                    )}
+
+                    {/* Vendor (if exists) */}
+                    {expense.vendor && (
+                      <div className="text-sm font-medium text-gray-700 whitespace-nowrap shrink-0 min-w-[120px]">
+                        🏪 {expense.vendor}
+                      </div>
+                    )}
+
+                    {/* Receipt (if exists) */}
+                    {expense.receiptUrl && (
+                      <a
+                        href={`http://localhost:3000${expense.receiptUrl}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-violet-600 hover:underline flex items-center gap-1 text-sm shrink-0"
                       >
-                        <FiCheck className="w-3.5 h-3.5" />
-                      </button>
+                        {expense.receiptUrl.endsWith('.pdf') ? (
+                          <FiFileText className="w-3.5 h-3.5" />
+                        ) : (
+                          <FiImage className="w-3.5 h-3.5" />
+                        )}
+                        Receipt
+                      </a>
                     )}
-                    {expense.expenseType === 'REIMBURSEMENT' && expense.reimbursementStatus === 'APPROVED' && (
+
+                    {/* Amount */}
+                    <div className="text-xl font-black text-gray-900 whitespace-nowrap shrink-0 min-w-[120px] text-right">
+                      {expense.currency} {expense.amount.toLocaleString()}
+                    </div>
+
+                    {/* Status */}
+                    <span className={`inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium ${statConfig.bgColor} ${statConfig.color} ${statConfig.borderColor} border whitespace-nowrap shrink-0`}>
+                      {statConfig.label}
+                    </span>
+
+                    {/* Actions */}
+                    <div className="flex gap-1 shrink-0">
+                      {expense.expenseType === 'REIMBURSEMENT' && expense.reimbursementStatus === 'PENDING' && (
+                        <button
+                          onClick={() => confirmApprove(expense.id, expense.description)}
+                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                          title="Approve"
+                        >
+                          <FiCheck className="w-4 h-4" />
+                        </button>
+                      )}
+                      {expense.expenseType === 'REIMBURSEMENT' && expense.reimbursementStatus === 'APPROVED' && (
+                        <button
+                          onClick={() => confirmMarkPaid(expense.id, expense.description)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Mark as Paid"
+                        >
+                          <FiDollarSign className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
-                        onClick={() => confirmMarkPaid(expense.id, expense.description)}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Mark as Paid"
+                        onClick={() => handleEdit(expense)}
+                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                       >
-                        <FiDollarSign className="w-3.5 h-3.5" />
+                        <FiEdit2 className="w-4 h-4" />
                       </button>
-                    )}
-                    <button
-                      onClick={() => handleEdit(expense)}
-                      className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
-                      <FiEdit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => confirmDelete(expense.id, expense.description)}
-                      className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      <FiTrash2 className="w-3.5 h-3.5" />
-                    </button>
+                      <button
+                        onClick={() => confirmDelete(expense.id, expense.description)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <FiTrash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
+
+                  {/* Notes */}
+                  {expense.notes && (
+                    <div className="text-xs text-gray-500 bg-gray-50 rounded-lg p-2 mt-3">
+                      {expense.notes}
+                    </div>
+                  )}
                 </div>
+              );
+            })}
 
-                {/* Amount & Status */}
-                <div className="flex items-center justify-between mb-3">
-                  <div className="text-2xl font-black text-gray-900">
-                    {expense.currency} {expense.amount.toLocaleString()}
-                  </div>
-                  <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${statConfig.bgColor} ${statConfig.color} ${statConfig.borderColor} border`}>
-                    {statConfig.label}
-                  </span>
-                </div>
-
-                {/* Category & Date */}
-                <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
-                  <span>{catConfig.icon} {catConfig.label}</span>
-                  <span>•</span>
-                  <span>{new Date(expense.expenseDate * 1000).toLocaleDateString()}</span>
-                </div>
-
-                {/* Employee */}
-                {expense.relatedEmployee && (
-                  <div className="text-xs text-gray-600 mb-2">
-                    👤 {expense.relatedEmployee.name}
-                  </div>
-                )}
-
-                {/* Vendor */}
-                {expense.vendor && (
-                  <div className="text-xs text-gray-600 mb-2">
-                    🏪 {expense.vendor}
-                  </div>
-                )}
-
-                {/* Receipt/Invoice */}
-                {expense.receiptUrl && (
-                  <div className="text-xs text-violet-600 mb-2 flex items-center gap-1">
-                    {expense.receiptUrl.endsWith('.pdf') ? (
-                      <FiFileText className="w-3 h-3" />
-                    ) : (
-                      <FiImage className="w-3 h-3" />
-                    )}
-                    <a href={`http://localhost:3000${expense.receiptUrl}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                      View Receipt
-                    </a>
-                  </div>
-                )}
-
-                {/* Notes */}
-                {expense.notes && (
-                  <div className="text-xs text-gray-500 bg-gray-50 rounded-lg p-2 mt-2">
-                    {expense.notes}
-                  </div>
-                )}
+            {expenses.length === 0 && (
+              <div className="text-center py-12 text-gray-500">
+                <FiDollarSign className="w-16 h-16 mx-auto mb-4 opacity-20" />
+                <p>No expenses found</p>
               </div>
-            );
-          })}
-
-          {expenses.length === 0 && (
-            <div className="col-span-full text-center py-12 text-gray-500">
-              <FiDollarSign className="w-16 h-16 mx-auto mb-4 opacity-20" />
-              <p>No expenses found</p>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Confirmation Dialog */}
