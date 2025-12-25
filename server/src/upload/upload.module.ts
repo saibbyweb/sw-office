@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
 import { UploadController } from './upload.controller';
+import { UploadService } from './upload.service';
+import { UploadResolver } from './upload.resolver';
 
 @Module({
   imports: [
@@ -9,5 +11,7 @@ import { UploadController } from './upload.controller';
     }),
   ],
   controllers: [UploadController],
+  providers: [UploadService, UploadResolver],
+  exports: [UploadService],
 })
 export class UploadModule {}

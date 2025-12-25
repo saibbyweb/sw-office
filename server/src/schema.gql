@@ -308,6 +308,7 @@ type Mutation {
   endBreak(breakId: ID!): Break!
   endCall(callId: String!): Call!
   endSession(id: ID!): Session!
+  getUploadPresignedUrl(fileName: String!, fileType: String!): PresignedUrlResponse!
   handleCallResponse(accept: Boolean!, callId: String!): Call!
   hashPassword(password: String!): String!
   initiateCall(receiverId: String!): Call!
@@ -406,6 +407,12 @@ type PayoutSnapshot {
   user: User!
   userId: String!
   workingDaysInCycle: Int!
+}
+
+type PresignedUrlResponse {
+  fileUrl: String!
+  key: String!
+  uploadUrl: String!
 }
 
 type Project {

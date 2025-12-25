@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@apollo/client';
 import { gql } from '@apollo/client';
-import { FiArrowLeft, FiCalendar, FiUser, FiTrendingUp, FiShield, FiCheckCircle, FiRefreshCw, FiDatabase } from 'react-icons/fi';
+import { FiArrowLeft, FiCalendar, FiUser, FiTrendingUp, FiShield, FiCheckCircle, FiRefreshCw, FiDatabase, FiDollarSign, FiClock, FiAlertCircle } from 'react-icons/fi';
+import { EXPENSES_QUERY } from '../graphql/expenses.mutations';
 
 const TEAM_USERS_QUERY = gql`
   query GetTeamUsers($startDate: String, $endDate: String, $forceCalculate: Boolean) {
@@ -72,19 +73,19 @@ interface TeamUsersData {
   getTeamUsers: TeamUser[];
 }
 
-// Helper to calculate billing cycle (19th to 18th)
+// Helper to calculate billing cycle (19th to 18th) - using UTC to avoid timezone issues
 const getBillingCycles = () => {
   const cycles: { label: string; startDate: string; endDate: string }[] = [];
   const today = new Date();
-  const dayOfMonth = today.getDate();
+  const dayOfMonth = today.getUTCDate();
 
   // Payout system started from November 2025
   const PAYOUT_START_MONTH = 10; // November (0-indexed)
   const PAYOUT_START_YEAR = 2025;
 
-  // Determine current cycle month
-  let currentCycleMonth = today.getMonth();
-  let currentCycleYear = today.getFullYear();
+  // Determine current cycle month using UTC
+  let currentCycleMonth = today.getUTCMonth();
+  let currentCycleYear = today.getUTCFullYear();
 
   // If we're before the 19th, the current cycle started last month
   if (dayOfMonth < 19) {
@@ -111,12 +112,12 @@ const getBillingCycles = () => {
       break;
     }
 
-    // Start date: 19th at 00:00:00
-    const startDate = new Date(cycleYear, cycleMonth, 19, 0, 0, 0, 0);
-    // End date: 18th at 23:59:59.999 (to include the full day)
-    const endDate = new Date(cycleYear, cycleMonth + 1, 18, 23, 59, 59, 999);
+    // Start date: 19th at 00:00:00 UTC
+    const startDate = new Date(Date.UTC(cycleYear, cycleMonth, 19, 0, 0, 0, 0));
+    // End date: 18th at 23:59:59.999 UTC (to include the full day)
+    const endDate = new Date(Date.UTC(cycleYear, cycleMonth + 1, 18, 23, 59, 59, 999));
 
-    const label = `${startDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} (${startDate.getDate()}th - ${endDate.getDate()}th)`;
+    const label = `${startDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' })} (${startDate.getUTCDate()}th - ${endDate.getUTCDate()}th)`;
 
     cycles.push({
       label,
@@ -143,6 +144,17 @@ export default function Payouts() {
       forceCalculate: true, // Always force calculation for admin panel Live Data
     },
     skip: activeTab === 'snapshots',
+  });
+
+  // Query expenses for reimbursements in this billing cycle
+  const { data: expensesData } = useQuery(EXPENSES_QUERY, {
+    variables: {
+      filters: {
+        expenseType: 'REIMBURSEMENT',
+        startDate: Math.floor(new Date(cycle.startDate).getTime() / 1000),
+        endDate: Math.floor(new Date(cycle.endDate).getTime() / 1000),
+      },
+    },
   });
 
   const { data: snapshotsData, loading: snapshotsLoading, refetch: refetchSnapshots } = useQuery(GET_PAYOUT_SNAPSHOTS, {
@@ -357,6 +369,29 @@ export default function Payouts() {
                 : item.expectedPayoutINR;
               const difference = expectedPayout - compensation;
 
+              // Get reimbursements for this user
+              const userReimbursements = (expensesData?.expenses || []).filter(
+                (expense: any) => expense.relatedEmployeeId === user.id
+              );
+
+              // Calculate reimbursement summary
+              const reimbursementSummary = {
+                total: userReimbursements.reduce((sum: number, exp: any) => sum + exp.amount, 0),
+                pending: userReimbursements.filter((exp: any) => exp.reimbursementStatus === 'PENDING').length,
+                approved: userReimbursements.filter((exp: any) => exp.reimbursementStatus === 'APPROVED').length,
+                paid: userReimbursements.filter((exp: any) => exp.reimbursementStatus === 'PAID').length,
+                rejected: userReimbursements.filter((exp: any) => exp.reimbursementStatus === 'REJECTED').length,
+                totalPending: userReimbursements
+                  .filter((exp: any) => exp.reimbursementStatus === 'PENDING')
+                  .reduce((sum: number, exp: any) => sum + exp.amount, 0),
+                totalApproved: userReimbursements
+                  .filter((exp: any) => exp.reimbursementStatus === 'APPROVED')
+                  .reduce((sum: number, exp: any) => sum + exp.amount, 0),
+                totalPaid: userReimbursements
+                  .filter((exp: any) => exp.reimbursementStatus === 'PAID')
+                  .reduce((sum: number, exp: any) => sum + exp.amount, 0),
+              };
+
               return (
                 <div
                   key={user.id}
@@ -452,6 +487,122 @@ export default function Payouts() {
                       {difference >= 0 ? '+' : ''}₹{difference.toFixed(2).replace(/\.?0+$/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                     </div>
                   </div>
+
+                  {/* Reimbursements Section */}
+                  {userReimbursements.length > 0 && (
+                    <div className="mt-3 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl p-3 border border-indigo-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FiDollarSign className="w-4 h-4 text-indigo-600" />
+                        <div className="text-xs font-medium text-indigo-700 uppercase tracking-wide">
+                          Reimbursements ({userReimbursements.length})
+                        </div>
+                      </div>
+
+                      {/* Reimbursement Summary */}
+                      <div className="space-y-2 mb-2">
+                        {reimbursementSummary.pending > 0 && (
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-1">
+                              <FiClock className="w-3 h-3 text-yellow-600" />
+                              <span className="text-gray-700 font-medium">Pending ({reimbursementSummary.pending})</span>
+                            </div>
+                            <span className="font-bold text-yellow-700">
+                              ₹{reimbursementSummary.totalPending.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                        )}
+                        {reimbursementSummary.approved > 0 && (
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-1">
+                              <FiCheckCircle className="w-3 h-3 text-blue-600" />
+                              <span className="text-gray-700 font-medium">Approved ({reimbursementSummary.approved})</span>
+                            </div>
+                            <span className="font-bold text-blue-700">
+                              ₹{reimbursementSummary.totalApproved.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                        )}
+                        {reimbursementSummary.paid > 0 && (
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-1">
+                              <FiCheckCircle className="w-3 h-3 text-green-600" />
+                              <span className="text-gray-700 font-medium">Paid ({reimbursementSummary.paid})</span>
+                            </div>
+                            <span className="font-bold text-green-700">
+                              ₹{reimbursementSummary.totalPaid.toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                        )}
+                        {reimbursementSummary.rejected > 0 && (
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-1">
+                              <FiAlertCircle className="w-3 h-3 text-red-600" />
+                              <span className="text-gray-700 font-medium">Rejected ({reimbursementSummary.rejected})</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Total Reimbursement */}
+                      <div className="pt-2 border-t border-indigo-200">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-indigo-900 uppercase">Total</span>
+                          <span className="text-lg font-black text-indigo-900">
+                            ₹{reimbursementSummary.total.toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Reimbursement List */}
+                      <div className="mt-2 space-y-1.5 max-h-32 overflow-y-auto">
+                        {userReimbursements.map((expense: any) => (
+                          <div
+                            key={expense.id}
+                            className="bg-white/60 rounded-lg p-2 text-xs"
+                          >
+                            <div className="flex items-center justify-between mb-0.5">
+                              <span className="font-medium text-gray-900 truncate flex-1">
+                                {expense.description}
+                              </span>
+                              <span className="font-bold text-gray-900 ml-2">
+                                ₹{expense.amount.toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs text-gray-500">
+                              <span>{new Date(expense.expenseDate * 1000).toLocaleDateString()}</span>
+                              <span className={`font-medium ${
+                                expense.reimbursementStatus === 'PAID' ? 'text-green-600' :
+                                expense.reimbursementStatus === 'APPROVED' ? 'text-blue-600' :
+                                expense.reimbursementStatus === 'PENDING' ? 'text-yellow-600' :
+                                'text-red-600'
+                              }`}>
+                                {expense.reimbursementStatus}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Total Payout (Expected Payout + Reimbursements) */}
+                  {userReimbursements.length > 0 && (
+                    <div className="mt-3 bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl p-3 border-2 border-violet-300">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-xs font-bold text-violet-700 uppercase tracking-wide mb-1">
+                            Total Payout (Salary + Reimbursements)
+                          </div>
+                          <div className="text-xs text-gray-600">
+                            ₹{expectedPayout.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} + ₹{reimbursementSummary.total.toLocaleString('en-IN')}
+                          </div>
+                        </div>
+                        <div className="text-3xl font-black text-violet-900">
+                          ₹{(expectedPayout + reimbursementSummary.total).toFixed(2).replace(/\.?0+$/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}

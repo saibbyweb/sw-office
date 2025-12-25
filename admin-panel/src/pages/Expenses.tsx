@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from '@apollo/client';
+import { useQuery, useMutation, useApolloClient } from '@apollo/client';
 import { FiArrowLeft, FiPlus, FiX, FiDollarSign, FiEdit2, FiTrash2, FiFilter, FiCheck, FiUpload, FiFileText, FiImage, FiGrid, FiList } from 'react-icons/fi';
 import toast, { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,6 +13,7 @@ import {
   APPROVE_EXPENSE_MUTATION,
   MARK_EXPENSE_AS_PAID_MUTATION,
 } from '../graphql/expenses.mutations';
+import { uploadFileToS3 } from '../utils/uploadToS3';
 
 const expenseTypeConfig = {
   COMPANY_EXPENSE: { label: 'Company Expense', color: 'from-gray-600 to-gray-800', bgColor: 'bg-gray-50', borderColor: 'border-gray-200' },
@@ -46,6 +47,7 @@ const statusConfig = {
 
 export default function Expenses() {
   const navigate = useNavigate();
+  const apolloClient = useApolloClient();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editExpense, setEditExpense] = useState<any>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -164,21 +166,11 @@ export default function Expenses() {
 
   const handleFileUpload = async (file: File) => {
     setUploadingFile(true);
-    const formDataUpload = new FormData();
-    formDataUpload.append('file', file);
 
     try {
-      const response = await fetch('http://localhost:3000/upload/receipt', {
-        method: 'POST',
-        body: formDataUpload,
-      });
-
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-
-      const data = await response.json();
-      setFormData({ ...formData, receiptUrl: data.url });
+      // Upload to S3 using presigned URL
+      const fileUrl = await uploadFileToS3(file, apolloClient);
+      setFormData({ ...formData, receiptUrl: fileUrl });
       toast.success('File uploaded successfully');
     } catch (error) {
       toast.error('Failed to upload file');
@@ -535,7 +527,7 @@ export default function Expenses() {
                       ) : (
                         <FiImage className="w-3 h-3" />
                       )}
-                      <a href={`http://localhost:3000${expense.receiptUrl}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                      <a href={expense.receiptUrl.startsWith('http') ? expense.receiptUrl : `http://localhost:3000${expense.receiptUrl}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
                         View Receipt
                       </a>
                     </div>
@@ -607,7 +599,7 @@ export default function Expenses() {
                     {/* Receipt (if exists) */}
                     {expense.receiptUrl && (
                       <a
-                        href={`http://localhost:3000${expense.receiptUrl}`}
+                        href={expense.receiptUrl.startsWith('http') ? expense.receiptUrl : `http://localhost:3000${expense.receiptUrl}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-violet-600 hover:underline flex items-center gap-1 text-sm shrink-0"

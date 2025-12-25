@@ -1,17 +1,22 @@
 import {
   Controller,
   Post,
+  Get,
   UseInterceptors,
   UploadedFile,
   UseGuards,
+  Body,
+  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { UploadService } from './upload.service';
 
 @Controller('upload')
 export class UploadController {
+  constructor(private readonly uploadService: UploadService) {}
   @Post('profile-picture')
   @UseInterceptors(
     FileInterceptor('file', {
@@ -70,5 +75,46 @@ export class UploadController {
   async uploadReceipt(@UploadedFile() file: Express.Multer.File) {
     const fileUrl = `/uploads/${file.filename}`;
     return { url: fileUrl };
+  }
+
+  @Get('presigned-url')
+  async getPresignedUrl(
+    @Query('fileName') fileName: string,
+    @Query('fileType') fileType: string,
+  ) {
+    if (!fileName || !fileType) {
+      throw new Error('fileName and fileType are required query parameters');
+    }
+
+    const result = await this.uploadService.getPresignedUrl(
+      fileName,
+      fileType,
+    );
+    return {
+      uploadUrl: result.uploadUrl,
+      fileUrl: result.fileUrl,
+      key: result.key,
+    };
+  }
+
+  @Get('sw-creator-store')
+  async getSwCreatorStorePresignedUrl(
+    @Query('fileName') fileName: string,
+  ) {
+    const SW_CREATOR_STORE_FOLDER = 'sw-creator-store'; // You can modify this subfolder path
+
+    if (!fileName) {
+      throw new Error('fileName is a required query parameter');
+    }
+
+    const result = await this.uploadService.getPresignedUrlWithFolder(
+      fileName,
+      SW_CREATOR_STORE_FOLDER,
+    );
+    return {
+      uploadUrl: result.uploadUrl,
+      fileUrl: result.fileUrl,
+      key: result.key,
+    };
   }
 }
