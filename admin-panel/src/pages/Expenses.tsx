@@ -6,7 +6,6 @@ import toast, { Toaster } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ADMIN_USERS_QUERY } from '../graphql/admin.queries';
 import {
-  EXPENSES_QUERY,
   PAGINATED_EXPENSES_QUERY,
   CREATE_EXPENSE_MUTATION,
   UPDATE_EXPENSE_MUTATION,
@@ -98,7 +97,7 @@ export default function Expenses() {
   if (startDate) filters.startDate = Math.floor(new Date(startDate).getTime() / 1000);
   if (endDate) filters.endDate = Math.floor(new Date(endDate).getTime() / 1000);
 
-  const { data: expensesData, loading: expensesLoading, fetchMore } = useQuery(PAGINATED_EXPENSES_QUERY, {
+  const { loading: expensesLoading, fetchMore } = useQuery(PAGINATED_EXPENSES_QUERY, {
     variables: {
       filters: {
         ...filters,
@@ -402,7 +401,6 @@ export default function Expenses() {
 
   // Helper function to render expense rows
   const renderExpenseRow = (expense: any) => {
-    const typeConfig = expenseTypeConfig[expense.expenseType as keyof typeof expenseTypeConfig];
     const catConfig = categoryConfig[expense.category as keyof typeof categoryConfig];
     const statConfig = statusConfig[expense.reimbursementStatus as keyof typeof statusConfig];
 
