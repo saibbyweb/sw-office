@@ -20,4 +20,10 @@ export class ExpenseFiltersInput {
 
   @Field(() => Int, { nullable: true })
   endDate?: number; // Epoch seconds
+
+  @Field(() => Int, { nullable: true })
+  skip?: number; // Number of records to skip
+
+  @Field(() => Int, { nullable: true })
+  take?: number; // Number of records to take
 }

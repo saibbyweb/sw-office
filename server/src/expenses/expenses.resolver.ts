@@ -4,6 +4,7 @@ import { Expense } from '../generated-nestjs-typegraphql';
 import { CreateExpenseInput } from './dto/create-expense.input';
 import { UpdateExpenseInput } from './dto/update-expense.input';
 import { ExpenseFiltersInput } from './dto/expense-filters.input';
+import { PaginatedExpensesResponse } from './dto/paginated-expenses-response.dto';
 
 @Resolver(() => Expense)
 export class ExpensesResolver {
@@ -14,6 +15,13 @@ export class ExpensesResolver {
     @Args('filters', { nullable: true }) filters?: ExpenseFiltersInput,
   ): Promise<Expense[]> {
     return this.expensesService.getExpenses(filters);
+  }
+
+  @Query(() => PaginatedExpensesResponse)
+  async paginatedExpenses(
+    @Args('filters', { nullable: true }) filters?: ExpenseFiltersInput,
+  ): Promise<PaginatedExpensesResponse> {
+    return this.expensesService.getPaginatedExpenses(filters);
   }
 
   @Query(() => Expense)
@@ -57,5 +65,12 @@ export class ExpensesResolver {
     @Args('id', { type: () => ID }) id: string,
   ): Promise<Expense> {
     return this.expensesService.markAsPaid(id);
+  }
+
+  @Mutation(() => Expense)
+  async markExpenseAsPending(
+    @Args('id', { type: () => ID }) id: string,
+  ): Promise<Expense> {
+    return this.expensesService.markAsPending(id);
   }
 }

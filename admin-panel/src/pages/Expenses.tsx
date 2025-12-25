@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useApolloClient } from '@apollo/client';
 import { FiArrowLeft, FiPlus, FiX, FiDollarSign, FiEdit2, FiTrash2, FiFilter, FiCheck, FiUpload, FiFileText, FiImage, FiGrid, FiList } from 'react-icons/fi';
@@ -7,11 +7,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ADMIN_USERS_QUERY } from '../graphql/admin.queries';
 import {
   EXPENSES_QUERY,
+  PAGINATED_EXPENSES_QUERY,
   CREATE_EXPENSE_MUTATION,
   UPDATE_EXPENSE_MUTATION,
   DELETE_EXPENSE_MUTATION,
   APPROVE_EXPENSE_MUTATION,
   MARK_EXPENSE_AS_PAID_MUTATION,
+  MARK_EXPENSE_AS_PENDING_MUTATION,
 } from '../graphql/expenses.mutations';
 import { uploadFileToS3 } from '../utils/uploadToS3';
 
@@ -57,12 +59,16 @@ export default function Expenses() {
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [uploadingFile, setUploadingFile] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [allExpenses, setAllExpenses] = useState<any[]>([]);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const observerTarget = useRef<HTMLDivElement>(null);
 
   // Confirmation dialog state
   const [confirmAction, setConfirmAction] = useState<{
-    type: 'approve' | 'paid' | 'delete';
+    type: 'approve' | 'paid' | 'delete' | 'pending';
     id: string;
     title: string;
   } | null>(null);
@@ -92,9 +98,39 @@ export default function Expenses() {
   if (startDate) filters.startDate = Math.floor(new Date(startDate).getTime() / 1000);
   if (endDate) filters.endDate = Math.floor(new Date(endDate).getTime() / 1000);
 
-  const { data: expensesData, refetch: refetchExpenses } = useQuery(EXPENSES_QUERY, {
-    variables: { filters: Object.keys(filters).length > 0 ? filters : undefined },
+  const { data: expensesData, loading: expensesLoading, fetchMore } = useQuery(PAGINATED_EXPENSES_QUERY, {
+    variables: {
+      filters: {
+        ...filters,
+        skip: 0,
+        take: 20
+      }
+    },
+    onCompleted: (data) => {
+      setAllExpenses(data.paginatedExpenses.expenses);
+      setHasMore(data.paginatedExpenses.hasMore);
+    },
   });
+
+  const refetchExpenses = useCallback(() => {
+    setAllExpenses([]);
+    setHasMore(true);
+    fetchMore({
+      variables: {
+        filters: {
+          ...filters,
+          skip: 0,
+          take: 20,
+        },
+      },
+      updateQuery: (_, { fetchMoreResult }) => {
+        if (!fetchMoreResult) return { paginatedExpenses: { expenses: [], total: 0, hasMore: false } };
+        setAllExpenses(fetchMoreResult.paginatedExpenses.expenses);
+        setHasMore(fetchMoreResult.paginatedExpenses.hasMore);
+        return fetchMoreResult;
+      },
+    });
+  }, [fetchMore, filters]);
 
   const [createExpense] = useMutation(CREATE_EXPENSE_MUTATION, {
     onCompleted: () => {
@@ -139,6 +175,18 @@ export default function Expenses() {
   const [markAsPaid, { loading: paidLoading }] = useMutation(MARK_EXPENSE_AS_PAID_MUTATION, {
     onCompleted: () => {
       toast.success('Marked as paid');
+      setConfirmAction(null);
+      refetchExpenses();
+    },
+    onError: (error) => {
+      toast.error(error.message);
+      setConfirmAction(null);
+    },
+  });
+
+  const [markAsPending, { loading: pendingLoading }] = useMutation(MARK_EXPENSE_AS_PENDING_MUTATION, {
+    onCompleted: () => {
+      toast.success('Marked as pending');
       setConfirmAction(null);
       refetchExpenses();
     },
@@ -244,6 +292,10 @@ export default function Expenses() {
     setConfirmAction({ type: 'paid', id, title: description });
   };
 
+  const confirmMarkPending = (id: string, description: string) => {
+    setConfirmAction({ type: 'pending', id, title: description });
+  };
+
   const executeConfirmedAction = () => {
     if (!confirmAction) return;
 
@@ -254,24 +306,200 @@ export default function Expenses() {
       case 'paid':
         markAsPaid({ variables: { id: confirmAction.id } });
         break;
+      case 'pending':
+        markAsPending({ variables: { id: confirmAction.id } });
+        break;
       case 'delete':
         deleteExpense({ variables: { id: confirmAction.id } });
         break;
     }
   };
 
-  const expenses = [...(expensesData?.expenses || [])].sort((a: any, b: any) => {
+  // Load more expenses when scrolling
+  const loadMoreExpenses = useCallback(() => {
+    if (!hasMore || loadingMore) return;
+
+    setLoadingMore(true);
+    fetchMore({
+      variables: {
+        filters: {
+          ...filters,
+          skip: allExpenses.length,
+          take: 20,
+        },
+      },
+      updateQuery: (prev, { fetchMoreResult }) => {
+        setLoadingMore(false);
+        if (!fetchMoreResult) return prev;
+
+        const newExpenses = fetchMoreResult.paginatedExpenses.expenses;
+        setAllExpenses((prevExpenses) => [...prevExpenses, ...newExpenses]);
+        setHasMore(fetchMoreResult.paginatedExpenses.hasMore);
+
+        return {
+          paginatedExpenses: {
+            ...fetchMoreResult.paginatedExpenses,
+            expenses: [...allExpenses, ...newExpenses],
+          },
+        };
+      },
+    });
+  }, [fetchMore, filters, allExpenses, hasMore, loadingMore]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore) {
+          loadMoreExpenses();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentTarget = observerTarget.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
+    }
+
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
+      }
+    };
+  }, [hasMore, loadingMore, loadMoreExpenses]);
+
+  // Reset when filters change
+  useEffect(() => {
+    refetchExpenses();
+  }, [selectedType, selectedCategory, selectedEmployee, selectedStatus, startDate, endDate]);
+
+  const expenses = [...allExpenses].sort((a: any, b: any) => {
     const dateA = new Date(a.createdAt).getTime();
     const dateB = new Date(b.createdAt).getTime();
     return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
   });
+
+  // Group expenses by date categories
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayTimestamp = Math.floor(todayStart.getTime() / 1000);
+
+  const yesterdayStart = new Date(todayStart);
+  yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+  const yesterdayTimestamp = Math.floor(yesterdayStart.getTime() / 1000);
+
+  const todayExpenses = expenses.filter((e: any) => e.expenseDate >= todayTimestamp);
+  const yesterdayExpenses = expenses.filter((e: any) => e.expenseDate >= yesterdayTimestamp && e.expenseDate < todayTimestamp);
+  const olderExpenses = expenses.filter((e: any) => e.expenseDate < yesterdayTimestamp);
 
   const userOptions = usersData?.adminUsers?.map((user: any) => ({
     value: user.id,
     label: user.name,
   })) || [];
 
-  const actionLoading = approveLoading || paidLoading || deleteLoading;
+  const actionLoading = approveLoading || paidLoading || deleteLoading || pendingLoading;
+
+  // Helper function to render expense rows
+  const renderExpenseRow = (expense: any) => {
+    const typeConfig = expenseTypeConfig[expense.expenseType as keyof typeof expenseTypeConfig];
+    const catConfig = categoryConfig[expense.category as keyof typeof categoryConfig];
+    const statConfig = statusConfig[expense.reimbursementStatus as keyof typeof statusConfig];
+
+    return (
+      <div
+        key={expense.id}
+        className="bg-white/80 backdrop-blur-md rounded-lg p-4 border border-gray-200 hover:shadow-lg transition-all"
+      >
+        <div className="flex items-center justify-between gap-3">
+          {/* Date */}
+          <div className="text-base font-semibold text-gray-800 whitespace-nowrap shrink-0 w-24">
+            {new Date(expense.expenseDate * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          </div>
+
+          {/* Description */}
+          <div className="text-base font-semibold text-gray-900 truncate shrink-0 w-52">
+            {expense.description}
+          </div>
+
+          {/* Category */}
+          <div className="text-base font-medium text-gray-700 whitespace-nowrap shrink-0 w-40">
+            {catConfig.icon} {catConfig.label}
+          </div>
+
+          {/* Employee (if exists) */}
+          <div className="text-base font-medium text-gray-700 whitespace-nowrap shrink-0 w-36">
+            {expense.relatedEmployee ? `👤 ${expense.relatedEmployee.name}` : '—'}
+          </div>
+
+          {/* Vendor (if exists) */}
+          <div className="text-base font-medium text-gray-700 whitespace-nowrap shrink-0 w-36 truncate">
+            {expense.vendor ? `🏪 ${expense.vendor}` : '—'}
+          </div>
+
+          {/* Amount */}
+          <div className="text-lg font-bold text-gray-900 whitespace-nowrap shrink-0 w-28 text-right">
+            {expense.currency} {expense.amount.toLocaleString()}
+          </div>
+
+          {/* Status */}
+          <span className={`inline-flex items-center px-3 py-2 rounded-md text-sm font-semibold ${statConfig.bgColor} ${statConfig.color} ${statConfig.borderColor} border whitespace-nowrap shrink-0 w-20 justify-center`}>
+            {statConfig.label}
+          </span>
+
+          {/* Actions */}
+          <div className="flex gap-1 shrink-0">
+            {expense.expenseType === 'REIMBURSEMENT' && expense.reimbursementStatus === 'PENDING' && (
+              <button
+                onClick={() => confirmApprove(expense.id, expense.description)}
+                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                title="Approve"
+              >
+                <FiCheck className="w-4 h-4" />
+              </button>
+            )}
+            {expense.expenseType === 'REIMBURSEMENT' && expense.reimbursementStatus === 'APPROVED' && (
+              <button
+                onClick={() => confirmMarkPaid(expense.id, expense.description)}
+                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                title="Mark as Paid"
+              >
+                <FiDollarSign className="w-4 h-4" />
+              </button>
+            )}
+            {expense.expenseType === 'REIMBURSEMENT' && (expense.reimbursementStatus === 'APPROVED' || expense.reimbursementStatus === 'PAID') && (
+              <button
+                onClick={() => confirmMarkPending(expense.id, expense.description)}
+                className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                title="Mark as Pending"
+              >
+                <FiX className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              onClick={() => handleEdit(expense)}
+              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <FiEdit2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => confirmDelete(expense.id, expense.description)}
+              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            >
+              <FiTrash2 className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Notes */}
+        {expense.notes && (
+          <div className="text-sm text-gray-500 bg-gray-50 rounded-lg p-2 mt-3 ml-28">
+            {expense.notes}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-8">
@@ -473,6 +701,15 @@ export default function Expenses() {
                           <FiDollarSign className="w-3.5 h-3.5" />
                         </button>
                       )}
+                      {expense.expenseType === 'REIMBURSEMENT' && (expense.reimbursementStatus === 'APPROVED' || expense.reimbursementStatus === 'PAID') && (
+                        <button
+                          onClick={() => confirmMarkPending(expense.id, expense.description)}
+                          className="p-1.5 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                          title="Mark as Pending"
+                        >
+                          <FiX className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleEdit(expense)}
                         className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
@@ -552,128 +789,61 @@ export default function Expenses() {
           </div>
         ) : (
           /* List View */
-          <div className="space-y-3">
-            {expenses.map((expense: any) => {
-              const typeConfig = expenseTypeConfig[expense.expenseType as keyof typeof expenseTypeConfig];
-              const catConfig = categoryConfig[expense.category as keyof typeof categoryConfig];
-              const statConfig = statusConfig[expense.reimbursementStatus as keyof typeof statusConfig];
-
-              return (
-                <div
-                  key={expense.id}
-                  className="bg-white/80 backdrop-blur-md rounded-xl p-4 border border-gray-200 hover:shadow-lg transition-all"
-                >
-                  <div className="flex items-center gap-4">
-                    {/* Type Badge */}
-                    <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r ${typeConfig.color} text-white whitespace-nowrap shrink-0`}>
-                      {typeConfig.label}
-                    </span>
-
-                    {/* Description & Category */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-base font-bold text-gray-900 truncate mb-0.5">{expense.description}</h3>
-                      <div className="text-sm text-gray-600">
-                        {catConfig.icon} {catConfig.label}
-                      </div>
-                    </div>
-
-                    {/* Date */}
-                    <div className="text-sm font-medium text-gray-700 whitespace-nowrap shrink-0">
-                      {new Date(expense.expenseDate * 1000).toLocaleDateString()}
-                    </div>
-
-                    {/* Employee (if exists) */}
-                    {expense.relatedEmployee && (
-                      <div className="text-sm font-medium text-gray-700 whitespace-nowrap shrink-0 min-w-[120px]">
-                        👤 {expense.relatedEmployee.name}
-                      </div>
-                    )}
-
-                    {/* Vendor (if exists) */}
-                    {expense.vendor && (
-                      <div className="text-sm font-medium text-gray-700 whitespace-nowrap shrink-0 min-w-[120px]">
-                        🏪 {expense.vendor}
-                      </div>
-                    )}
-
-                    {/* Receipt (if exists) */}
-                    {expense.receiptUrl && (
-                      <a
-                        href={expense.receiptUrl.startsWith('http') ? expense.receiptUrl : `http://localhost:3000${expense.receiptUrl}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-violet-600 hover:underline flex items-center gap-1 text-sm shrink-0"
-                      >
-                        {expense.receiptUrl.endsWith('.pdf') ? (
-                          <FiFileText className="w-3.5 h-3.5" />
-                        ) : (
-                          <FiImage className="w-3.5 h-3.5" />
-                        )}
-                        Receipt
-                      </a>
-                    )}
-
-                    {/* Amount */}
-                    <div className="text-xl font-black text-gray-900 whitespace-nowrap shrink-0 min-w-[120px] text-right">
-                      {expense.currency} {expense.amount.toLocaleString()}
-                    </div>
-
-                    {/* Status */}
-                    <span className={`inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium ${statConfig.bgColor} ${statConfig.color} ${statConfig.borderColor} border whitespace-nowrap shrink-0`}>
-                      {statConfig.label}
-                    </span>
-
-                    {/* Actions */}
-                    <div className="flex gap-1 shrink-0">
-                      {expense.expenseType === 'REIMBURSEMENT' && expense.reimbursementStatus === 'PENDING' && (
-                        <button
-                          onClick={() => confirmApprove(expense.id, expense.description)}
-                          className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                          title="Approve"
-                        >
-                          <FiCheck className="w-4 h-4" />
-                        </button>
-                      )}
-                      {expense.expenseType === 'REIMBURSEMENT' && expense.reimbursementStatus === 'APPROVED' && (
-                        <button
-                          onClick={() => confirmMarkPaid(expense.id, expense.description)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Mark as Paid"
-                        >
-                          <FiDollarSign className="w-4 h-4" />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleEdit(expense)}
-                        className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                      >
-                        <FiEdit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => confirmDelete(expense.id, expense.description)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <FiTrash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Notes */}
-                  {expense.notes && (
-                    <div className="text-xs text-gray-500 bg-gray-50 rounded-lg p-2 mt-3">
-                      {expense.notes}
-                    </div>
-                  )}
+          <div className="space-y-6 overflow-x-auto">
+            {/* Today Section */}
+            {todayExpenses.length > 0 && (
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-3">Today</h2>
+                <div className="space-y-2">
+                  {todayExpenses.map(renderExpenseRow)}
                 </div>
-              );
-            })}
+              </div>
+            )}
 
-            {expenses.length === 0 && (
+            {/* Yesterday Section */}
+            {yesterdayExpenses.length > 0 && (
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-3">Yesterday</h2>
+                <div className="space-y-2">
+                  {yesterdayExpenses.map(renderExpenseRow)}
+                </div>
+              </div>
+            )}
+
+            {/* Older Section */}
+            {olderExpenses.length > 0 && (
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-3">Older</h2>
+                <div className="space-y-2">
+                  {olderExpenses.map(renderExpenseRow)}
+                </div>
+              </div>
+            )}
+
+            {expenses.length === 0 && !expensesLoading && (
               <div className="text-center py-12 text-gray-500">
                 <FiDollarSign className="w-16 h-16 mx-auto mb-4 opacity-20" />
                 <p>No expenses found</p>
               </div>
             )}
+
+            {/* Loading indicator */}
+            {expensesLoading && expenses.length === 0 && (
+              <div className="text-center py-12">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600"></div>
+                <p className="text-gray-600 mt-4">Loading expenses...</p>
+              </div>
+            )}
+
+            {/* Infinite scroll trigger */}
+            <div ref={observerTarget} className="h-10 flex items-center justify-center">
+              {loadingMore && (
+                <div className="flex items-center gap-2 text-gray-600">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-violet-600"></div>
+                  <span>Loading more...</span>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -698,11 +868,13 @@ export default function Expenses() {
               <h3 className="text-xl font-bold text-gray-900 mb-2">
                 {confirmAction.type === 'approve' && 'Approve Expense?'}
                 {confirmAction.type === 'paid' && 'Mark as Paid?'}
+                {confirmAction.type === 'pending' && 'Mark as Pending?'}
                 {confirmAction.type === 'delete' && 'Delete Expense?'}
               </h3>
               <p className="text-gray-600 mb-6">
                 {confirmAction.type === 'approve' && `Are you sure you want to approve "${confirmAction.title}"?`}
                 {confirmAction.type === 'paid' && `Are you sure you want to mark "${confirmAction.title}" as paid?`}
+                {confirmAction.type === 'pending' && `Are you sure you want to mark "${confirmAction.title}" as pending?`}
                 {confirmAction.type === 'delete' && `Are you sure you want to delete "${confirmAction.title}"? This action cannot be undone.`}
               </p>
 
@@ -722,6 +894,8 @@ export default function Expenses() {
                       ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800'
                       : confirmAction.type === 'approve'
                       ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
+                      : confirmAction.type === 'pending'
+                      ? 'bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800'
                       : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800'
                   }`}
                 >
@@ -737,6 +911,7 @@ export default function Expenses() {
                     <>
                       {confirmAction.type === 'approve' && 'Approve'}
                       {confirmAction.type === 'paid' && 'Mark Paid'}
+                      {confirmAction.type === 'pending' && 'Mark Pending'}
                       {confirmAction.type === 'delete' && 'Delete'}
                     </>
                   )}

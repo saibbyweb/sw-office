@@ -102,6 +102,66 @@ export class ExpensesService {
     return expenses as Expense[];
   }
 
+  async getPaginatedExpenses(filters?: ExpenseFiltersInput): Promise<{
+    expenses: Expense[];
+    total: number;
+    hasMore: boolean;
+  }> {
+    const where: any = {};
+    const skip = filters?.skip || 0;
+    const take = filters?.take || 20; // Default page size
+
+    if (filters) {
+      if (filters.expenseType) {
+        where.expenseType = filters.expenseType;
+      }
+      if (filters.category) {
+        where.category = filters.category;
+      }
+      if (filters.reimbursementStatus) {
+        where.reimbursementStatus = filters.reimbursementStatus;
+      }
+      if (filters.relatedEmployeeId) {
+        where.relatedEmployeeId = filters.relatedEmployeeId;
+      }
+      if (filters.startDate || filters.endDate) {
+        where.expenseDate = {};
+        if (filters.startDate) {
+          where.expenseDate.gte = filters.startDate;
+        }
+        if (filters.endDate) {
+          where.expenseDate.lte = filters.endDate;
+        }
+      }
+    }
+
+    // Get total count
+    const total = await this.prisma.expense.count({ where });
+
+    // Get paginated expenses
+    const expenses = await this.prisma.expense.findMany({
+      where,
+      include: {
+        relatedEmployee: true,
+        approvedBy: true,
+        createdBy: true,
+      },
+      orderBy: {
+        expenseDate: 'desc',
+      },
+      skip,
+      take,
+    });
+
+    const hasMore = skip + expenses.length < total;
+
+    return {
+      expenses: expenses as Expense[],
+      total,
+      hasMore,
+    };
+  }
+
   async getExpenseById(id: string): Promise<Expense> {
     const expense = await this.prisma.expense.findUnique({
       where: { id },
@@ -146,6 +206,22 @@ export class ExpensesService {
       data: {
         reimbursementStatus: 'PAID',
         reimbursedDate: Math.floor(Date.now() / 1000),
+      },
+      include: {
+        relatedEmployee: true,
+        approvedBy: true,
+        createdBy: true,
+      },
+    });
+
+    return expense as Expense;
+  }
+
+  async markAsPending(id: string): Promise<Expense> {
+    const expense = await this.prisma.expense.update({
+      where: { id },
+      data: {
+        reimbursementStatus: 'PENDING',
       },
       include: {
         relatedEmployee: true,
