@@ -97,7 +97,7 @@ export default function Expenses() {
   if (startDate) filters.startDate = Math.floor(new Date(startDate).getTime() / 1000);
   if (endDate) filters.endDate = Math.floor(new Date(endDate).getTime() / 1000);
 
-  const { loading: expensesLoading, fetchMore } = useQuery(PAGINATED_EXPENSES_QUERY, {
+  const { loading: expensesLoading, fetchMore, refetch } = useQuery(PAGINATED_EXPENSES_QUERY, {
     variables: {
       filters: {
         ...filters,
@@ -109,27 +109,22 @@ export default function Expenses() {
       setAllExpenses(data.paginatedExpenses.expenses);
       setHasMore(data.paginatedExpenses.hasMore);
     },
+    notifyOnNetworkStatusChange: true,
   });
 
-  const refetchExpenses = useCallback(() => {
-    setAllExpenses([]);
-    setHasMore(true);
-    fetchMore({
-      variables: {
-        filters: {
-          ...filters,
-          skip: 0,
-          take: 20,
-        },
-      },
-      updateQuery: (_, { fetchMoreResult }) => {
-        if (!fetchMoreResult) return { paginatedExpenses: { expenses: [], total: 0, hasMore: false } };
-        setAllExpenses(fetchMoreResult.paginatedExpenses.expenses);
-        setHasMore(fetchMoreResult.paginatedExpenses.hasMore);
-        return fetchMoreResult;
+  const refetchExpenses = useCallback(async () => {
+    const { data } = await refetch({
+      filters: {
+        ...filters,
+        skip: 0,
+        take: 20,
       },
     });
-  }, [fetchMore, filters]);
+    if (data) {
+      setAllExpenses(data.paginatedExpenses.expenses);
+      setHasMore(data.paginatedExpenses.hasMore);
+    }
+  }, [refetch, filters]);
 
   const [createExpense] = useMutation(CREATE_EXPENSE_MUTATION, {
     onCompleted: () => {
