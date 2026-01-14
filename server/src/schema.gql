@@ -36,8 +36,35 @@ type Break {
   userId: String!
 }
 
+type BreakAnalyticsReportType {
+  aiInsights: String
+  anomalyAnalysis: BreakAnomalyAnalysisType!
+  dateRange: DateRangeType!
+  userStats: [UserBreakStatsType!]!
+}
+
+type BreakAnomalyAnalysisType {
+  overallStats: OverallStatsType!
+  unusualTimePatterns: [UnusualTimePatternType!]!
+  usersWithFewerBreaks: [UserWithFewerBreaksType!]!
+  usersWithLongerBreaks: [UserWithLongerBreaksType!]!
+}
+
 type BreakCount {
   segments: Int!
+}
+
+type BreakSegmentDataType {
+  breakType: String!
+  dayOfWeek: Int!
+  duration: Int!
+  endTime: DateTime
+  hourOfDay: Int!
+  id: String!
+  startTime: DateTime!
+  userEmail: String!
+  userId: String!
+  userName: String!
 }
 
 enum BreakType {
@@ -45,6 +72,21 @@ enum BreakType {
   OTHER
   PRAYER
   SHORT
+}
+
+type BreaksByDayType {
+  count: Int!
+  day: Int!
+}
+
+type BreaksByHourType {
+  count: Int!
+  hour: Int!
+}
+
+type BreaksByTypeType {
+  count: Int!
+  type: String!
 }
 
 type Call {
@@ -135,6 +177,11 @@ type DailyOutputScore {
   updatedAt: DateTime!
   user: User!
   userId: String!
+}
+
+type DateRangeType {
+  from: DateTime!
+  to: DateTime!
 }
 
 """
@@ -332,6 +379,7 @@ type Mutation {
   syncSlackUserIds: String!
   testInitiateCall(callerId: String!, receiverId: String!): Call!
   unapproveTask(taskId: String!): Task!
+  unassignTask(taskId: String!): Task!
   uncompleteTask(taskId: String!): Task!
   unresolveStabilityIncident(id: String!): StabilityIncident!
   updateDailyScore(id: String!, input: UpdateDailyScoreInput!): DailyOutputScore!
@@ -368,6 +416,14 @@ type OrganizationMeeting {
   organizerName: String!
   startDateTime: String!
   subject: String!
+}
+
+type OverallStatsType {
+  averageBreakDuration: Float!
+  averageBreaksPerUserPerDay: Float!
+  leastActiveUsers: [String!]!
+  mostCommonBreakHours: [Int!]!
+  totalUsers: Int!
 }
 
 type PaginatedExpensesResponse {
@@ -454,6 +510,14 @@ type Query {
   adminUserWorkLogs(input: GetSessionsInput!, userId: ID!): [WorkLog!]!
   adminUsers: [User!]!
   allDailyScores(endDate: String, startDate: String): [DailyOutputScore!]!
+
+  """
+  Generate comprehensive break analytics report with anomaly detection and AI insights
+  """
+  breakAnalyticsReport(
+    """Number of months to analyze (default: 2)"""
+    monthsBack: Int! = 2
+  ): BreakAnalyticsReportType!
   checkUserInMeeting(userId: String!): MeetingStatus!
   completedTasks(endDate: String, startDate: String): [Task!]!
   completedTasksByUser(endDate: String, startDate: String, userId: String!): [Task!]!
@@ -756,6 +820,13 @@ type TeamsUserWithPresence {
   userPrincipalName: String!
 }
 
+type UnusualTimePatternType {
+  description: String!
+  pattern: String!
+  userId: String!
+  userName: String!
+}
+
 input UpdateDailyScoreInput {
   availabilityRating: Float
   initiativeCount: Int
@@ -860,6 +931,22 @@ type User {
   workLogs: [WorkLog!]
 }
 
+type UserBreakStatsType {
+  averageBreakDuration: Float!
+  averageBreaksPerDay: Float!
+  breaksByDayOfWeek: [BreaksByDayType!]!
+  breaksByHour: [BreaksByHourType!]!
+  breaksByType: [BreaksByTypeType!]!
+  longestBreak: Int!
+  outlierBreaks: [BreakSegmentDataType!]!
+  shortestBreak: Int!
+  totalBreakTime: Int!
+  totalBreaks: Int!
+  userEmail: String!
+  userId: String!
+  userName: String!
+}
+
 type UserCount {
   assignedScores: Int!
   breaks: Int!
@@ -920,6 +1007,21 @@ type UserStatistics {
   totalRatedTasksInCycle: Int!
   totalTasksInCycle: Int!
   workingDaysInCycle: Int!
+}
+
+type UserWithFewerBreaksType {
+  averageBreaksPerDay: Float!
+  percentageBelow: Float!
+  totalBreaks: Int!
+  userId: String!
+  userName: String!
+}
+
+type UserWithLongerBreaksType {
+  averageBreakDuration: Float!
+  percentageAbove: Float!
+  userId: String!
+  userName: String!
 }
 
 type WorkException {

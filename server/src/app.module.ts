@@ -21,6 +21,7 @@ import { WorkExceptionModule } from './work-exceptions/work-exception.module';
 import { DailyOutputScoreModule } from './daily-output-score/daily-output-score.module';
 import { StabilityIncidentsModule } from './stability-incidents/stability-incidents.module';
 import { ExpensesModule } from './expenses/expenses.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { ExpensesModule } from './expenses/expenses.module';
     DailyOutputScoreModule,
     StabilityIncidentsModule,
     ExpensesModule,
+    AnalyticsModule,
   ],
 })
 export class AppModule {}

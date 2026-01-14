@@ -497,6 +497,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
   const { data, loading, error } = useQuery(GET_USER_PROFILE, {
     variables: { userId },
     skip: !userId,
+    fetchPolicy: 'no-cache',
   });
 
   const { data: sessionDatesData, loading: datesLoading } = useQuery(GET_USER_SESSION_DATES, {
@@ -589,7 +590,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ userId, onCl
       endDate: currentCycle?.endDate,
     },
     skip: !isOwnProfile,
-    fetchPolicy: 'network-only',
+    fetchPolicy: 'no-cache',
   });
 
   // Keep the last valid payout data to prevent unmounting during refetches

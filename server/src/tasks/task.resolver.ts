@@ -299,6 +299,21 @@ export class TaskResolver {
   }
 
   @Mutation(() => Task)
+  @UseGuards(JwtGuard)
+  async unassignTask(
+    @Args('taskId') taskId: string,
+    @Context() context: GraphQLContext,
+  ): Promise<Task> {
+    const userId = context.req.user?.id;
+
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
+    return this.taskService.unassignTask(taskId, userId);
+  }
+
+  @Mutation(() => Task)
   async completeTask(
     @Args('taskId') taskId: string,
   ): Promise<Task> {

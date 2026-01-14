@@ -14,6 +14,7 @@ import DailyOutputScore from './pages/DailyOutputScore';
 import StabilityIncidents from './pages/StabilityIncidents';
 import Payouts from './pages/Payouts';
 import Expenses from './pages/Expenses';
+import BreakAnalytics from './pages/BreakAnalytics';
 
 function AppRoutes() {
   const { login } = useAuth();
@@ -108,6 +109,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <Expenses />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/break-analytics"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <BreakAnalytics />
           </ProtectedRoute>
         }
       />

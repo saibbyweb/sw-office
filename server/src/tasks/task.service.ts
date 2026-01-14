@@ -522,6 +522,54 @@ export class TaskService {
     return true;
   }
 
+  async unassignTask(taskId: string, userId: string): Promise<Task> {
+    // First check if the task exists
+    const existingTask = await this.prisma.task.findUnique({
+      where: { id: taskId },
+      select: {
+        assignedToId: true,
+        suggestedById: true,
+        status: true
+      },
+    });
+
+    if (!existingTask) {
+      throw new Error('Task not found');
+    }
+
+    if (existingTask.assignedToId !== userId) {
+      throw new Error('You can only un-assign tasks assigned to you');
+    }
+
+    if (existingTask.suggestedById !== userId) {
+      throw new Error('You can only un-assign tasks you suggested yourself');
+    }
+
+    // Only allow un-assignment if task has not been started yet
+    if (existingTask.status !== 'APPROVED') {
+      throw new Error('Cannot un-assign task that has been started (status must be APPROVED)');
+    }
+
+    // Un-assign and un-approve the task (revert to SUGGESTED status)
+    const updatedTask = await this.prisma.task.update({
+      where: { id: taskId },
+      data: {
+        assignedToId: null,
+        approvedById: null,
+        approvedDate: null,
+        status: 'SUGGESTED',
+      },
+      include: {
+        project: true,
+        suggestedBy: true,
+        assignedTo: true,
+        approvedBy: true,
+      },
+    });
+
+    return updatedTask;
+  }
+
   async completeTask(taskId: string): Promise<Task> {
     const task = await this.prisma.task.findUnique({
       where: { id: taskId },

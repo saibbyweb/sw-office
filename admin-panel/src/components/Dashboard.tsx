@@ -1,4 +1,4 @@
-import { FiUsers, FiGitBranch, FiBarChart2, FiUserPlus, FiCheckSquare, FiCalendar, FiAward, FiAlertTriangle, FiDollarSign, FiCreditCard } from 'react-icons/fi';
+import { FiUsers, FiGitBranch, FiBarChart2, FiUserPlus, FiCheckSquare, FiCalendar, FiAward, FiAlertTriangle, FiDollarSign, FiCreditCard, FiActivity } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 
 const pages = [
@@ -65,6 +65,14 @@ const pages = [
     icon: FiCreditCard,
     gradient: 'from-cyan-600 to-blue-600',
     bgGradient: 'from-cyan-500/20 to-blue-500/20',
+  },
+  {
+    title: 'Break Analytics',
+    description: 'AI-powered fraud detection and break pattern analysis',
+    path: '/break-analytics',
+    icon: FiActivity,
+    gradient: 'from-purple-600 to-pink-600',
+    bgGradient: 'from-purple-500/20 to-pink-500/20',
   },
   {
     title: 'Workflow View',

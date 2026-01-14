@@ -589,7 +589,24 @@ export const DELETE_SUGGESTED_TASK = gql`
   mutation DeleteSuggestedTask($taskId: String!) {
     deleteSuggestedTask(taskId: $taskId)
   }
-`; 
+`;
+
+export const UNASSIGN_TASK = gql`
+  mutation UnassignTask($taskId: String!) {
+    unassignTask(taskId: $taskId) {
+      id
+      title
+      status
+      assignedTo {
+        id
+        name
+        email
+        avatarUrl
+      }
+    }
+  }
+`;
+
 export const UPDATE_PR_LINKS = gql`
   mutation UpdatePrLinks($input: UpdatePrLinksInput!) {
     updatePrLinks(input: $input) {

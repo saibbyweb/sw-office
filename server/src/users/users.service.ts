@@ -336,7 +336,7 @@ export class UsersService {
     // Calculate task statistics
     const allottedTasks = user.taskAssignments.length;
     const completedTasks = user.taskAssignments.filter(
-      (task) => task.status === 'COMPLETED',
+      (task) => task.status === 'COMPLETED' || task.status === 'PARTIALLY_COMPLETED',
     ).length;
     const inProgressTasks = user.taskAssignments.filter(
       (task) => task.status === 'IN_PROGRESS',
@@ -376,7 +376,7 @@ export class UsersService {
     // Use session start time for completed tasks, createdAt for others
     const anyTasksInCycle = allTasksForUser.some(task => {
       // For completed tasks, use session start time (or completedDate as fallback)
-      if (task.status === 'COMPLETED') {
+      if (task.status === 'COMPLETED' || task.status === 'PARTIALLY_COMPLETED') {
         const relevantDate = task.completedSession?.startTime || task.completedDate;
         return relevantDate && relevantDate >= startDate && relevantDate <= endDate;
       }
@@ -387,7 +387,7 @@ export class UsersService {
 
     // Filter completed tasks by session start time (or completedDate as fallback)
     const completedTasksInCycle = allTasksForUser.filter(task => {
-      if (task.status !== 'COMPLETED') return false;
+      if (task.status !== 'COMPLETED' && task.status !== 'PARTIALLY_COMPLETED') return false;
 
       // Prefer session start time if available, otherwise use completed date
       const relevantDate = task.completedSession?.startTime || task.completedDate;

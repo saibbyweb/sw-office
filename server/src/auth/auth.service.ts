@@ -31,6 +31,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    if (user.archived) {
+      throw new UnauthorizedException('Account Deactivated');
+    }
+
     if (process.env.NODE_ENV === 'development') {
       return user;
     }

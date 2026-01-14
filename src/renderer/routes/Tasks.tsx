@@ -11,7 +11,7 @@ import { EditTaskModal } from '../components/modals/EditTaskModal';
 import { UserProfileModal } from '../components/UserProfileModal';
 import { TeamMembersList } from '../components/TeamMembersList';
 import { PrLinksInput } from '../components/PrLinksInput';
-import { ME, AVAILABLE_TASKS, GET_PROJECTS, ASSIGN_TASK, UPDATE_TASK_STATUS, SELF_APPROVE_TASK, TEAM_USERS_QUERY, EDIT_SUGGESTED_TASK, DELETE_SUGGESTED_TASK, UPDATE_PR_LINKS, ACTIVE_SESSION } from '../../graphql/queries';
+import { ME, AVAILABLE_TASKS, GET_PROJECTS, ASSIGN_TASK, UPDATE_TASK_STATUS, SELF_APPROVE_TASK, TEAM_USERS_QUERY, EDIT_SUGGESTED_TASK, DELETE_SUGGESTED_TASK, UNASSIGN_TASK, UPDATE_PR_LINKS, ACTIVE_SESSION } from '../../graphql/queries';
 import { CheckSquare, Clock, User, Calendar, AlertCircle, Briefcase, Search, Filter, X, Plus, UserPlus, Play, Check, Slash, AlertTriangle, ArrowLeft, RotateCcw, RefreshCw, CheckCircle, ChevronDown, ChevronUp, Edit2, Trash2, Link as LinkIcon, ExternalLink } from 'react-feather';
 import toast from 'react-hot-toast';
 import { useConnectedUsers } from '../../contexts/ConnectedUsersContext';
@@ -1992,6 +1992,17 @@ export const Tasks: React.FC = () => {
     },
   });
 
+  const [unassignTask] = useMutation(UNASSIGN_TASK, {
+    refetchQueries: ['AvailableTasks'],
+    onCompleted: () => {
+      toast.success('Task reverted to Suggested status successfully!');
+      setActiveTab('suggested');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to un-assign task');
+    },
+  });
+
   const [updatePrLinks, { loading: updatePrLinksLoading }] = useMutation(UPDATE_PR_LINKS, {
     refetchQueries: ['AvailableTasks'],
     onCompleted: () => {
@@ -2219,6 +2230,14 @@ export const Tasks: React.FC = () => {
     return task.status === 'SUGGESTED' && task.suggestedBy?.id === currentUserId;
   };
 
+  const canUnassign = (task: Task): boolean => {
+    return (
+      task.status === 'APPROVED' &&
+      task.assignedTo?.id === currentUserId &&
+      task.suggestedBy?.id === currentUserId
+    );
+  };
+
   const handleSelfApprove = async (taskId: string) => {
     try {
       await selfApproveTask({
@@ -2254,6 +2273,19 @@ export const Tasks: React.FC = () => {
         });
       } catch (error) {
         console.error('Error deleting task:', error);
+      }
+    }
+  };
+
+  const handleUnassignTask = async (taskId: string, taskTitle: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (window.confirm(`Revert "${taskTitle}" to Suggested status? This will remove your assignment and approval.`)) {
+      try {
+        await unassignTask({
+          variables: { taskId },
+        });
+      } catch (error) {
+        console.error('Error un-assigning task:', error);
       }
     }
   };
@@ -2735,7 +2767,7 @@ export const Tasks: React.FC = () => {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
                           <StatusButtonsContainer>
                             {/* Start Task Button (only show when APPROVED or not started) */}
-                            {task.status === 'APPROVED' && (
+                            {task.status === 'APPROVED' && !canUnassign(task) && (
                               <PrimaryActionButton
                                 disabled={updateStatusLoading || !hasActiveSession}
                                 onClick={(e) => {
@@ -2752,6 +2784,36 @@ export const Tasks: React.FC = () => {
                                 <Play size={14} />
                                 Start Task
                               </PrimaryActionButton>
+                            )}
+
+                            {/* Un-assign Button (only show for self-assigned APPROVED tasks) */}
+                            {task.status === 'APPROVED' && canUnassign(task) && (
+                              <SecondaryActionsRow>
+                                <PrimaryActionButton
+                                  disabled={updateStatusLoading || !hasActiveSession}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (!hasActiveSession) {
+                                      toast.error('You must have an active session to start a task');
+                                      return;
+                                    }
+                                    handleStatusUpdate(task.id, 'IN_PROGRESS');
+                                    setShowCompletionButtons(null);
+                                  }}
+                                  title={!hasActiveSession ? 'Start a session to work on tasks' : ''}
+                                >
+                                  <Play size={14} />
+                                  Start Task
+                                </PrimaryActionButton>
+                                <SecondaryActionButton
+                                  variant="reset"
+                                  onClick={(e) => handleUnassignTask(task.id, task.title, e)}
+                                  title="Remove this task from your assignments"
+                                >
+                                  <X size={11} />
+                                  Un-assign
+                                </SecondaryActionButton>
+                              </SecondaryActionsRow>
                             )}
 
                             {/* Secondary Actions: Reset / I'm Blocked / End Task (only show when IN_PROGRESS) */}
